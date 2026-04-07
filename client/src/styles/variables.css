@@ -1,0 +1,50 @@
+  :root {
+    /* --- Base Colors --- */
+    --brand-deep-blue: #12457d;
+    --brand-orange: #f19b29;
+    --brand-light-orange: #f5c280;
+    --brand-light-blue: #a6c3e3;
+
+    /* --- Semantic Colors --- */
+    --color-primary: var(--brand-orange);
+    --color-on-primary: #ffffff;
+    --color-primary-container: #ffffff;
+    --color-on-primary-container: #000000;
+    --color-primary-hover: #f3ae53;
+
+    --color-secondary: var(--brand-deep-blue);
+    --color-on-secondary: #ffffff;
+    --color-secondary-container: #ffffff;
+    --color-on-secondary-container: var(--brand-deep-blue);
+
+    --color-tertiary: #006a6a;
+    --color-background: #ffffff;
+    --color-surface: #f9f9fd;
+    --color-on-surface: #1a1c1e;
+    --color-surface-variant: #ebebf2;
+    
+    /* Bordes y Líneas */
+    --color-outline: #74777f;
+    --color-outline-variant: #5d6066;
+    --color-muted: #94a3b8;
+
+    /* Spacing scales */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    /* Typo */
+    --font-family: system-ui, -apple-system, sans-serif;
+    --font-size-base: 16px;
+    --font-size-lg: 20px;
+    --font-size-xl: 28px;
+
+    /* Layout */
+    --container-width: 100%;
+
+    /* Effects */
+    --border-radius: 12px;
+    --transition-fast: 0.2s ease;
+  }
