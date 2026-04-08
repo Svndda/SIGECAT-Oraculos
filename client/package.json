@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "api": "node server/api.mjs",
+    "dev:full": "concurrently \"npm run dev\" \"npm run api\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -15,6 +17,8 @@
     "@fontsource/roboto": "^5.2.10",
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
+    "axios": "^1.14.0",
+    "express": "^5.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2"
@@ -25,10 +29,13 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "node-fetch": "^2.7.0",
+    "node-html-parser": "^7.1.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1"

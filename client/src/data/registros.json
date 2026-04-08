@@ -1,0 +1,77 @@
+[
+  {
+    "nombre": "Josue Perez",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "Unidad de matematica",
+    "numeroPlaza": "000192",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "asdnaosnda",
+    "estadoLeido": false,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "10:48",
+        "horaFin": "11:50",
+        "horas": 1,
+        "minutos": 2
+      }
+    ],
+    "id": "1775623694518",
+    "fecha": "2026-04-08T04:48:14.518Z"
+  },
+  {
+    "nombre": "Jerry Duran ",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "Unidad de Computacion ",
+    "numeroPlaza": "122312",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "garantizar bla bla asdasd",
+    "estadoLeido": false,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "15:08",
+        "horaFin": "16:08",
+        "horas": 1,
+        "minutos": 0
+      },
+      {
+        "id": 2,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "17:08",
+        "horaFin": "18:08",
+        "horas": 1,
+        "minutos": 0
+      }
+    ],
+    "id": "1775624914489",
+    "fecha": "2026-04-08T05:08:34.489Z"
+  }
+]
