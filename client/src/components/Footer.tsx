@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <Box
       component="img"
-      src="/src/assets/footer.png"
+      src="/assets/footer.png"
       alt="Footer"
       sx={{
         width: '100%',

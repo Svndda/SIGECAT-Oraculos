@@ -4,7 +4,7 @@ export default function Header() {
   return (
     <Box
       component="img"
-      src="/src/assets/header.png"
+      src="/assets/header.png"
       alt="Header"
       sx={{
         width: '100%',
