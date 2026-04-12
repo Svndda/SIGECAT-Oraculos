@@ -1,4 +1,4 @@
-# SIGECAT---Oraculos
+# SIGECAT---Oráculos
 
 
 ## How to Run
