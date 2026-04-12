@@ -1,0 +1,98 @@
+[
+  {
+    "id": "5020",
+    "codigo": "5020",
+    "estrato": "Operativo",
+    "descripcion": "Trabajador Operativo A"
+  },
+  {
+    "id": "5040",
+    "codigo": "5040",
+    "estrato": "Operativo",
+    "descripcion": "Trabajador Operativo B"
+  },
+  {
+    "id": "5060",
+    "codigo": "5060",
+    "estrato": "Operativo",
+    "descripcion": "Trabajador Operativo C"
+  },
+  {
+    "id": "5080",
+    "codigo": "5080",
+    "estrato": "Asistencial",
+    "descripcion": "Técnico Asistencial A"
+  },
+  {
+    "id": "5100",
+    "codigo": "5100",
+    "estrato": "Asistencial",
+    "descripcion": "Técnico Asistencial B"
+  },
+  {
+    "id": "5120",
+    "codigo": "5120",
+    "estrato": "Técnico",
+    "descripcion": "Técnico Especializado A"
+  },
+  {
+    "id": "5140",
+    "codigo": "5140",
+    "estrato": "Técnico",
+    "descripcion": "Técnico Especializado B"
+  },
+  {
+    "id": "5160",
+    "codigo": "5160",
+    "estrato": "Técnico",
+    "descripcion": "Técnico Especializado C"
+  },
+  {
+    "id": "5180",
+    "codigo": "5180",
+    "estrato": "Técnico",
+    "descripcion": "Técnico Especializado D"
+  },
+  {
+    "id": "5200",
+    "codigo": "5200",
+    "estrato": "Profesional",
+    "descripcion": "Profesional A"
+  },
+  {
+    "id": "5220",
+    "codigo": "5220",
+    "estrato": "Profesional",
+    "descripcion": "Profesional B (5220)"
+  },
+  {
+    "id": "5240",
+    "codigo": "5240",
+    "estrato": "Profesional",
+    "descripcion": "Profesional C"
+  },
+  {
+    "id": "5260",
+    "codigo": "5260",
+    "estrato": "Profesional",
+    "descripcion": "Profesional D"
+  },
+  {
+    "id": "5280",
+    "codigo": "5280",
+    "estrato": "Mandos Medios",
+    "descripcion": "Jefe A"
+  },
+  {
+    "id": "5300",
+    "codigo": "5300",
+    "estrato": "Mandos Medios",
+    "descripcion": "Jefe B"
+  },
+  {
+    "id": "5320",
+    "codigo": "5320",
+    "estrato": "Dirección",
+    "descripcion": "Director"
+  }
+]
