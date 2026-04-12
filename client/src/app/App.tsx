@@ -4,12 +4,12 @@ import Screen1 from './pages/Screen1';
 import Screen2 from './pages/Screen2';
 import Screen3 from './pages/Screen3';
 import Home from './pages/Home';
-import { RegistrosProvider } from '../context/RegistrosContext';
+import { RecordsProvider } from '../context/RecordsContext';
 
 
 function App() {
   return (
-    <RegistrosProvider>
+    <RecordsProvider>
       <BrowserRouter>
         <Routes>
 
@@ -23,7 +23,7 @@ function App() {
 
         </Routes>
       </BrowserRouter>
-    </RegistrosProvider>
+    </RecordsProvider>
   );
 }
 

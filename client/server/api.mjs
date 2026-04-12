@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
-const REGISTROS_FILE = path.join(__dirname, '../src/data/registros.json');
+const RECORDS_FILE = path.join(__dirname, '../src/data/records.json');
 
 // Middleware
 app.use(express.json());
@@ -25,99 +25,99 @@ app.use((req, res, next) => {
   }
 });
 
-// Leer registros del archivo
-const leerRegistros = () => {
+// Read records from file
+const readRecords = () => {
   try {
-    if (!fs.existsSync(REGISTROS_FILE)) {
-      fs.writeFileSync(REGISTROS_FILE, JSON.stringify([]));
+    if (!fs.existsSync(RECORDS_FILE)) {
+      fs.writeFileSync(RECORDS_FILE, JSON.stringify([]));
     }
-    const data = fs.readFileSync(REGISTROS_FILE, 'utf-8');
+    const data = fs.readFileSync(RECORDS_FILE, 'utf-8');
     return JSON.parse(data || '[]');
   } catch (error) {
-    console.error('Error leyendo registros:', error);
+    console.error('Error reading records:', error);
     return [];
   }
 };
 
-// Escribir registros al archivo
-const escribirRegistros = (registros) => {
+// Write records to file
+const writeRecords = (records) => {
   try {
-    fs.writeFileSync(REGISTROS_FILE, JSON.stringify(registros, null, 2));
+    fs.writeFileSync(RECORDS_FILE, JSON.stringify(records, null, 2));
   } catch (error) {
-    console.error('Error escribiendo registros:', error);
+    console.error('Error writing records:', error);
   }
 };
 
-// Rutas API
+// API Routes
 
-// GET /api/registros - Obtener todos los registros
-app.get('/api/registros', (req, res) => {
-  const registros = leerRegistros();
-  res.json(registros);
+// GET /api/records - Get all records
+app.get('/api/records', (req, res) => {
+  const records = readRecords();
+  res.json(records);
 });
 
-// POST /api/registros - Crear un nuevo registro
-app.post('/api/registros', (req, res) => {
+// POST /api/records - Create a new record
+app.post('/api/records', (req, res) => {
   try {
-    const registros = leerRegistros();
-    const nuevoRegistro = {
+    const records = readRecords();
+    const newRecord = {
       ...req.body,
       id: Date.now().toString(),
       fecha: new Date().toISOString(),
     };
-    registros.push(nuevoRegistro);
-    escribirRegistros(registros);
-    res.status(201).json(nuevoRegistro);
+    records.push(newRecord);
+    writeRecords(records);
+    res.status(201).json(newRecord);
   } catch (error) {
-    res.status(500).json({ error: 'Error al guardar registro' });
+    res.status(500).json({ error: 'Error saving record' });
   }
 });
 
-// GET /api/registros/:id - Obtener un registro por ID
-app.get('/api/registros/:id', (req, res) => {
-  const registros = leerRegistros();
-  const registro = registros.find((r) => r.id === req.params.id);
-  if (registro) {
-    res.json(registro);
+// GET /api/records/:id - Get a record by ID
+app.get('/api/records/:id', (req, res) => {
+  const records = readRecords();
+  const record = records.find((r) => r.id === req.params.id);
+  if (record) {
+    res.json(record);
   } else {
-    res.status(404).json({ error: 'Registro no encontrado' });
+    res.status(404).json({ error: 'Record not found' });
   }
 });
 
-// PUT /api/registros/:id - Actualizar un registro
-app.put('/api/registros/:id', (req, res) => {
+// PUT /api/records/:id - Update a record
+app.put('/api/records/:id', (req, res) => {
   try {
-    const registros = leerRegistros();
-    const index = registros.findIndex((r) => r.id === req.params.id);
+    const records = readRecords();
+    const index = records.findIndex((r) => r.id === req.params.id);
     if (index > -1) {
-      registros[index] = {
-        ...registros[index],
+      records[index] = {
+        ...records[index],
         ...req.body,
       };
-      escribirRegistros(registros);
-      res.json(registros[index]);
+      writeRecords(records);
+      res.json(records[index]);
     } else {
-      res.status(404).json({ error: 'Registro no encontrado' });
+      res.status(404).json({ error: 'Record not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar registro' });
+    res.status(500).json({ error: 'Error updating record' });
   }
 });
 
-// DELETE /api/registros/:id - Eliminar un registro
-app.delete('/api/registros/:id', (req, res) => {
+// DELETE /api/records/:id - Delete a record
+app.delete('/api/records/:id', (req, res) => {
   try {
-    let registros = leerRegistros();
-    registros = registros.filter((r) => r.id !== req.params.id);
-    escribirRegistros(registros);
+    let records = readRecords();
+    records = records.filter((r) => r.id !== req.params.id);
+    writeRecords(records);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar registro' });
+    res.status(500).json({ error: 'Error deleting record' });
   }
 });
 
-// Iniciar servidor
+// Start server
 app.listen(PORT, () => {
-  console.log(`✓ Servidor API corriendo en http://localhost:${PORT}`);
-  console.log(`✓ Datos guardados en: ${REGISTROS_FILE}`);
+  console.log(`✓ API Server running at http://localhost:${PORT}`);
+  console.log(`✓ Data saved at: ${RECORDS_FILE}`);
 });

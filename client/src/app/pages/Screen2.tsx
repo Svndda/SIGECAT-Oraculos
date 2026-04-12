@@ -3,18 +3,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import clasesData from '../../data/clases.json';
-import cargosData from '../../data/cargos.json';
-import { useRegistros } from '../../context/RegistrosContext';
+import classesData from '../../data/classes.json';
+import jobsData from '../../data/jobs.json';
+import { useRecords } from '../../context/RecordsContext';
 
-interface Clase {
+interface Class {
   id: string;
   codigo: string;
   estrato: string;
   descripcion: string;
 }
 
-interface Cargo {
+interface Job {
   id: string;
   codigo: string;
   clase: string;
@@ -24,25 +24,25 @@ interface Cargo {
 
 export default function Screen2() {
   const navigate = useNavigate();
-  const { registroActual, establecerRegistroActual } = useRegistros();
+  const { currentRecord, setCurrentRecord } = useRecords();
   
   const [formData, setFormData] = useState({
-    nombre: registroActual?.nombre || '',
-    cedula: registroActual?.cedula || '',
-    correoInstitucional: registroActual?.correoInstitucional || '',
-    codigoEmpleado: registroActual?.codigoEmpleado || '',
-    relacionUCR: registroActual?.relacionUCR || '',
-    lugarTrabajo: registroActual?.lugarTrabajo || '',
-    numeroPlaza: registroActual?.numeroPlaza || '',
-    claseOcupacional: registroActual?.claseOcupacional || null,
-    cargoDelPuesto: (registroActual as any)?.cargoDelPuesto || null,
-    jornadaLaboral: registroActual?.jornadaLaboral || 'Diurna',
-    horarioInicio: registroActual?.horarioInicio || '08:00',
-    horarioFinal: registroActual?.horarioFinal || '16:30',
+    nombre: currentRecord?.nombre || '',
+    cedula: currentRecord?.cedula || '',
+    correoInstitucional: currentRecord?.correoInstitucional || '',
+    codigoEmpleado: currentRecord?.codigoEmpleado || '',
+    relacionUCR: currentRecord?.relacionUCR || '',
+    lugarTrabajo: currentRecord?.lugarTrabajo || '',
+    numeroPlaza: currentRecord?.numeroPlaza || '',
+    claseOcupacional: currentRecord?.claseOcupacional || null,
+    cargoDelPuesto: (currentRecord as any)?.cargoDelPuesto || null,
+    jornadaLaboral: currentRecord?.jornadaLaboral || 'Diurna',
+    horarioInicio: currentRecord?.horarioInicio || '08:00',
+    horarioFinal: currentRecord?.horarioFinal || '16:30',
   });
 
-  const [clases, setClases] = useState<Clase[]>([]);
-  const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [ssoExpanded, setSsoExpanded] = useState(false);
 
@@ -58,7 +58,7 @@ export default function Screen2() {
     }
   };
 
-  const handleClaseChange = (_: any, value: Clase | null) => {
+  const handleClassChange = (_: any, value: Class | null) => {
     setFormData(prev => ({ ...prev, claseOcupacional: value }));
     if (errors.claseOcupacional) {
       setErrors(prev => {
@@ -69,7 +69,7 @@ export default function Screen2() {
     }
   };
 
-  const handleCargoChange = (_: any, value: Cargo | null) => {
+  const handleJobChange = (_: any, value: Job | null) => {
     setFormData(prev => ({ ...prev, cargoDelPuesto: value }));
   };
 
@@ -90,8 +90,8 @@ export default function Screen2() {
       return;
     }
 
-    // Guardar datos en el contexto para que Screen3 pueda acceder
-    establecerRegistroActual({
+    // Save form data to context so Screen3 can access
+    setCurrentRecord({
       nombre: formData.nombre,
       cedula: formData.cedula,
       correoInstitucional: formData.correoInstitucional,
@@ -111,8 +111,8 @@ export default function Screen2() {
   };
 
   useEffect(() => {
-    setClases(clasesData as Clase[]);
-    setCargos(cargosData as Cargo[]);
+    setClasses(classesData as Class[]);
+    setJobs(jobsData as Job[]);
   }, []);
 
   return (
@@ -203,10 +203,10 @@ export default function Screen2() {
                     Clase Ocupacional:
                   </Typography>
                   <Autocomplete
-                    options={clases}
+                    options={classes}
                     getOptionLabel={(option) => `${option.codigo} - ${option.descripcion}`}
                     value={formData.claseOcupacional}
-                    onChange={handleClaseChange}
+                    onChange={handleClassChange}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -229,10 +229,10 @@ export default function Screen2() {
                     Cargo del puesto:
                   </Typography>
                   <Autocomplete
-                    options={cargos}
+                    options={jobs}
                     getOptionLabel={(option) => `${option.codigo} - ${option.nombre}`}
                     value={formData.cargoDelPuesto}
-                    onChange={handleCargoChange}
+                    onChange={handleJobChange}
                     renderInput={(params) => (
                       <TextField
                         {...params}

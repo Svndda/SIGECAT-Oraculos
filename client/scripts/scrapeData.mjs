@@ -5,7 +5,7 @@ import { parse } from 'node-html-parser';
 
 async function scrapeClases() {
   try {
-    console.log('Extrayendo Clases Ocupacionales...');
+    console.log('Extracting Occupational Classes...');
     const response = await fetch('https://plataformaorh.ucr.ac.cr/ManualClases/IndexManual');
     const html = await response.text();
     const root = parse(html);
@@ -31,8 +31,8 @@ async function scrapeClases() {
       }
     });
 
-    // Guardar en archivo
-    const outputPath = path.join(process.cwd(), 'src', 'data', 'clases.json');
+    // Save to file
+    const outputPath = path.join(process.cwd(), 'src', 'data', 'classes.json');
     const outputDir = path.dirname(outputPath);
 
     if (!fs.existsSync(outputDir)) {
@@ -40,18 +40,18 @@ async function scrapeClases() {
     }
 
     fs.writeFileSync(outputPath, JSON.stringify(clases, null, 2));
-    console.log(`✓ ${clases.length} Clases extraídas y guardadas en src/data/clases.json`);
+    console.log(`✓ ${clases.length} Classes extracted and saved to src/data/classes.json`);
 
     return clases;
   } catch (error) {
-    console.error('Error al extraer clases:', error);
+    console.error('Error extracting classes:', error);
     return [];
   }
 }
 
 async function scrapeCargos() {
   try {
-    console.log('Extrayendo Cargos...');
+    console.log('Extracting Jobs/Positions...');
     const response = await fetch('https://plataformaorh.ucr.ac.cr/ManualClases/IndexManualCargos');
     const html = await response.text();
     const root = parse(html);
@@ -79,8 +79,8 @@ async function scrapeCargos() {
       }
     });
 
-    // Guardar en archivo
-    const outputPath = path.join(process.cwd(), 'src', 'data', 'cargos.json');
+    // Save to file
+    const outputPath = path.join(process.cwd(), 'src', 'data', 'jobs.json');
     const outputDir = path.dirname(outputPath);
 
     if (!fs.existsSync(outputDir)) {
@@ -88,20 +88,20 @@ async function scrapeCargos() {
     }
 
     fs.writeFileSync(outputPath, JSON.stringify(cargos, null, 2));
-    console.log(`✓ ${cargos.length} Cargos extraídos y guardados en src/data/cargos.json`);
+    console.log(`✓ ${cargos.length} Jobs extracted and saved to src/data/jobs.json`);
 
     return cargos;
   } catch (error) {
-    console.error('Error al extraer cargos:', error);
+    console.error('Error extracting jobs:', error);
     return [];
   }
 }
 
 async function main() {
-  console.log('Iniciando scraping de datos UCR...\n');
+  console.log('Starting UCR data scraping...\n');
   await scrapeClases();
   await scrapeCargos();
-  console.log('\n✓ Scraping completado exitosamente');
+  console.log('\n✓ Scraping completed successfully');
 }
 
 main();

@@ -1,39 +1,48 @@
 # SIGECAT---Oraculos
 
 
-## Cómo Ejecutar
+## How to Run
 ```bash
 cd client
 npm install
 npm run dev
 ```
 
-La aplicación estará disponible en `http://localhost:5173`
+## Terminal 2 / Run server
+```bash
+cd client
+npm run api
+```
 
-## Construcción
+The application will be available at `http://localhost:5173`
+
+## Build
 ```bash
 npm run build
 ```
 
-Esto genera los archivos optimizados en la carpeta `dist/`.
+This generates optimized files in the `dist/` folder.
 
-## Flujo de Navegación
+## Navigation Flow
 ```
 Screen1 (/) 
-    ↓ "Comenzar"
+    ↓ "Begin"
 Screen2 (/screen2)
-    ├→ "Atrás" (vuelve a /)
-    ↓ "Continuar"
+    ├→ "Back" (returns to /)
+    ↓ "Next"
 Screen3 (/screen3)
-    ├→ "Atrás" (vuelve a /screen2)
-    ↓ "Continuar al Inicio"
+    ├→ "Back" (returns to /screen2)
+    ↓ "Complete"
 Home (/home)
 
 ```
-## Tecnologías Utilizadas
-- **React 19.2.4** - Framework principal
-- **React Router DOM 7.13.2** - Enrutamiento
-- **Material-UI (MUI) 7.3.9** - Componentes UI (Container, Box, Button, Typography, Stack, Alert)
-- **Material Icons 7.3.9** - Iconografía (ArrowForward, ArrowBack)
-- **TypeScript** - Tipado estático
+## Technologies Used
+- **React 19.2.4** - Main framework
+- **React Router DOM 7.13.2** - Client-side routing
+- **Material-UI (MUI) 7.3.9** - UI Components (Container, Box, Button, Typography, Stack, Alert)
+- **Material Icons 7.3.9** - Icons (ArrowForward, ArrowBack)
+- **TypeScript** - Static typing
 - **Vite** - Build tool
+- **Express.js** - Mock API server
+- **Axios** - HTTP client
+- **Concurrently** - Run multiple dev servers

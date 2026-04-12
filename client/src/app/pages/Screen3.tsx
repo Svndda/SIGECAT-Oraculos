@@ -5,7 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { useRegistros } from '../../context/RegistrosContext';
+import { useRecords } from '../../context/RecordsContext';
 
 interface HoraRow {
   id: number;
@@ -19,12 +19,12 @@ interface HoraRow {
 
 export default function Screen3() {
   const navigate = useNavigate();
-  const { registroActual, guardarRegistro } = useRegistros();
-  const [objetivo, setObjetivo] = useState(registroActual?.objetivo || '');
-  const [estadoLeido, setEstadoLeido] = useState(registroActual?.estadoLeido === true);
+  const { currentRecord, saveRecord } = useRecords();
+  const [objetivo, setObjetivo] = useState(currentRecord?.objetivo || '');
+  const [estadoLeido, setEstadoLeido] = useState(currentRecord?.estadoLeido === true);
   const [horasRows, setHorasRows] = useState<HoraRow[]>(
-    registroActual?.horas && registroActual.horas.length > 0
-      ? registroActual.horas
+    currentRecord?.horas && currentRecord.horas.length > 0
+      ? currentRecord.horas
       : [{ id: 1, dia: 'Lunes', tipoTarea: 'propias', horaInicio: '', horaFin: '', horas: 0, minutos: 0 }]
   );
   const [guardando, setGuardando] = useState(false);
@@ -80,7 +80,7 @@ export default function Screen3() {
   };
 
   const handleCompletarRegistro = async () => {
-    if (!registroActual) {
+    if (!currentRecord) {
       setMensaje('Error: No hay datos del formulario previo');
       return;
     }
@@ -92,14 +92,14 @@ export default function Screen3() {
 
     setGuardando(true);
     try {
-      const registroCompleto = {
-        ...registroActual,
+      const recordComplete = {
+        ...currentRecord,
         objetivo,
         estadoLeido,
         horas: horasRows,
       };
 
-      await guardarRegistro(registroCompleto);
+      await saveRecord(recordComplete);
       setMensaje('✓ Registro guardado exitosamente');
       
       setTimeout(() => {
