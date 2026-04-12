@@ -1,18 +1,36 @@
-// import { Outlet } from 'react-router-dom';
-// import ResponsiveAppBar from '../components/ResponsiveAppBar';
+import { Outlet } from 'react-router-dom';
+import { Box } from '@mui/material';
+import type { NavLinkItem } from '../types/navigation';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
-// export default function MainLayout() {
-//   return (
-//     <div className="app">
-//        <ResponsiveAppBar appName="SvnWeb" navLinks={[
-//         { label: 'Inicio', route: '/' },
-//         { label: 'Servicios', route: '/services' },
-//        ]} />
+export interface MainLayoutProps {
+  appName?: string;
+  navLinks: NavLinkItem[];
+  settingsLinks?: NavLinkItem[];
+}
 
-//       <main className="container flex-col centered" style={{ flexGrow: 1 }}>
-//         <Outlet />
-//       </main>
-      
-//     </div>
-//   );
-// }
+export default function MainLayout () {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
+    >
+      <Header />
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+        }}
+      >
+        <Outlet />
+      </main>
+      <Footer />
+    </Box>
+  );
+}
