@@ -21,11 +21,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: ./client
 
       - name: Install Vercel CLI
         run: npm install --global vercel
 
-      # Determinar si es producción o preview
       - name: Set environment
         id: env
         run: |
@@ -39,9 +39,12 @@ jobs:
 
       - name: Pull Vercel Environment
         run: vercel pull --yes --environment=${{ steps.env.outputs.environment }} --token=${{ secrets.VERCEL_TOKEN }}
-
+        working-directory: ./client
+        
       - name: Build Project
         run: vercel build ${{ steps.env.outputs.prod_flag }} --token=${{ secrets.VERCEL_TOKEN }}
-
+        working-directory: ./client
+        
       - name: Deploy to Vercel
         run: vercel deploy --prebuilt ${{ steps.env.outputs.prod_flag }} --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./client
