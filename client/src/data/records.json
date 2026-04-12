@@ -1,0 +1,185 @@
+[
+  {
+    "nombre": "Josue Perez",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "Unidad de matematica",
+    "numeroPlaza": "000192",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "asdnaosnda",
+    "estadoLeido": false,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "10:48",
+        "horaFin": "11:50",
+        "horas": 1,
+        "minutos": 2
+      }
+    ],
+    "id": "1775623694518",
+    "fecha": "2026-04-08T04:48:14.518Z"
+  },
+  {
+    "nombre": "Jerry Duran ",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "Unidad de Computacion ",
+    "numeroPlaza": "122312",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "garantizar bla bla asdasd",
+    "estadoLeido": false,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "15:08",
+        "horaFin": "16:08",
+        "horas": 1,
+        "minutos": 0
+      },
+      {
+        "id": 2,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "17:08",
+        "horaFin": "18:08",
+        "horas": 1,
+        "minutos": 0
+      }
+    ],
+    "id": "1775624914489",
+    "fecha": "2026-04-08T05:08:34.489Z"
+  },
+  {
+    "nombre": "a",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "a",
+    "numeroPlaza": "a",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "dasda",
+    "estadoLeido": true,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "12:34",
+        "horaFin": "14:35",
+        "horas": 2,
+        "minutos": 1
+      }
+    ],
+    "id": "1775626505541",
+    "fecha": "2026-04-08T05:35:05.541Z"
+  },
+  {
+    "nombre": "a",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "a",
+    "numeroPlaza": "122312",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "asdasd",
+    "estadoLeido": true,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Lunes",
+        "tipoTarea": "propias",
+        "horaInicio": "08:04",
+        "horaFin": "18:04",
+        "horas": 10,
+        "minutos": 0
+      }
+    ],
+    "id": "1776020752504",
+    "fecha": "2026-04-12T19:05:52.504Z"
+  },
+  {
+    "nombre": "a",
+    "cedula": "",
+    "correoInstitucional": "",
+    "codigoEmpleado": "",
+    "relacionUCR": "",
+    "lugarTrabajo": "a",
+    "numeroPlaza": "122312",
+    "claseOcupacional": {
+      "id": "5020",
+      "codigo": "5020",
+      "estrato": "Operativo",
+      "descripcion": "Trabajador Operativo A"
+    },
+    "jornadaLaboral": "Diurna",
+    "horarioInicio": "08:00",
+    "horarioFinal": "16:30",
+    "objetivo": "asd",
+    "estadoLeido": true,
+    "horas": [
+      {
+        "id": 1,
+        "dia": "Martes",
+        "tipoTarea": "propias",
+        "horaInicio": "14:06",
+        "horaFin": "15:06",
+        "horas": 1,
+        "minutos": 0
+      },
+      {
+        "id": 2,
+        "dia": "",
+        "tipoTarea": "propias",
+        "horaInicio": "",
+        "horaFin": "",
+        "horas": 0,
+        "minutos": 0
+      }
+    ],
+    "id": "1776020789033",
+    "fecha": "2026-04-12T19:06:29.033Z"
+  }
+]

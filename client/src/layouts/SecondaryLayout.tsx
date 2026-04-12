@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router-dom';
+import { Box } from '@mui/material';
 import type { NavLinkItem } from '../types/navigation';
-import ResponsiveAppBar from '../components/ResponsiveAppBar';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 export interface MainLayoutProps {
   appName?: string;
@@ -8,14 +10,27 @@ export interface MainLayoutProps {
   settingsLinks?: NavLinkItem[];
 }
 
-export default function MainLayout ({ appName, navLinks, settingsLinks }: MainLayoutProps) {
+export default function MainLayout () {
   return (
-
-    <div className="app">
-      <ResponsiveAppBar appName={appName} navLinks={navLinks} settingsLinks={settingsLinks  } />
-      <main className="container flex-col centered" style={{ flexGrow: 1 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
+    >
+      <Header />
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+        }}
+      >
         <Outlet />
       </main>
-    </div>
+      <Footer />
+    </Box>
   );
 }
