@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "api": "php -S localhost:8000 -t ../api",
+    "api": "php -S localhost:8000 -t ../api ../api/public/index.php",
     "dev:full": "concurrently \"npm run dev\" \"npm run api\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
