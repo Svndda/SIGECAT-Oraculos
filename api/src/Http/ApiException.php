@@ -25,9 +25,10 @@ final class ApiException extends RuntimeException
    */
   public function __construct(
     private ErrorType $error,
-    int $httpStatus = 400
+    ?int $httpStatus = null
   ) {
-    parent::__construct($error->jsonSerialize()['message'], $httpStatus);
+    $status = $httpStatus ?? $error->getStatusCode();
+    parent::__construct($error->jsonSerialize()['message'], $status);
   }
 
   /**

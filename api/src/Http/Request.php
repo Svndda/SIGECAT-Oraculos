@@ -69,10 +69,7 @@ final class Request
     $data = self::json();
 
     if ($data === null) {
-      Response::error(
-        ErrorType::invalidJson(),
-        400
-      );
+      throw new ApiException(ErrorType::invalidJson());
     }
 
     return $data;
