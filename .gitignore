@@ -25,3 +25,9 @@ yarn-error.log*
 .env
 .env.build
 .vercel
+
+# OCI configuration (contains sensitive credentials)
+api/config/oci_config.php
+
+# PHP Dependencies (Composer)
+api/vendor/
