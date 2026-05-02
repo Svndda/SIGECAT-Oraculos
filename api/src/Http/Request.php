@@ -116,7 +116,7 @@ final class Request
     $path = $_SERVER['REQUEST_URI'] ?? '/';
     $path = parse_url($path, PHP_URL_PATH) ?? '/';
     
-    $basePath = '/api/';
+    $basePath = '/api/public/';
     if (stripos($path, $basePath) === 0) {
       $path = substr($path, strlen($basePath));
     }
