@@ -31,8 +31,12 @@ final class Request
   {
     if (self::$rawBody === null) {
       $raw = fopen('php://input', 'r');
-      self::$rawBody = $raw ? stream_get_contents($raw) : '';
-      fclose($raw);
+      if ($raw === false) {
+        self::$rawBody = null;
+      } else {
+        self::$rawBody = stream_get_contents($raw);
+        fclose($raw);
+      }
     }
     return self::$rawBody === '' ? null : self::$rawBody;
   }
@@ -114,7 +118,9 @@ final class Request
    */
   public static function getPath(): string
   {
-    $path = filter_var($_SERVER['REQUEST_URI'] ?? '/', FILTER_SANITIZE_URL);
+    $rawPath = $_SERVER['REQUEST_URI'] ?? '/';
+    $sanitized = filter_var($rawPath, FILTER_SANITIZE_URL);
+    $path = is_string($sanitized) ? $sanitized : '/';
     $basePath = '/api/public';
     if (stripos($path, $basePath) === 0) {
       $path = substr($path, strlen($basePath));
