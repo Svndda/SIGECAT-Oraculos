@@ -113,8 +113,7 @@ final class Request
    */
   public static function getPath(): string
   {
-    $path = $_SERVER['REQUEST_URI'] ?? '/';
-    $path = parse_url($path, PHP_URL_PATH) ?? '/';
+    $path = filter_var($_SERVER['REQUEST_URI'], FILTER_SANITIZE_URL) ?? '/';
     
     $basePath = '/api/public';
     if (stripos($path, $basePath) === 0) {
