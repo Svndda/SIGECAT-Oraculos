@@ -42,10 +42,12 @@ class GlobalErrorHandler
    * @param int $line The line number where the error was raised.
    * @throws ErrorException
    */
-  public static function handleError($severity, $message, $file, $line): void
+  public static function handleError(
+    int $severity, string $message,
+    string $file, int $line): bool
   {
     if (!(error_reporting() & $severity)) {
-      return;
+      return false;
     }
     throw new ErrorException($message, 0, $severity, $file, $line);
   }
@@ -59,7 +61,7 @@ class GlobalErrorHandler
    * @param Throwable $e The caught exception or error.
    * @return void
    */
-  public static function handleException($e): void
+  public static function handleException(Throwable $e): void
   {
     $logEntry = sprintf(
       "[%s] %s: %s in %s:%d\n",
