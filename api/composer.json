@@ -14,5 +14,8 @@
     ],
     "require": {
         "symfony/uid": "^8.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1"
     }
 }
