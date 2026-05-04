@@ -31,3 +31,6 @@ api/config/oci_config.php
 
 # PHP Dependencies (Composer)
 api/vendor/
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
