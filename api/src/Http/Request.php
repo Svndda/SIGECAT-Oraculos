@@ -13,13 +13,13 @@ namespace Http;
  */
 final class Request
 {
-  /** @var array|null Stores the authenticated user data for the current request. */
+  /** @var array<mixed>|null Stores the authenticated user data for the current request. */
   private static ?array $user = null;
 
   /** @var string|null Cached raw body content */
   private static ?string $rawBody = null;
 
-  /** @var array|null Cached parsed JSON body */
+  /** @var array<mixed>|null Cached parsed JSON body */
   private static ?array $jsonBody = null;
 
   /**
@@ -40,7 +40,7 @@ final class Request
   /**
    * Decodes the raw body into a JSON array and caches the result.
    * 
-   * @return array|null Associative array or null if invalid.
+   * @return array<mixed>|null Associative array or null if invalid.
    */
   private static function json(): ?array
   {
@@ -79,7 +79,7 @@ final class Request
   /**
    * Sets the authenticated user context for the current request.
    * 
-   * @param array|null $user Associative array containing user details.
+   * @param array<mixed>|null $user Associative array containing user details.
    * @return void
    */
   public static function setUser(?array $user): void
@@ -90,7 +90,7 @@ final class Request
   /**
    * Retrieves the authenticated user data.
    * 
-   * @return array|null The user details or null if the request is unauthenticated.
+   * @return array<mixed>|null The user details or null if the request is unauthenticated.
    */
   public static function getUser(): ?array
   {
