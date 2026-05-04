@@ -29,11 +29,12 @@ final class Request
    */
   public static function getBody(): ?string
   {
-      if (self::$rawBody === null) {
-          $raw = file_get_contents('php://input');
-          self::$rawBody = $raw ?: '';
-      }
-      return self::$rawBody === '' ? null : self::$rawBody;
+    if (self::$rawBody === null) {
+      $raw = fopen('php://input', 'r');
+      self::$rawBody = $raw ? stream_get_contents($raw) : '';
+      fclose($raw);
+    }
+    return self::$rawBody === '' ? null : self::$rawBody;
   }
 
   /**
@@ -54,7 +55,7 @@ final class Request
 
     $data = json_decode($raw, true);
     self::$jsonBody = is_array($data) ? $data : null;
-    
+
     return self::$jsonBody;
   }
 
