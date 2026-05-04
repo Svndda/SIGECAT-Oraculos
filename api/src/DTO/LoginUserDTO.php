@@ -28,11 +28,11 @@ class LoginUserDTO {
     $email = strtolower(trim($this->email) ?? '');
 
     // Required fields
-    if (empty($email)) {
+    if (empty($email) === TRUE) {
       throw new InvalidArgumentException('El correo es obligatorio');
     }
 
-    if (!filter_var($this->email, FILTER_VALIDATE_EMAIL)) {
+    if (filter_var($this->email, FILTER_VALIDATE_EMAIL) === FALSE) {
       throw new InvalidArgumentException('Formato de email inválido');
     }
 
@@ -42,7 +42,7 @@ class LoginUserDTO {
       throw new InvalidArgumentException('Dominio de email inválido');
     }
 
-    if (empty($this->password)) {
+    if (empty($this->password) === TRUE) {
       throw new InvalidArgumentException('La contraseña es obligatoria');
     }
   }

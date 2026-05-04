@@ -9,15 +9,15 @@ class PasswordValidator {
           . self::PASSWORD_LENGTH . " caracteres");
     }
 
-    if (!preg_match('/[A-Z]/', $password)) {
+    if (preg_match('/[A-Z]/', $password) === FALSE) {
       throw new InvalidArgumentException("La contraseña debe tener al menos una mayúscula");
     }
 
-    if (!preg_match('/[0-9]/', $password)) {
+    if (preg_match('/[0-9]/', $password) === FALSE) {
       throw new InvalidArgumentException("La contraseña debe tener al menos un número");
     }
 
-    if (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+    if (preg_match('/[^a-zA-Z0-9]/', $password) === FALSE) {
       throw new InvalidArgumentException("La contraseña debe tener al menos un caracter especial");
     }
   }

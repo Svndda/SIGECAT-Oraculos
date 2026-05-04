@@ -52,14 +52,14 @@ class UpdateUserDTO {
   }
 
   public function validate(): void {
-    if (empty($this->userId)) {
+    if (empty($this->userId) === TRUE) {
       throw new InvalidArgumentException("El identificador del usuario es obligatorio");
     } 
     
     if ($this->email !== null) {
       // Normalize the email address
       $email = strtolower(trim($this->email));
-      if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+      if (filter_var($email, FILTER_VALIDATE_EMAIL) === FALSE) {
         throw new InvalidArgumentException('Formato de email inválido');
       }
     }
@@ -68,11 +68,11 @@ class UpdateUserDTO {
       PasswordValidator::validate($this->password);
     }
 
-     if (!AllowedUserRoles::isValid($this->role)) {
+     if (AllowedUserRoles::isValid($this->role) === FALSE) {
       throw new InvalidArgumentException('Rol inválido');
     }
 
-    if ($this->isActive !== null && !in_array($this->isActive, [0,1])) {
+    if ($this->isActive !== null && (in_array($this->isActive, [0,1])) === FALSE) {
       throw new InvalidArgumentException("Valor inválido para definir el usuario activo");
     }
   }

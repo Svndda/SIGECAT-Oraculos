@@ -51,11 +51,11 @@ class RegisterUserDTO {
     $email = strtolower(trim($this->email) ?? '');
 
     // Required fields
-    if (empty($email)) {
+    if (empty($email) === TRUE) {
       throw new InvalidArgumentException('El correo es obligatorio');
     }
 
-    if (!filter_var($this->email, FILTER_VALIDATE_EMAIL)) {
+    if (filter_var($this->email, FILTER_VALIDATE_EMAIL) === FALSE) {
       throw new InvalidArgumentException('Formato de email inválido');
     }
 
@@ -65,29 +65,29 @@ class RegisterUserDTO {
       throw new InvalidArgumentException('El email debe pertenecer al dominio @ucr.ac.cr');
     }
     
-    if (empty($this->firstname)) {
+    if (empty($this->firstname) === TRUE) {
       throw new InvalidArgumentException('El nombre es obligatorio');
     }
 
-    if (empty($this->lastname)) {
+    if (empty($this->lastname) === TRUE) {
       throw new InvalidArgumentException('El apellido es obligatorio');
     }
 
-    if (empty($this->password)) {
+    if (empty($this->password) === TRUE ) {
       throw new InvalidArgumentException('La contraseña es obligatoria');
     }
     
     PasswordValidator::validate($this->password);
 
-    if (empty($this->jobClassId)) {
+    if (empty($this->jobClassId) === TRUE) {
       throw new InvalidArgumentException('El job class id es obligatorio');
     }
 
-    if (!AllowedUserRoles::isValid($this->role)) {
+    if (AllowedUserRoles::isValid($this->role) === FALSE) {
       throw new InvalidArgumentException('Rol inválido');
     }
 
-    if (empty($this->createdBy)) {
+    if (empty($this->createdBy) === TRUE) {
       throw new InvalidArgumentException('Created_by es obligatorio');
     }
   }
