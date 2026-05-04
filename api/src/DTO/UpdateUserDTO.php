@@ -28,7 +28,7 @@ class UpdateUserDTO {
 
   public function __construct(string $userId, ?string $email, 
       ?string $firstName, ?string $lastName, ?string $password,
-      ?string $jobClassId, ?string $role, ?string $isActive) {
+      ?string $jobClassId, ?string $role, ?int $isActive) {
     $this->userId = $userId;
     $this->email = $email;
     $this->firstName = $firstName;
