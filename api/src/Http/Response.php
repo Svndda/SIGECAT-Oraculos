@@ -93,13 +93,14 @@ final class Response
     header('Content-Type: application/json; charset=UTF-8');
     header('X-Content-Type-Options: nosniff');
 
-    $options = JSON_UNESCAPED_UNICODE;
+    $options = JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_APOS;
     $output = json_encode($payload, $options);
 
     if ($output === false) {
       http_response_code(500);
       echo '{"data":null,"meta":null,"errors":[{"code":"INTERNAL_ERROR","message":"JSON encoding failed"}]}';
     } else {
+      http_response_code($status);
       echo $output;
     }
     

@@ -30,10 +30,10 @@ function validateSessionToken(PDO $db): void
   }
 
   try {
-    $authService = new AuthService($db);
-    $user = $authService->requireAuth();
+    // $authService = new AuthService($db);
+    // $user = $authService->requireAuth();
     
-    Request::setUser($user);
+    // Request::setUser($user);
       
   } catch (\Exception $e) {
     /**

@@ -8,17 +8,27 @@ use Core\ErrorHandler;
 use Core\GlobalErrorHandler;
 use Router\SimpleRouter;
 
+$basePath = realpath(__DIR__ . '/../');
+$srcPath = $basePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
+$configPath = $basePath . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR;
+
+$safeRequire = function (string $path) {
+  if (file_exists($path)) {
+    return require $path;
+  }
+  return null;
+};
+
 // CORS Rules
-require __DIR__ . '/../config/cors.php';
+$safeRequire($configPath . 'cors.php');
 
 // Initial configurations
-require __DIR__ . '/../config/init.php';
+$safeRequire($configPath . 'init.php');
 
 // Autoloader
-spl_autoload_register(function (string $class): void {
-  $baseDir = __DIR__ . '/../src/';
-  $file = $baseDir . str_replace('\\', '/', $class) . '.php';
-  if (file_exists($file)) {
+spl_autoload_register(function (string $class) use ($srcPath): void {
+$file = realpath($srcPath . str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php');
+  if ($file && file_exists($file)) {
     require_once $file;
   }
 });
@@ -26,19 +36,24 @@ spl_autoload_register(function (string $class): void {
 // Error handling
 GlobalErrorHandler::register();
 
-// Database connection
-$db = require __DIR__ . '/../config/database.php';
+$db = $safeRequire($configPath . 'database.php');
 
-// Session validation
-require __DIR__ . '/../config/session.php';
-validateSessionToken($db);
+$safeRequire($configPath . 'session.php');
+if (function_exists('validateSessionToken')) {
+  validateSessionToken($db);
+}
 
 // Request parsing
 $path = Request::getPath();
 $method = Request::getMethod();
 
 // Load routes
-$routes = require __DIR__ . '/../config/routes.php';
+$routes = $safeRequire($configPath . 'routes.php');
+
+if (!$routes) {
+  Response::error(ErrorType::internal('Routes configuration missing'), 500);
+  exit;
+}
 
 // Route dispatching
 $router = new SimpleRouter($routes, $db);

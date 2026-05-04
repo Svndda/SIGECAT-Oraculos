@@ -130,7 +130,8 @@ final class Request
    */
   public static function getMethod(): string
   {
-    return $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    return strtoupper($method);
   }
 
   /**

@@ -1,9 +1,21 @@
 <?php
-require_once __DIR__ . '/oci_config.php';
+
+declare(strict_types=1);
+
+$configFilePath = realpath(__DIR__ . '/oci_config.php');
+
+if (!$configFilePath || !file_exists($configFilePath)) {
+  throw new \RuntimeException("Critical configuration file 'oci_config.php' not found.");
+}
+
+require_once $configFilePath;
 
 try {
-  $dsn = "oci:dbname=" . OCIConfig::TNSNAME . ";charset=AL32UTF8";
-
+  $dsn = sprintf(
+    "oci:dbname=%s;charset=AL32UTF8",
+    OCIConfig::TNSNAME
+  );
+  
   $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -14,9 +26,6 @@ try {
   echo "Connection successful to Oracle Cloud!\n";
 
   return $pdo;
-
 } catch (\PDOException $e) {
   throw new \PDOException($e->getMessage(), (int) $e->getCode());
 }
-
-?>
