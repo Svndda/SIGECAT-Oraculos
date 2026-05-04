@@ -16,8 +16,8 @@ final class Response
   /**
    * Sends a successful JSON response and terminates execution.
    *
-   * @param array|null $data The primary resource or payload to return.
-   * @param array|null $meta Optional pagination, versioning, or additional context.
+   * @param array<mixed>|null $data The primary resource or payload to return.
+   * @param array<mixed>|null $meta Optional pagination, versioning, or additional context.
    * @param int $status HTTP response status code (defaults to 200 OK).
    * @return void This method terminates the script execution.
    */
@@ -40,9 +40,9 @@ final class Response
    * Handles multiple input formats: a single ErrorType instance, an array of ErrorTypes/strings,
    * or a single legacy string.
    *
-   * @param ErrorType|array|string $errors Single error object, list of errors, or error message.
+   * @param ErrorType|array<mixed>|string $errors Single error object, list of errors, or error message.
    * @param int $status HTTP status code (defaults to 401 Unauthorized).
-   * @param array|null $meta Optional additional metadata.
+   * @param array<mixed>|null $meta Optional additional metadata.
    * @return void This method terminates the script execution.
    */
   public static function error(
@@ -81,7 +81,7 @@ final class Response
    * 
    * Applies JSON_UNESCAPED_UNICODE for proper character encoding (UTF-8) 
    *
-   * @param array $payload The structured response body.
+   * @param array<mixed> $payload The structured response body.
    * @param int $status The HTTP status code to be sent.
    * @return void Terminates execution via exit.
    */
