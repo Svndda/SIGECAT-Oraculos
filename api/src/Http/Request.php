@@ -13,13 +13,13 @@ namespace Http;
  */
 final class Request
 {
-  /** @var array|null Stores the authenticated user data for the current request. */
+  /** @var array<mixed>|null Stores the authenticated user data for the current request. */
   private static ?array $user = null;
 
   /** @var string|null Cached raw body content */
   private static ?string $rawBody = null;
 
-  /** @var array|null Cached parsed JSON body */
+  /** @var array<mixed>|null Cached parsed JSON body */
   private static ?array $jsonBody = null;
 
   /**
@@ -31,8 +31,12 @@ final class Request
   {
     if (self::$rawBody === null) {
       $raw = fopen('php://input', 'r');
-      self::$rawBody = $raw ? stream_get_contents($raw) : '';
-      fclose($raw);
+      if ($raw === false) {
+        self::$rawBody = null;
+      } else {
+        self::$rawBody = stream_get_contents($raw);
+        fclose($raw);
+      }
     }
     return self::$rawBody === '' ? null : self::$rawBody;
   }
@@ -40,7 +44,7 @@ final class Request
   /**
    * Decodes the raw body into a JSON array and caches the result.
    * 
-   * @return array|null Associative array or null if invalid.
+   * @return array<mixed>|null Associative array or null if invalid.
    */
   private static function json(): ?array
   {
@@ -79,7 +83,7 @@ final class Request
   /**
    * Sets the authenticated user context for the current request.
    * 
-   * @param array|null $user Associative array containing user details.
+   * @param array<mixed>|null $user Associative array containing user details.
    * @return void
    */
   public static function setUser(?array $user): void
@@ -90,7 +94,7 @@ final class Request
   /**
    * Retrieves the authenticated user data.
    * 
-   * @return array|null The user details or null if the request is unauthenticated.
+   * @return array<mixed>|null The user details or null if the request is unauthenticated.
    */
   public static function getUser(): ?array
   {
@@ -114,7 +118,9 @@ final class Request
    */
   public static function getPath(): string
   {
-    $path = filter_var($_SERVER['REQUEST_URI'] ?? '/', FILTER_SANITIZE_URL);
+    $rawPath = $_SERVER['REQUEST_URI'] ?? '/';
+    $sanitized = filter_var($rawPath, FILTER_SANITIZE_URL);
+    $path = is_string($sanitized) ? $sanitized : '/';
     $basePath = '/api/public';
     if (stripos($path, $basePath) === 0) {
       $path = substr($path, strlen($basePath));
