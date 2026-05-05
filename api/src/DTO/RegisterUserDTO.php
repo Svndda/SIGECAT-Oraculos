@@ -1,6 +1,10 @@
 <?php 
 declare(strict_types= 1);
 
+namespace DTO;
+use Http\ApiException;
+use Http\ErrorType;
+
 /**
  * RegisterUserDTO
  * 
@@ -52,43 +56,39 @@ class RegisterUserDTO {
 
     // Required fields
     if (empty($email) === TRUE) {
-      throw new InvalidArgumentException('El correo es obligatorio');
+      throw new ApiException(ErrorType::missingField("email"));
     }
 
     if (filter_var($this->email, FILTER_VALIDATE_EMAIL) === FALSE) {
-      throw new InvalidArgumentException('Formato de email inválido');
+      throw new ApiException(ErrorType::invalidEmail());
     }
 
     // Email Domain
     [$local, $domain] = explode('@', $email);
     if ($domain !== 'ucr.ac.cr') {
-      throw new InvalidArgumentException('El email debe pertenecer al dominio @ucr.ac.cr');
+      throw new ApiException(ErrorType::from("INVALID_EMAIL" ,"El dominio de email es inválido"));
     }
     
     if (empty($this->firstname) === TRUE) {
-      throw new InvalidArgumentException('El nombre es obligatorio');
+      throw new ApiException(ErrorType::missingField("firstname"));
     }
 
     if (empty($this->lastname) === TRUE) {
-      throw new InvalidArgumentException('El apellido es obligatorio');
+      throw new ApiException(ErrorType::missingField("lastname"));
     }
 
     if (empty($this->password) === TRUE ) {
-      throw new InvalidArgumentException('La contraseña es obligatoria');
+      throw new ApiException(ErrorType::missingField("password"));
     }
     
     PasswordValidator::validate($this->password);
 
     if (empty($this->jobClassId) === TRUE) {
-      throw new InvalidArgumentException('El job class id es obligatorio');
+      throw new ApiException(ErrorType::missingField("jobClassId"));
     }
 
     if (AllowedUserRoles::isValid($this->role) === FALSE) {
-      throw new InvalidArgumentException('Rol inválido');
-    }
-
-    if (empty($this->createdBy) === TRUE) {
-      throw new InvalidArgumentException('Created_by es obligatorio');
+      throw new ApiException(ErrorType::invalidField("role"));
     }
   }
 }

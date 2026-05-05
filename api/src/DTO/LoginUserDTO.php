@@ -1,5 +1,10 @@
 <?php
 declare(strict_types= 1);
+
+namespace DTO;
+use Http\ApiException;
+use Http\ErrorType;
+
 /**
  * LoginUserDTO
  * 
@@ -14,7 +19,7 @@ class LoginUserDTO {
   public string $email;
   public string $password;
 
-  private function __construct(string $email, string $password) {
+  public function __construct(string $email, string $password) {
     $this->email = $email;
     $this->password = $password;
   }
@@ -29,21 +34,21 @@ class LoginUserDTO {
 
     // Required fields
     if (empty($email) === TRUE) {
-      throw new InvalidArgumentException('El correo es obligatorio');
+      throw new ApiException(ErrorType::missingField("email"));
     }
 
     if (filter_var($this->email, FILTER_VALIDATE_EMAIL) === FALSE) {
-      throw new InvalidArgumentException('Formato de email inválido');
+      throw new ApiException(ErrorType::invalidEmail());
     }
 
     // Email Domain
     [$local, $domain] = explode('@', $email);
     if ($domain !== 'ucr.ac.cr') {
-      throw new InvalidArgumentException('Dominio de email inválido');
+      throw new ApiException(ErrorType::from("INVALID_EMAIL" ,"El dominio de email es inválido"));
     }
 
     if (empty($this->password) === TRUE) {
-      throw new InvalidArgumentException('La contraseña es obligatoria');
+      throw new ApiException(ErrorType::missingField("password"));
     }
   }
 }

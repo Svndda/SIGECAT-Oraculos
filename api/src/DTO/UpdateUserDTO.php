@@ -1,6 +1,10 @@
 <?php
 declare(strict_types= 1);
 
+namespace DTO;
+use Http\ApiException;
+use Http\ErrorType;
+
 /**
  * UpdateUserDTO
  * 
@@ -39,29 +43,39 @@ class UpdateUserDTO {
     $this->isActive = $isActive;
   }
 
+  
   public static function fromArray(array $data): self {
-  return new self (
-    $data["user_id"] ?? '',
-    $data["email"] ?? null,
-    $data['first_name'] ?? null,
-    $data['last_name'] ?? null,
-    $data['password'] ?? null,
-    $data['job_class_id'] ?? null,
-    $data['role'] ?? null,
-    $data['is_active'] ?? null);
+    return new self (
+      $data["user_id"] ?? '',
+      $data["email"] ?? null,
+      $data['first_name'] ?? null,
+      $data['last_name'] ?? null,
+      $data['password'] ?? null,
+      $data['job_class_id'] ?? null,
+      $data['role'] ?? null,
+      $data['is_active'] ?? null
+    );
   }
 
   public function validate(): void {
     if (empty($this->userId) === TRUE) {
-      throw new InvalidArgumentException("El identificador del usuario es obligatorio");
+      throw new ApiException(ErrorType::missingField('user_id'));
     } 
     
-    if ($this->email !== null) {
-      // Normalize the email address
-      $email = strtolower(trim($this->email));
-      if (filter_var($email, FILTER_VALIDATE_EMAIL) === FALSE) {
-        throw new InvalidArgumentException('Formato de email inválido');
-      }
+    if (empty($this->email) === TRUE) {
+      throw new ApiException(ErrorType::missingField("email"));
+    }
+      
+    // Normalize the email address
+    $email = strtolower(trim($this->email));
+    if (filter_var($email, FILTER_VALIDATE_EMAIL) === FALSE) {
+      throw new ApiException(ErrorType::invalidEmail());
+    }
+
+    // Email Domain
+    [$local, $domain] = explode('@', $email);
+    if ($domain !== 'ucr.ac.cr') {
+      throw new ApiException(ErrorType::from("INVALID_EMAIL" ,"El dominio de email es inválido"));
     }
 
     if ($this->password !== null) {
@@ -69,11 +83,11 @@ class UpdateUserDTO {
     }
 
      if (AllowedUserRoles::isValid($this->role) === FALSE) {
-      throw new InvalidArgumentException('Rol inválido');
+      throw new ApiException(ErrorType::invalidField("role"));
     }
 
     if ($this->isActive !== null && (in_array($this->isActive, [0,1])) === FALSE) {
-      throw new InvalidArgumentException("Valor inválido para definir el usuario activo");
+      throw new ApiException(ErrorType::invalidField("isActive"));
     }
   }
 }
