@@ -145,7 +145,10 @@ final class AuthService
         'refresh_token' => $rawNewRefresh,
         'refresh_expires_at' => $refreshExpiresAt,
       ],
-      'meta' => ['rotated' => true],
+      'meta' => [
+        'token_type' => 'Bearer',
+        'expires_in' => $accessTtl,
+      ],
     ];
   }
 
