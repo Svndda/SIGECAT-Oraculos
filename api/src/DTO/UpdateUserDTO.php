@@ -43,51 +43,66 @@ class UpdateUserDTO {
     $this->isActive = $isActive;
   }
 
-  
+  /**
+   * @param array{
+   *   user_id?: string,
+   *   email?: string,
+   *   first_name?: string,
+   *   last_name?: string,
+   *   password?: string,
+   *   job_class_id?: string,
+   *   role?: string,
+   *   is_active?: int
+   * } $data
+   */
   public static function fromArray(array $data): self {
     return new self (
-      $data["user_id"] ?? '',
-      $data["email"] ?? null,
-      $data['first_name'] ?? null,
-      $data['last_name'] ?? null,
-      $data['password'] ?? null,
-      $data['job_class_id'] ?? null,
-      $data['role'] ?? null,
-      $data['is_active'] ?? null
+      (string) ($data["user_id"] ?? ''),
+      (string) ($data["email"] ?? null),
+      (string) ($data['first_name'] ?? null),
+      (string) ($data['last_name'] ?? null),
+      (string) ($data['password'] ?? null),
+      (string) ($data['job_class_id'] ?? null),
+      (string) ($data['role'] ?? null),
+      (int) ($data['is_active'] ?? null)
     );
   }
 
   public function validate(): void {
     if (empty($this->userId) === TRUE) {
       throw new ApiException(ErrorType::missingField('user_id'));
-    } 
+    }
+
+    if ($this->email !== null) {
+      EmailValidator::validate($this->email);
+    }
+
+    if ($this->firstName !== null) {
+      $this->firstName = trim($this->firstName);
+
+      if ($this->firstName === '') {
+        throw new ApiException(ErrorType::invalidField('first_name'));
+      }
+    }
+
+    if ($this->lastName !== null) {
+      $this->lastName = trim($this->lastName);
+
+      if ($this->lastName === '') {
+        throw new ApiException(ErrorType::invalidField('last_name'));
+      }
+    }
     
-    if (empty($this->email) === TRUE) {
-      throw new ApiException(ErrorType::missingField("email"));
-    }
-      
-    // Normalize the email address
-    $email = strtolower(trim($this->email));
-    if (filter_var($email, FILTER_VALIDATE_EMAIL) === FALSE) {
-      throw new ApiException(ErrorType::invalidEmail());
-    }
-
-    // Email Domain
-    [$local, $domain] = explode('@', $email);
-    if ($domain !== 'ucr.ac.cr') {
-      throw new ApiException(ErrorType::from("INVALID_EMAIL" ,"El dominio de email es inválido"));
-    }
-
     if ($this->password !== null) {
       PasswordValidator::validate($this->password);
     }
-
-     if (AllowedUserRoles::isValid($this->role) === FALSE) {
-      throw new ApiException(ErrorType::invalidField("role"));
+    
+    if ($this->role !== null && AllowedUserRoles::isValid($this->role) === FALSE) {
+      throw new ApiException(ErrorType::invalidField('role'));
     }
 
-    if ($this->isActive !== null && (in_array($this->isActive, [0,1])) === FALSE) {
-      throw new ApiException(ErrorType::invalidField("isActive"));
+    if ($this->isActive !== null && (in_array($this->isActive, [0,1], true)) === FALSE) {
+      throw new ApiException(ErrorType::invalidField('isActive'));
     }
   }
 }
