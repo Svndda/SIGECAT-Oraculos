@@ -5,6 +5,18 @@ namespace DTO;
 use Http\ApiException;
 use Http\ErrorType;
 
+/**
+ * Validates a password.
+ *
+ * Checks that:
+ * - The password is not empty
+ * - It has at least 8 characters
+ * - It includes an uppercase letter
+ * - It includes a number
+ * - It includes a special character
+ *
+ * Throws an ApiException if any rule is not met.
+ */
 class PasswordValidator {
   private const PASSWORD_LENGTH = 8;
   public static function validate(string $password): void {

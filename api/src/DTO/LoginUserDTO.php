@@ -24,29 +24,19 @@ class LoginUserDTO {
     $this->password = $password;
   }
 
+  /** 
+   * @param array{email?: string, password?: string} $data 
+   */
   public static function fromArray(array $data): self {
-    return new self($data["email"] ?? '', $data["password"] ?? '');
+    return new self(
+      (string) ($data["email"] ?? ''), 
+      (string) ($data["password"] ?? '')
+    );
   }
 
   public function validate(): void {
-    // Normalize the email address
-    $email = strtolower(trim($this->email) ?? '');
-
-    // Required fields
-    if (empty($email) === TRUE) {
-      throw new ApiException(ErrorType::missingField("email"));
-    }
-
-    if (filter_var($this->email, FILTER_VALIDATE_EMAIL) === FALSE) {
-      throw new ApiException(ErrorType::invalidEmail());
-    }
-
-    // Email Domain
-    [$local, $domain] = explode('@', $email);
-    if ($domain !== 'ucr.ac.cr') {
-      throw new ApiException(ErrorType::from("INVALID_EMAIL" ,"El dominio de email es inválido"));
-    }
-
+    EmailValidator::validate($this->email);
+    
     if (empty($this->password) === TRUE) {
       throw new ApiException(ErrorType::missingField("password"));
     }
