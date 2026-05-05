@@ -1,6 +1,8 @@
 <?php
 declare(strict_types= 1);
 
+namespace DTO;
+
 class AllowedUserRoles {
   public const ADMIN = 'admin';
   public const EMPLOYEE = 'employee';
