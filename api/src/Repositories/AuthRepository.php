@@ -5,7 +5,7 @@ namespace Repositories;
 
 use DTO\RefreshTokenDTO;
 use DTO\AccessTokenDTO;
-use DTO\TokenRotationDTO;
+use DTO\TokensRotationDTO;
 use PDO;
 use Throwable;
 
@@ -37,13 +37,13 @@ final class AuthRepository extends Repository
    * The operation runs inside a database transaction to ensure consistency.
    * If any step fails, all changes are rolled back.
    *
-   * @param TokenRotationDTO $data Container holding the user ID and the new
+   * @param TokensRotationDTO $data Container holding the user ID and the new
    *                               access and refresh token DTOs.
    *
    * @throws Throwable Re-throws any exception that occurs during the
    *                   transaction after performing a rollback.
    */
-  public function rotateTokensAtomic(TokenRotationDTO $data): void
+  public function rotateTokensAtomic(TokensRotationDTO $data): void
   {
     try {
       $this->beginTransaction();
@@ -55,7 +55,7 @@ final class AuthRepository extends Repository
       $this->upsertRefreshToken($data->refreshToken);
 
       $this->commit();
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
       $this->rollBack();
       throw $e;
     }
@@ -226,7 +226,7 @@ final class AuthRepository extends Repository
   public function revokeRefreshToken(string $hash): void
   {
     $this->db->prepare(
-      'DELETE FROM refresh_tokens WHERE token_hash = :hash'
+      'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = :hash'
     )->execute(['hash' => $hash]);
   }
 

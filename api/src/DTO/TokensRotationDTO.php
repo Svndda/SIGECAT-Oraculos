@@ -15,10 +15,10 @@ use DTO\RefreshTokenDTO;
  *
  * @package DTO
  */
-final class TokenRotationDTO
+final class TokensRotationDTO
 {
   /**
-   * Constructs a new TokenRotationDTO.
+   * Constructs a new TokensRotationDTO.
    *
    * @param AccessTokenDTO  $accessToken  DTO containing the new access token data.
    * @param RefreshTokenDTO $refreshToken DTO containing the new refresh token data.
