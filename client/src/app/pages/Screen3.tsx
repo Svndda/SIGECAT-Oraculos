@@ -21,7 +21,6 @@ export default function Screen3() {
   const navigate = useNavigate();
   const { currentRecord, saveRecord } = useRecords();
   const [objetivo, setObjetivo] = useState(currentRecord?.objetivo || '');
-  const [estadoLeido, setEstadoLeido] = useState(currentRecord?.estadoLeido === true);
   const [horasRows, setHorasRows] = useState<HoraRow[]>(
     currentRecord?.horas && currentRecord.horas.length > 0
       ? currentRecord.horas
@@ -95,7 +94,7 @@ export default function Screen3() {
       const recordComplete = {
         ...currentRecord,
         objetivo,
-        estadoLeido,
+        estadoLeido: currentRecord?.estadoLeido ?? false,
         horas: horasRows,
       };
 
@@ -122,23 +121,6 @@ export default function Screen3() {
         <Typography variant="subtitle1" sx={{ mb: 4, color: '#666', textAlign: 'center' }}>
           Diagnóstico de Cargas de trabajo
         </Typography>
-
-        {/* Botón Estado Leído */}
-        <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Typography variant="subtitle2" sx={{ fontWeight: '600', color: '#12457d' }}>
-              Estado de lectura:
-            </Typography>
-            <Button
-              variant={estadoLeido ? "contained" : "outlined"}
-              color={estadoLeido ? "success" : "inherit"}
-              onClick={() => setEstadoLeido(!estadoLeido)}
-              sx={{ minWidth: '150px' }}
-            >
-              {estadoLeido ? '✓ Se leyó' : 'Marcar como leído'}
-            </Button>
-          </Stack>
-        </Box>
 
         {/* Objetivo del Puesto */}
         <Paper sx={{ p: 3, mb: 4, backgroundColor: '#f9f9fd' }}>

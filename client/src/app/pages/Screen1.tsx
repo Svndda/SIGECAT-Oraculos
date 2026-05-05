@@ -1,10 +1,22 @@
-import { Container, Box, Button, Typography, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
+import { Container, Box, Button, Typography, Stack, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useRecords } from '../../context/RecordsContext';
+
+const DEFAULT_RECORD = {
+  nombre: '', cedula: '', correoInstitucional: '', codigoEmpleado: '',
+  relacionUCR: '', lugarTrabajo: '', numeroPlaza: '', claseOcupacional: null,
+  jornadaLaboral: '', horarioInicio: '', horarioFinal: '', objetivo: '',
+  estadoLeido: false, horas: [],
+};
 
 export default function Screen1() {
   const navigate = useNavigate();
+  const { currentRecord, setCurrentRecord } = useRecords();
+  const [estadoLeido, setEstadoLeido] = useState(currentRecord?.estadoLeido === true);
 
   const indicaciones = [
     {
@@ -20,6 +32,11 @@ export default function Screen1() {
       content: 'Complete cualquier información adicional que considere relevante para el análisis.'
     },
   ];
+
+  const handleComenzar = () => {
+    setCurrentRecord({ ...(currentRecord ?? DEFAULT_RECORD), estadoLeido });
+    navigate('/screen2');
+  };
 
   return (
     <Container maxWidth="lg">
@@ -88,12 +105,27 @@ export default function Screen1() {
           </Typography>
         </Alert>
 
-        {/* Botón */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        {/* Botones */}
+        <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+          <Button
+            variant={estadoLeido ? 'contained' : 'outlined'}
+            startIcon={<CheckCircleIcon />}
+            onClick={() => setEstadoLeido(!estadoLeido)}
+            sx={estadoLeido ? {
+              backgroundColor: '#388e3c',
+              '&:hover': { backgroundColor: '#2e7d32' },
+            } : {
+              color: '#12457d',
+              borderColor: '#12457d',
+              '&:hover': { backgroundColor: '#f0f4ff' },
+            }}
+          >
+            {estadoLeido ? 'Leído' : 'Marcar como leído'}
+          </Button>
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/screen2')}
+            onClick={handleComenzar}
             sx={{
               px: 4,
               py: 1.5,
@@ -106,7 +138,7 @@ export default function Screen1() {
           >
             Comenzar
           </Button>
-        </Box>
+        </Stack>
       </Box>
     </Container>
   );
