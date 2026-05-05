@@ -22,7 +22,7 @@ use Exception;
  */
 class SimpleRouter
 {
-    /** @var array The application route definition map. */
+    /** @var array<mixed> The application route definition map. */
     private array $routes;
 
     /** @var array<string, object> Singleton-like cache for instantiated controllers. */
@@ -35,7 +35,7 @@ class SimpleRouter
     /**
      * SimpleRouter constructor.
      * 
-     * @param array $routes Array of route definitions (method, path, controller, action).
+     * @param array<mixed> $routes Array of route definitions (method, path, controller, action).
      * @param PDO $db The database connection instance.
      */
     public function __construct(array $routes, \PDO $db)

@@ -1,6 +1,6 @@
 <?php
 
-namespace DTO;
+namespace Core;
 
 use Symfony\Component\Uid\Ulid;
 

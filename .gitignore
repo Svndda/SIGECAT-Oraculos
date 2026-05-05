@@ -32,7 +32,7 @@ yarn-error.log*
 api/config/oci_config.php
 
 # PHP Dependencies (Composer)
-api/vendor/
+vendor
 
 #Ignore vscode AI rules
 .github\instructions\codacy.instructions.md
