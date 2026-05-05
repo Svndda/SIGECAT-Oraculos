@@ -14,7 +14,7 @@ import type { ServiceError } from '../../../services/adminService';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 
-export default function AjustesPage() {
+export default function SettingsPage() {
   const [plazaNumber, setPlazaNumber] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -29,7 +29,7 @@ const NAV_ITEMS = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/' },
   { label: 'Usuarios', icon: <PersonIcon fontSize="small" />, route: '/usuarios' },
   { label: 'Organización', icon: <CorporateFareIcon fontSize="small" />, route: '/organizacion' },
-  { label: 'Laboral', icon: <WorkIcon fontSize="small" />, route: '/laboral' },
+  { label: 'Trabajo', icon: <WorkIcon fontSize="small" />, route: '/laboral' },
   { label: 'Ajustes', icon: <SettingsIcon fontSize="small" />, route: '/ajustes' },
 ];
 
