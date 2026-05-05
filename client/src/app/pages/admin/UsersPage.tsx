@@ -40,7 +40,7 @@ const EMPTY_FORM = {
   job_class_id: '',
 };
 
-export default function UsuariosPage() {
+export default function UsersPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState('');

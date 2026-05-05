@@ -29,7 +29,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 }
 
-export default function OrganizacionPage() {
+export default function OrganizationPage() {
   const [entities, setEntities] = useState<OrgEntity[]>([]);
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);

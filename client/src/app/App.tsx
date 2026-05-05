@@ -1,14 +1,14 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import Screen1 from './pages/Screen1';
-import Screen2 from './pages/Screen2';
-import Screen3 from './pages/Screen3';
+import EmployeeRecordPage from './pages/EmployeeRecordPage';
+import EmployeeFormPage from './pages/EmployeeFormPage';
+import WorkHoursPage from './pages/WorkHoursPage';
 import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
-import OrganizacionPage from './pages/admin/OrganizacionPage';
-import UsuariosPage from './pages/admin/UsuariosPage';
-import AjustesPage from './pages/admin/AjustesPage';
+import OrganizationPage from './pages/admin/OrganizationPage';
+import UsersPage from './pages/admin/UsersPage';
+import SettingsPage from './pages/admin/SettingsPage';
 import { RecordsProvider } from '../context/RecordsContext';
 import { AuthProvider } from '../context/AuthContext';
 import PrivateRoute from '../components/PrivateRoute';
@@ -28,13 +28,13 @@ function App() {
             {/* Protected routes */}
             <Route element={<PrivateRoute />}>
               <Route path="/" element={<MainLayout />}>
-                <Route index element={<Screen1 />} />
-                <Route path="screen2" element={<Screen2 />} />
-                <Route path="screen3" element={<Screen3 />} />
+                <Route index element={<EmployeeRecordPage />} />
+                <Route path="employee-form" element={<EmployeeFormPage />} />
+                <Route path="work-hours" element={<WorkHoursPage />} />
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />
-                <Route path="organizacion" element={<OrganizacionPage />} />
-                <Route path="usuarios" element={<UsuariosPage />} />
-                <Route path="ajustes" element={<AjustesPage />} />
+                <Route path="organizacion" element={<OrganizationPage />} />
+                <Route path="usuarios" element={<UsersPage />} />
+                <Route path="ajustes" element={<SettingsPage />} />
               </Route>
             </Route>
 

@@ -7,69 +7,69 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useRecords } from '../../context/RecordsContext';
 
-interface HoraRow {
+interface HourRow {
   id: number;
   dia: string;
-  tipoTarea: 'propias' | 'apoyo' | 'otros';
-  horaInicio: string;
-  horaFin: string;
-  horas: number;
-  minutos: number;
+  taskType: 'propias' | 'apoyo' | 'otros';
+  startTime: string;
+  endTime: string;
+  hours: number;
+  minutes: number;
 }
 
-export default function Screen3() {
+export default function WorkHoursPage() {
   const navigate = useNavigate();
   const { currentRecord, saveRecord } = useRecords();
-  const [objetivo, setObjetivo] = useState(currentRecord?.objetivo || '');
-  const [horasRows, setHorasRows] = useState<HoraRow[]>(
-    currentRecord?.horas && currentRecord.horas.length > 0
-      ? currentRecord.horas
-      : [{ id: 1, dia: 'Lunes', tipoTarea: 'propias', horaInicio: '', horaFin: '', horas: 0, minutos: 0 }]
+  const [objective, setObjective] = useState(currentRecord?.objective || '');
+  const [hourRows, setHourRows] = useState<HourRow[]>(
+    currentRecord?.hours && currentRecord.hours.length > 0
+      ? currentRecord.hours
+      : [{ id: 1, dia: 'Lunes', taskType: 'propias', startTime: '', endTime: '', hours: 0, minutes: 0 }]
   );
-  const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const handleAgregarFila = () => {
-    const newId = Math.max(...horasRows.map(r => r.id), 0) + 1;
-    setHorasRows([...horasRows, { id: newId, dia: '', tipoTarea: 'propias', horaInicio: '', horaFin: '', horas: 0, minutos: 0 }]);
+  const handleAddRow = () => {
+    const newId = Math.max(...hourRows.map(r => r.id), 0) + 1;
+    setHourRows([...hourRows, { id: newId, dia: '', taskType: 'propias', startTime: '', endTime: '', hours: 0, minutes: 0 }]);
   };
 
-  const handleEliminarFila = (id: number) => {
-    if (horasRows.length > 1) {
-      setHorasRows(horasRows.filter(row => row.id !== id));
+  const handleDeleteRow = (id: number) => {
+    if (hourRows.length > 1) {
+      setHourRows(hourRows.filter(row => row.id !== id));
     }
   };
 
-  const calcularHorasYMinutos = (horaInicio: string, horaFin: string) => {
-    if (!horaInicio || !horaFin) return { horas: 0, minutos: 0 };
+  const calculateHoursAndMinutes = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) return { hours: 0, minutes: 0 };
 
-    const [hI, mI] = horaInicio.split(':').map(Number);
-    const [hF, mF] = horaFin.split(':').map(Number);
+    const [hI, mI] = startTime.split(':').map(Number);
+    const [hF, mF] = endTime.split(':').map(Number);
 
-    const minutosTotales = (hF * 60 + mF) - (hI * 60 + mI);
+    const totalMinutes = (hF * 60 + mF) - (hI * 60 + mI);
     
-    if (minutosTotales < 0) return { horas: 0, minutos: 0 };
+    if (totalMinutes < 0) return { hours: 0, minutes: 0 };
 
     return {
-      horas: Math.floor(minutosTotales / 60),
-      minutos: minutosTotales % 60,
+      hours: Math.floor(totalMinutes / 60),
+      minutes: totalMinutes % 60,
     };
   };
 
   const handleRowChange = (id: number, field: string, value: string | number) => {
-    setHorasRows(horasRows.map(row => {
+    setHourRows(hourRows.map(row => {
       if (row.id === id) {
         const newRow = { ...row, [field]: value };
-        // Calcular horas y minutos automáticamente
-        if (field === 'horaInicio' || field === 'horaFin') {
-          const { horas, minutos } = calcularHorasYMinutos(newRow.horaInicio, newRow.horaFin);
-          // Limitar a máximo 60 horas
-          if (horas > 60) {
-            newRow.horas = 60;
-            newRow.minutos = 0;
+        // Calculate hours and minutes automatically
+        if (field === 'startTime' || field === 'endTime') {
+          const { hours, minutes } = calculateHoursAndMinutes(newRow.startTime, newRow.endTime);
+          // Limit to maximum 60 hours
+          if (hours > 60) {
+            newRow.hours = 60;
+            newRow.minutes = 0;
           } else {
-            newRow.horas = horas;
-            newRow.minutos = minutos;
+            newRow.hours = hours;
+            newRow.minutes = minutes;
           }
         }
         return newRow;
@@ -78,36 +78,36 @@ export default function Screen3() {
     }));
   };
 
-  const handleCompletarRegistro = async () => {
+  const handleCompleteRecord = async () => {
     if (!currentRecord) {
-      setMensaje('Error: No hay datos del formulario previo');
+      setMessage('Error: No hay datos del formulario previo');
       return;
     }
 
-    if (!objetivo.trim()) {
-      setMensaje('Error: El objetivo del puesto es requerido');
+    if (!objective.trim()) {
+      setMessage('Error: El objetivo del puesto es requerido');
       return;
     }
 
-    setGuardando(true);
+    setIsSaving(true);
     try {
       const recordComplete = {
         ...currentRecord,
-        objetivo,
-        estadoLeido: currentRecord?.estadoLeido ?? false,
-        horas: horasRows,
+        objective,
+        isRead: currentRecord?.isRead ?? false,
+        hours: hourRows,
       };
 
       await saveRecord(recordComplete);
-      setMensaje('✓ Registro guardado exitosamente');
+      setMessage('✓ Registro guardado exitosamente');
       
       setTimeout(() => {
         navigate('/');
       }, 2000);
     } catch (error) {
-      setMensaje('Error al guardar el registro: ' + String(error));
+      setMessage('Error al guardar el registro: ' + String(error));
     } finally {
-      setGuardando(false);
+      setIsSaving(false);
     }
   };
 
@@ -130,14 +130,14 @@ export default function Screen3() {
           <TextField
             fullWidth
             name="objetivo"
-            value={objetivo}
-            onChange={(e) => setObjetivo(e.target.value)}
+            value={objective}
+            onChange={(e) => setObjective(e.target.value)}
             placeholder="Garantizar la calidad, seguridad y cumplimiento normativo en el uso de las radiaciones ionizantes..."
             variant="outlined"
             multiline
             rows={5}
-            error={!objetivo.trim()}
-            helperText={!objetivo.trim() ? 'El objetivo es requerido' : ''}
+            error={!objective.trim()}
+            helperText={!objective.trim() ? 'El objetivo es requerido' : ''}
             sx={{ backgroundColor: 'white' }}
           />
           <Box sx={{ mt: 2, p: 2, backgroundColor: '#e8f4f8', borderRadius: '4px' }}>
@@ -167,7 +167,7 @@ export default function Screen3() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {horasRows.map((row) => (
+                  {hourRows.map((row) => (
                     <TableRow key={row.id} sx={{ backgroundColor: '#fafafa', '&:hover': { backgroundColor: '#f5f5f5' } }}>
                       <TableCell sx={{ maxWidth: 100 }}>
                         <TextField
@@ -183,8 +183,8 @@ export default function Screen3() {
                         <TextField
                           select
                           size="small"
-                          value={row.tipoTarea}
-                          onChange={(e) => handleRowChange(row.id, 'tipoTarea', e.target.value)}
+                          value={row.taskType}
+                          onChange={(e) => handleRowChange(row.id, 'taskType', e.target.value)}
                           variant="outlined"
                           sx={{ width: '100%', backgroundColor: 'white' }}
                         >
@@ -197,8 +197,8 @@ export default function Screen3() {
                         <TextField
                           size="small"
                           type="time"
-                          value={row.horaInicio}
-                          onChange={(e) => handleRowChange(row.id, 'horaInicio', e.target.value)}
+                          value={row.startTime}
+                          onChange={(e) => handleRowChange(row.id, 'startTime', e.target.value)}
                           variant="outlined"
                           inputProps={{ step: 300 }}
                           sx={{ backgroundColor: 'white', width: '100%' }}
@@ -208,21 +208,21 @@ export default function Screen3() {
                         <TextField
                           size="small"
                           type="time"
-                          value={row.horaFin}
-                          onChange={(e) => handleRowChange(row.id, 'horaFin', e.target.value)}
+                          value={row.endTime}
+                          onChange={(e) => handleRowChange(row.id, 'endTime', e.target.value)}
                           variant="outlined"
                           inputProps={{ step: 300 }}
                           sx={{ backgroundColor: 'white', width: '100%' }}
                         />
                       </TableCell>
                       <TableCell sx={{ fontWeight: '600', color: '#12457d', textAlign: 'center' }}>
-                        {row.horas}h : {row.minutos}m
+                        {row.hours}h : {row.minutes}m
                       </TableCell>
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={() => handleEliminarFila(row.id)}
-                          disabled={horasRows.length === 1}
+                          onClick={() => handleDeleteRow(row.id)}
+                          disabled={hourRows.length === 1}
                           sx={{ color: '#d32f2f' }}
                         >
                           <DeleteIcon fontSize="small" />
@@ -238,7 +238,7 @@ export default function Screen3() {
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
-              onClick={handleAgregarFila}
+              onClick={handleAddRow}
               sx={{
                 mt: 2,
                 color: '#12457d',
@@ -252,9 +252,9 @@ export default function Screen3() {
         </Paper>
 
         {/* Mensaje de Guardado */}
-        {mensaje && (
-          <Alert severity={mensaje.includes('Error') ? 'error' : 'success'} sx={{ mt: 3 }}>
-            {mensaje}
+        {message && (
+          <Alert severity={message.includes('Error') ? 'error' : 'success'} sx={{ mt: 3 }}>
+            {message}
           </Alert>
         )}
 
@@ -263,7 +263,7 @@ export default function Screen3() {
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/screen2')}
+            onClick={() => navigate('/employee-form')}
             sx={{ color: '#12457d', borderColor: '#12457d' }}
           >
             Atrás
@@ -271,8 +271,8 @@ export default function Screen3() {
           <Button
             variant="contained"
             endIcon={<CheckCircleIcon />}
-            onClick={handleCompletarRegistro}
-            disabled={guardando || !objetivo.trim()}
+            onClick={handleCompleteRecord}
+            disabled={isSaving || !objective.trim()}
             sx={{
               backgroundColor: '#2c2c2c',
               '&:hover': {
@@ -280,7 +280,7 @@ export default function Screen3() {
               },
             }}
           >
-            {guardando ? 'Guardando...' : 'Completar'}
+            {isSaving ? 'Guardando...' : 'Completar'}
           </Button>
         </Stack>
       </Box>
