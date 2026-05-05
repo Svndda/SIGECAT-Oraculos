@@ -89,7 +89,6 @@ final class AuthService
         'user_id' => $userId,
         'email' => $userInfo['email'],
         'name' => $userInfo['name'] ?? '',
-        'is_admin' => ($userInfo['role'] ?? '') === 'admin',
         'role' => $userInfo['role'] ?? 'usr',
       ],
       'meta' => [
