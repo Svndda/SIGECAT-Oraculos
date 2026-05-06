@@ -8,8 +8,10 @@ import {
   Stack,
   MenuItem,
   InputAdornment,
+  IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { adminService } from '../../../services/adminService';
 import type { AdminUser, ServiceError } from '../../../services/adminService';
 import { useAuth } from '../../../context/AuthContext';
@@ -38,6 +40,7 @@ export default function UsersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
   const [successOpen, setSuccessOpen] = useState(false);
@@ -56,6 +59,7 @@ export default function UsersPage() {
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setFormErrors({});
+    setShowPassword(false);
     setFormOpen(true);
   };
 
@@ -240,7 +244,7 @@ export default function UsersPage() {
           </TextField>
           <TextField
             label="Contraseña temporal"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={form.password}
             onChange={handleChange('password')}
             size="small"
@@ -248,6 +252,17 @@ export default function UsersPage() {
             error={!!formErrors.password}
             helperText={formErrors.password}
             required
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowPassword((p) => !p)} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
         </Stack>
       </ModalForm>
