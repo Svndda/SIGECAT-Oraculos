@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Repositories;
 
+use Core\UlidGenerator;
 use PDO;
 use PDOException;
 use DTO\RegisterUserDTO;
@@ -31,9 +32,9 @@ final class UserRepository extends Repository {
               first_name, last_name, password_hash,
               is_active, is_password_temp, failed_logging_attempts,
               created_at, created_by
-       FROM USER
+       FROM USERS
        WHERE user_id = :user_id
-       LIMIT 1'
+       AND ROWNUM = 1'
     );
     $stmt->execute([':user_id' => $userId]);
 
@@ -46,9 +47,9 @@ final class UserRepository extends Repository {
       'SELECT user_id, role, email,
               first_name, last_name, password_hash,
               is_active, is_password_temp, failed_logging_attempts
-       FROM USER
+       FROM USERS
        WHERE email = :email
-       LIMIT 1'
+       AND ROWNUM = 1'
     );
     $stmt->execute([':email' => $email]);
 
@@ -57,26 +58,27 @@ final class UserRepository extends Repository {
   }
 
   public function create(string $createdBy, RegisterUserDTO $dto): void {
+    $newUserId = UlidGenerator::generate();
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare(
-        'INSERT INTO USER
-          (role, job_class_id, email, first_name, last_name,
+        'INSERT INTO USERS
+          (user_id, role, email, first_name, last_name,
             password_hash, is_active, is_password_temp,
-            failed_logging_attempts, created_by)
+            failed_logging_attempts, created_by, created_at)
         VALUES
-          (:role, :job_class_id, :email, :first_name, :last_name,
-            :password_hash, 1, 1, 0, :created_by)'
+          (:user_id, :role, :email, :first_name, :last_name,
+            :password_hash, 1, 1, 0, :created_by, CURRENT_TIMESTAMP)'
       );
 
       $stmt->execute([
+        ':user_id'       => $newUserId,
         ':role'          => $dto->role,
-        ':job_class_id'  => $dto->jobPosition,
         ':email'         => strtolower(trim($dto->email)),
         ':first_name'    => trim($dto->firstName),
         ':last_name'     => trim($dto->lastName),
         ':password_hash' => $dto->password,
-        ':created_by'    => $createdBy
+        ':created_by'    => $newUserId
       ]);
 
       $this->commit();
@@ -107,10 +109,6 @@ final class UserRepository extends Repository {
       $fields[] = 'password_hash = :password_hash';
       $params[':password_hash'] = $dto->password;
     }
-    if ($dto->jobPosition !== null) {
-      $fields[] = 'job_class_id = :job_class_id';
-      $params[':job_class_id'] = $dto->jobPosition;
-    }
     if ($dto->role !== null) {
       $fields[] = 'role = :role';
       $params[':role'] = $dto->role;
@@ -124,7 +122,7 @@ final class UserRepository extends Repository {
       throw new \RuntimeException('No fields provided for update.');
     }
 
-    $sql = 'UPDATE USER SET ' . implode(', ', $fields)
+    $sql = 'UPDATE USERS SET ' . implode(', ', $fields)
          . ' WHERE user_id = :user_id';
 
     $this->beginTransaction();
@@ -142,7 +140,7 @@ final class UserRepository extends Repository {
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare(
-        'UPDATE USER
+        'UPDATE USERS
          SET failed_logging_attempts = failed_logging_attempts + 1
          WHERE user_id = :user_id'
       );
@@ -159,7 +157,7 @@ final class UserRepository extends Repository {
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare(
-        'UPDATE USER
+        'UPDATE USERS
          SET failed_logging_attempts = 0
          WHERE user_id = :user_id'
       );

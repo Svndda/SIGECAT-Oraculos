@@ -11,6 +11,7 @@ use Http\ErrorType;
 use Repositories\UserRepository;
 use Repositories\AuthRepository;
 use Services\AuthService;
+use PDO;
 
 /**
  * UserService
@@ -27,10 +28,11 @@ use Services\AuthService;
 class UserService {
   private const MAX_FAILED_ATTEMPTS = 5;
 
-  public function __construct(
-    private readonly UserRepository $userRepository,
-    private readonly AuthService $authService
-  ) {}
+  private UserRepository $userRepository;
+
+  public function __construct(private PDO $pdo) {
+    $this->userRepository = new UserRepository($this->pdo);
+  }
 
   /**
    * Validates credentials and returns the authenticated user data.

@@ -11,6 +11,8 @@ use Http\Request;
 use Http\Response;
 use Services\AuthService;
 use Services\UserService;
+use Http\ErrorType;
+use PDO;
 
 /**
  * UserController
@@ -24,10 +26,14 @@ use Services\UserService;
  * - Obtains authenticated user context via AuthService::requireAuth().
  */
 class UserController {
-  public function __construct(
-    private readonly UserService $userService,
-    private readonly AuthService $authService
-  ) {}
+
+  private AuthService $authService;
+  private UserService $userService;
+  
+  public function __construct(private PDO $pdo) {
+    $this->authService = new AuthService($this->pdo);
+    $this->userService = new UserService($this->pdo);
+  }
 
   /**
    * POST /users/login
@@ -51,8 +57,11 @@ class UserController {
    */
   public function register(): void {
     try {
-      $auth      = $this->authService->requireAuth();
-      $createdBy = $auth['user_id'];
+      // $auth      = $this->authService->requireAuth();
+
+      // $createdBy = $auth['user_id'];
+
+      $createdBy = 'SYSTEM_FIRST_USER________';
 
       $data = Request::parseJsonRequest();
       $dto  = RegisterUserDTO::fromArray($data);

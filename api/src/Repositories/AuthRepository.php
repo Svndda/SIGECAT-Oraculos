@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Repositories;
 
+use Core\UlidGenerator;
 use DTO\RefreshTokenDTO;
 use DTO\AccessTokenDTO;
 use DTO\TokensRotationDTO;
@@ -48,9 +49,11 @@ final class AuthRepository extends Repository
     try {
       $this->beginTransaction();
 
+      $this->db->exec('ALTER SESSION DISABLE PARALLEL DML');
+
       $userId = $data->refreshToken->userId;
       $this->deleteUserTokens($userId);
-
+      
       $this->upsertAccessToken($data->accessToken);
       $this->upsertRefreshToken($data->refreshToken);
 
@@ -73,20 +76,38 @@ final class AuthRepository extends Repository
    */
   private function upsertAccessToken(AccessTokenDTO $data): void
   {
-    $stmt = $this->db->prepare('
-        INSERT INTO access_tokens (user_id, token_hash, expires_at, updated_at)
-        VALUES (
-        :user_id, :token_hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND), NOW()
-        )
-        ON DUPLICATE KEY UPDATE
-            token_hash = VALUES(token_hash),
-            expires_at = VALUES(expires_at),
-            updated_at = NOW()
-    ');
+    $atExp = date('Y-m-d H:i:s', time() + $data->ttlSeconds);
+    $atNow = date('Y-m-d H:i:s');
+
+    $sql = '
+        MERGE INTO access_tokens t
+        USING (
+            SELECT :v_target_uid AS val_uid, 
+                   :v_token_hsh  AS val_hsh, 
+                   :v_at_exp     AS val_exp, 
+                   :v_at_now     AS val_now 
+            FROM DUAL
+        ) s
+        ON (t.user_id = s.val_uid)
+        WHEN MATCHED THEN
+            UPDATE SET
+                token_hash = s.val_hsh,
+                expires_at = TO_TIMESTAMP(s.val_exp, \'YYYY-MM-DD HH24:MI:SS\'),
+                updated_at = TO_TIMESTAMP(s.val_now, \'YYYY-MM-DD HH24:MI:SS\')
+        WHEN NOT MATCHED THEN
+            INSERT (access_token_id, user_id, token_hash, expires_at, updated_at)
+            VALUES (:v_token_id, s.val_uid, s.val_hsh,
+                    TO_TIMESTAMP(s.val_exp, \'YYYY-MM-DD HH24:MI:SS\'),
+                    TO_TIMESTAMP(s.val_now, \'YYYY-MM-DD HH24:MI:SS\'))
+    ';
+
+    $stmt = $this->db->prepare($sql);
     $stmt->execute([
-      'user_id' => $data->userId,
-      'token_hash' => $data->tokenHash,
-      'ttl' => $data->ttlSeconds
+      ':v_token_id'   => UlidGenerator::generate(),
+      ':v_target_uid' => $data->userId,
+      ':v_token_hsh'  => $data->tokenHash,
+      ':v_at_exp'     => $atExp,
+      ':v_at_now'     => $atNow,
     ]);
   }
 
@@ -101,20 +122,38 @@ final class AuthRepository extends Repository
    */
   private function upsertRefreshToken(RefreshTokenDTO $data): void
   {
-    $stmt = $this->db->prepare('
-        INSERT INTO refresh_tokens (user_id, token_hash, expires_at, updated_at)
-        VALUES (
-        :user_id, :token_hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND), NOW()
-        )
-        ON DUPLICATE KEY UPDATE
-            token_hash = VALUES(token_hash),
-            expires_at = VALUES(expires_at),
-            updated_at = NOW()
-    ');
+    $atExp = date('Y-m-d H:i:s', time() + $data->ttlSeconds);
+    $atNow = date('Y-m-d H:i:s');
+
+    $sql = '
+        MERGE INTO refresh_tokens t
+        USING (
+            SELECT :v_target_uid AS val_uid, 
+                   :v_token_hsh  AS val_hsh, 
+                   :v_at_exp     AS val_exp, 
+                   :v_at_now     AS val_now 
+            FROM DUAL
+        ) s
+        ON (t.user_id = s.val_uid)
+        WHEN MATCHED THEN
+            UPDATE SET
+                token_hash = s.val_hsh,
+                expires_at = TO_TIMESTAMP(s.val_exp, \'YYYY-MM-DD HH24:MI:SS\'),
+                updated_at = TO_TIMESTAMP(s.val_now, \'YYYY-MM-DD HH24:MI:SS\')
+        WHEN NOT MATCHED THEN
+            INSERT (refresh_token_id, user_id, token_hash, expires_at, updated_at)
+            VALUES (:v_token_id, s.val_uid, s.val_hsh,
+                    TO_TIMESTAMP(s.val_exp, \'YYYY-MM-DD HH24:MI:SS\'),
+                    TO_TIMESTAMP(s.val_now, \'YYYY-MM-DD HH24:MI:SS\'))
+    ';
+
+    $stmt = $this->db->prepare($sql);
     $stmt->execute([
-      'user_id' => $data->userId,
-      'token_hash' => $data->tokenHash,
-      'ttl' => $data->ttlSeconds
+      ':v_token_id'   => UlidGenerator::generate(),
+      ':v_target_uid' => $data->userId,
+      ':v_token_hsh'  => $data->tokenHash,
+      ':v_at_exp'     => $atExp,
+      ':v_at_now'     => $atNow,
     ]);
   }
 
@@ -131,9 +170,8 @@ final class AuthRepository extends Repository
         SELECT user_id, token_hash, expires_at, revoked_at
         FROM refresh_tokens
         WHERE token_hash = :hash
-          AND expires_at > NOW()
+          AND expires_at > CURRENT_TIMESTAMP
           AND revoked_at IS NULL
-        LIMIT 1
     ');
 
     $stmt->execute(['hash' => $tokenHash]);
@@ -144,9 +182,9 @@ final class AuthRepository extends Repository
     }
 
     return [
-      'user_id' => $tokenRow['user_id'],
-      'token_hash' => $tokenRow['token_hash'],
-      'expires_at' => $tokenRow['expires_at']
+      'USER_ID' => $tokenRow['USER_ID'],
+      'TOKEN_HASH' => $tokenRow['TOKEN_HASH'],
+      'EXPIRES_AT' => $tokenRow['EXPIRES_AT']
     ];
   }
 
@@ -163,9 +201,9 @@ final class AuthRepository extends Repository
         SELECT user_id, token_hash, expires_at, revoked_at
         FROM access_tokens
         WHERE token_hash = :hash
-          AND expires_at > NOW()
+          AND expires_at > CURRENT_TIMESTAMP
           AND revoked_at IS NULL
-        LIMIT 1
+        AND ROWNUM = 1
     ');
 
     $stmt->execute(['hash' => $tokenHash]);
@@ -176,9 +214,9 @@ final class AuthRepository extends Repository
     }
 
     return [
-      'user_id' => $tokenRow['user_id'],
-      'token_hash' => $tokenRow['token_hash'],
-      'expires_at' => $tokenRow['expires_at']
+      'USER_ID' => $tokenRow['USER_ID'],
+      'TOKEN_HASH' => $tokenRow['TOKEN_HASH'],
+      'EXPIRES_AT' => $tokenRow['EXPIRES_AT']
     ];
   }
 
@@ -198,7 +236,7 @@ final class AuthRepository extends Repository
         SELECT user_id, token_hash, expires_at, revoked_at
         FROM access_tokens
         WHERE token_hash = :hash
-        LIMIT 1
+        AND ROWNUM = 1
     ');
 
     $stmt->execute(['hash' => $tokenHash]);
@@ -209,10 +247,10 @@ final class AuthRepository extends Repository
     }
 
     return [
-      'user_id' => $tokenRow['user_id'],
-      'token_hash' => $tokenRow['token_hash'],
-      'expires_at' => $tokenRow['expires_at'],
-      'revoked_at' => $tokenRow['revoked_at']
+      'USER_ID' => $tokenRow['USER_ID'],
+      'TOKEN_HASH' => $tokenRow['TOKEN_HASH'],
+      'EXPIRES_AT' => $tokenRow['EXPIRES_AT'],
+      'REVOKED_AT' => $tokenRow['REVOKED_AT']
     ];
   }
 
@@ -226,7 +264,7 @@ final class AuthRepository extends Repository
   public function revokeRefreshToken(string $hash): void
   {
     $this->db->prepare(
-      'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = :hash'
+      'UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = :hash'
     )->execute(['hash' => $hash]);
   }
 
@@ -239,13 +277,15 @@ final class AuthRepository extends Repository
    */
   public function deleteUserTokens(string $userId): void
   {
-    $this->db->prepare(
-      'DELETE FROM access_tokens WHERE user_id = :uid'
-    )->execute(['uid' => $userId]);
 
-    $this->db->prepare(
-      'DELETE FROM refresh_tokens WHERE user_id = :uid'
-    )->execute(['uid' => $userId]);
+    $sqlAccess = 'DELETE FROM access_tokens WHERE user_id = :v_uid';
+    $stmtAccess = $this->db->prepare($sqlAccess);
+    $stmtAccess->execute([':v_uid' => $userId]);
+
+    $sqlRefresh = 'DELETE FROM refresh_tokens WHERE user_id = :v_uid';
+    $stmtRefresh = $this->db->prepare($sqlRefresh);
+    $stmtRefresh->execute([':v_uid' => $userId]);
+
   }
 
 }
