@@ -78,18 +78,16 @@ final class AuthService
     // TODO: Fetch user info from database for response.
     // For now, we return dummy data.
     // Fetch user info for response
-    $userInfo = [
-      'email' => ''
-    ];
+    $userInfo = [];
 
     return [
       'data' => [
         'access_token' => $rawAccessToken,
         'refresh_token' => $rawRefreshToken,
         'user_id' => $userId,
-        'email' => $userInfo['email'],
-        'name' => $userInfo['name'] ?? '',
-        'role' => $userInfo['role'] ?? 'usr',
+        // 'email' => $userInfo['email'],
+        // 'name' => $userInfo['name'] ?? '',
+        // 'role' => $userInfo['role'] ?? 'usr',
       ],
       'meta' => [
         'token_type' => 'Bearer',
@@ -147,7 +145,10 @@ final class AuthService
         'refresh_token' => $rawNewRefresh,
         'refresh_expires_at' => $refreshExpiresAt,
       ],
-      'meta' => ['rotated' => true],
+      'meta' => [
+        'token_type' => 'Bearer',
+        'expires_in' => $accessTtl,
+      ],
     ];
   }
 
