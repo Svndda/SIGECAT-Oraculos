@@ -19,23 +19,20 @@ use Http\ErrorType;
  */
 class RegisterUserDTO {
   public string $email;
-  public string $firstname;
-  public string $lastname;
+  public string $firstName;
+  public string $lastName;
   public string $password;
-  public string $jobClassId;
+  public string $jobPosition;
   public string $role;
-  public string $createdBy;
 
-  private function __construct (string $email, string $firstname,
-      string $lastname, string $password, string $jobClassId, string $role,
-      string $createdBy) {
+  private function __construct (string $email, string $firstName,
+      string $lastName, string $password, string $jobPosition, string $role) {
     $this->email = $email;
-    $this->firstname = $firstname;
-    $this->lastname = $lastname;
+    $this->firstName = $firstName;
+    $this->lastName = $lastName;
     $this->password = $password;
-    $this->jobClassId = $jobClassId;
+    $this->jobPosition = $jobPosition;
     $this->role = $role;
-    $this->createdBy = $createdBy;
   }
 
   /**
@@ -46,7 +43,6 @@ class RegisterUserDTO {
    * password?: string,
    * job_class_id?: string,
    * role?: string,
-   * created_by?: string
    * } $data
    */
   public static function fromArray(array $data): self {
@@ -57,19 +53,18 @@ class RegisterUserDTO {
       (string) ($data['password'] ?? ''),
       (string) ($data['job_class_id'] ?? ''),
       (string) ($data['role'] ?? ''),
-      (string) ($data['created_by'] ?? '')
     );
   }
 
   public function validate(): void {
     EmailValidator::validate($this->email);
     
-    if (empty($this->firstname) === TRUE) {
-      throw new ApiException(ErrorType::missingField("firstname"));
+    if (empty($this->firstName) === TRUE) {
+      throw new ApiException(ErrorType::missingField("firstName"));
     }
 
-    if (empty($this->lastname) === TRUE) {
-      throw new ApiException(ErrorType::missingField("lastname"));
+    if (empty($this->lastName) === TRUE) {
+      throw new ApiException(ErrorType::missingField("lastName"));
     }
 
     if (empty($this->password) === TRUE) {
@@ -78,7 +73,7 @@ class RegisterUserDTO {
 
     PasswordValidator::validate($this->password);
 
-    if (empty($this->jobClassId) === TRUE) {
+    if (empty($this->jobPosition) === TRUE) {
       throw new ApiException(ErrorType::missingField("jobClassId"));
     }
 
