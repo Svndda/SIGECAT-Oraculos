@@ -49,11 +49,11 @@ export default function LoginPage() {
       navigate('/');
     } catch (error) {
       const serviceError = error as ServiceError;
-      const message =
-        serviceError.code === 'INVALID_CREDENTIALS'
-          ? 'Credenciales incorrectas. Verifique su correo y contraseña.'
-          : 'Error del servidor. Intente de nuevo más tarde.';
-      setModalError({ open: true, title: 'Error al iniciar sesión', message });
+      setModalError({
+        open: true,
+        title: 'Error al iniciar sesión',
+        message: serviceError.message ?? 'Error desconocido.',
+      });
     } finally {
       setIsSubmitting(false);
     }

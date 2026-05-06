@@ -47,12 +47,34 @@ const MOCK_USER: AuthUser = {
 };
 
 function extractApiError(error: unknown): ServiceError {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const axiosError = error as { response?: { data?: { errors?: ServiceError[] } } };
-    const errors = axiosError.response?.data?.errors;
-    if (errors?.length) return errors[0];
+  if (error && typeof error === 'object') {
+    if ('response' in error) {
+      const axiosError = error as { response?: { data?: unknown } };
+      const raw = axiosError.response?.data;
+
+      if (raw && typeof raw === 'object' && 'errors' in raw) {
+        const errors = (raw as { errors?: ServiceError[] }).errors;
+        if (errors?.length) return errors[0];
+      }
+
+      // PHP echo pollution: body arrived as string, try to extract JSON errors
+      if (typeof raw === 'string') {
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[0]);
+            if (parsed.errors?.length) return parsed.errors[0];
+          } catch { /* ignore */ }
+        }
+        return { code: 'SERVER_ERROR', message: raw.trim() };
+      }
+    }
+
+    if ('message' in error) {
+      return { code: 'NETWORK_ERROR', message: (error as { message: string }).message };
+    }
   }
-  return { code: 'INTERNAL_ERROR', message: 'Error del servidor. Intente de nuevo más tarde.' };
+  return { code: 'INTERNAL_ERROR', message: 'Error desconocido del servidor.' };
 }
 
 function mapRole(role: string): 'ADMIN' | 'EMPLOYEE' {
