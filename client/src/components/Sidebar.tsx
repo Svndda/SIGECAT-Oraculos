@@ -28,9 +28,9 @@ const CLOSED_WIDTH = 64;
 const NAV_ITEMS = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/' },
   { label: 'Usuarios', icon: <PersonIcon fontSize="small" />, route: '/usuarios' },
-  { label: 'Organización', icon: <CorporateFareIcon fontSize="small" />, route: '/organizacion' },
-  { label: 'Trabajo', icon: <WorkIcon fontSize="small" />, route: '/laboral' },
-  { label: 'Ajustes', icon: <SettingsIcon fontSize="small" />, route: '/ajustes' },
+  // { label: 'Organización', icon: <CorporateFareIcon fontSize="small" />, route: '/organizacion' },
+  // { label: 'Trabajo', icon: <WorkIcon fontSize="small" />, route: '/laboral' },
+  // { label: 'Ajustes', icon: <SettingsIcon fontSize="small" />, route: '/ajustes' },
 ];
 
 export default function Sidebar() {
