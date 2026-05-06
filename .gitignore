@@ -23,5 +23,16 @@ yarn-error.log*
 
 # Environment Variables
 .env
+.env.local
+.env.development
 .env.build
 .vercel
+
+# OCI configuration (contains sensitive credentials)
+api/config/oci_config.php
+
+# PHP Dependencies (Composer)
+vendor
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

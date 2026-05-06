@@ -1,17 +1,73 @@
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 export default function Header() {
   return (
     <Box
-      component="img"
-      src="/assets/header.png"
-      alt="Header"
+      component="header"
       sx={{
-        width: '100%',
-        height: 'auto',
-        display: 'block',
-        backgroundColor: '#2c2c2c',
+        backgroundColor: '#1565c0',
+        px: 4,
+        py: 2,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        flexShrink: 0,
       }}
-    />
+    >
+      {/* UCR */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+        <Typography
+          sx={{
+            color: '#b8c8dc',
+            fontFamily: 'Cicero, serif',
+            fontWeight: 400,
+            fontSize: '2.4rem',
+            letterSpacing: '0.00em',
+            lineHeight: 1,
+            userSelect: 'none',
+          }}
+        >
+          UCR
+        </Typography>
+        {/* Arc underline */}
+        <Box
+          sx={{
+            height: 10,
+            mt: '3px',
+            borderBottom: '2.5px solid #b8c8dc',
+            borderBottomLeftRadius: '50%',
+            borderBottomRightRadius: '50%',
+          }}
+        />
+      </Box>
+
+      {/* VRA + Vicerrectoría de Administración */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box>
+          <Typography
+            sx={{
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '2.4rem',
+              letterSpacing: '0.08em',
+              lineHeight: 1,
+              userSelect: 'none',
+            }}
+          >
+            VRA
+          </Typography>
+          <Box sx={{ height: '2px', bgcolor: 'white', mt: '5px' }} />
+        </Box>
+
+        <Box sx={{ ml: 0.5 }}>
+          <Typography sx={{ color: 'white', fontSize: '0.8rem', fontWeight: 400, lineHeight: 1.4 }}>
+            Vicerrectoría de
+          </Typography>
+          <Typography sx={{ color: 'white', fontSize: '0.85rem', fontWeight: 700, lineHeight: 1.4 }}>
+            Administración
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }
