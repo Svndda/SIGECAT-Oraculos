@@ -1,0 +1,8 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - config
+        - public
+    scanDirectories:
+        - src
