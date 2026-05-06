@@ -22,16 +22,14 @@ class RegisterUserDTO {
   public string $firstName;
   public string $lastName;
   public string $password;
-  public string $jobPosition;
   public string $role;
 
   private function __construct (string $email, string $firstName,
-      string $lastName, string $password, string $jobPosition, string $role) {
+      string $lastName, string $password, string $role) {
     $this->email = $email;
     $this->firstName = $firstName;
     $this->lastName = $lastName;
     $this->password = $password;
-    $this->jobPosition = $jobPosition;
     $this->role = $role;
   }
 
@@ -41,7 +39,6 @@ class RegisterUserDTO {
    * first_name?: string,
    * last_name?: string,
    * password?: string,
-   * job_class_id?: string,
    * role?: string,
    * } $data
    */
@@ -51,7 +48,6 @@ class RegisterUserDTO {
       (string) ($data['first_name'] ?? ''),
       (string) ($data['last_name'] ?? ''),
       (string) ($data['password'] ?? ''),
-      (string) ($data['job_class_id'] ?? ''),
       (string) ($data['role'] ?? ''),
     );
   }
@@ -72,10 +68,6 @@ class RegisterUserDTO {
     }
 
     PasswordValidator::validate($this->password);
-
-    if (empty($this->jobPosition) === TRUE) {
-      throw new ApiException(ErrorType::missingField("jobClassId"));
-    }
 
     if (AllowedUserRoles::isValid($this->role) === FALSE) {
       throw new ApiException(ErrorType::invalidField("role"));

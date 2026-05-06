@@ -7,6 +7,7 @@ namespace Services;
 use PDO;
 use DTO\AccessTokenDTO;
 use DTO\LoginUserDTO;
+use DTO\PasswordValidator;
 use DTO\RefreshTokenDTO;
 use DTO\TokensRotationDTO;
 use Http\ApiException;
@@ -27,7 +28,7 @@ use Services\PasswordService;
  */
 final class AuthService
 {
-  // TODO: Inject UserRepository when available.
+  private UserRepository $userRepository;
   private AuthRepository $authRepository;
 
   /**
@@ -37,7 +38,7 @@ final class AuthService
    */
   public function __construct(private PDO $pdo)
   {
-    // TODO: Inject UserRepository when available.
+    $this->userRepository = new UserRepository($this->pdo);
     $this->authRepository = new AuthRepository($this->pdo);
   }
 
@@ -55,9 +56,16 @@ final class AuthService
    */
   public function login(LoginUserDTO $dto): array
   {
+
+    echo "Attempting login for email: {$dto->email}\n"; // Debug log
     $dto->validate();
 
-    $userId = (string) "usuario";
+    $user = $this->userRepository->findByEmail($dto->email);
+    if (!$user || !password_verify($dto->password, $user['PASSWORD_HASH'])) {
+      throw new ApiException(ErrorType::invalidCredentials(), 401);
+    } 
+    $userId = $user['USER_ID'];
+
     $accessTtl = 3600 + 1800;  // 1.5 hours
     $refreshTtl = 3600 * 24 * 30; // 30 days
 
@@ -75,19 +83,19 @@ final class AuthService
     // Perform atomic replace of all user tokens.
     $this->authRepository->rotateTokensAtomic($rotationDto);
 
-    // TODO: Fetch user info from database for response.
-    // For now, we return dummy data.
-    // Fetch user info for response
-    $userInfo = [];
+    echo "Login successful for user_id: {$userId}\n"; // Debug log
+
+    // Fetch user info from database for response.
+    $userInfo = $this->userRepository->findById($userId);
 
     return [
       'data' => [
         'access_token' => $rawAccessToken,
         'refresh_token' => $rawRefreshToken,
         'user_id' => $userId,
-        // 'email' => $userInfo['email'],
-        // 'name' => $userInfo['name'] ?? '',
-        // 'role' => $userInfo['role'] ?? 'usr',
+        'email' => $userInfo['EMAIL'],
+        'name' => $userInfo['FIRST_NAME'] . ' ' . $userInfo['LAST_NAME'],
+        'role' => $userInfo['ROLE'] ?? 'usr',
       ],
       'meta' => [
         'token_type' => 'Bearer',
@@ -117,7 +125,7 @@ final class AuthService
       throw new ApiException(ErrorType::invalidRefreshToken(), 401);
     }
 
-    $userId = $stored['user_id'];
+    $userId = $stored['USER_ID'];
     $accessTtl = 3600 + 1800;
     $refreshTtl = 3600 * 24 * 30;
 
@@ -185,7 +193,7 @@ final class AuthService
         // Token not found in DB.
         return;
       }
-      $userId = $tokenRecord['user_id'];
+      $userId = $tokenRecord['USER_ID'];
     }
 
     if ($userId !== null) {
@@ -287,19 +295,19 @@ final class AuthService
   private function authenticate(string $rawAccessToken): array
   {
     $tokenRecord = $this->validateAccessToken($rawAccessToken);
-    $userId = $tokenRecord['user_id'];
+    $userId = $tokenRecord['USER_ID'];
 
-    // TODO: In a real implementation, we would fetch the user from the database.
-    $user = [
-      'user_id' => $userId,
-      'email' => '',
-      'role' => 'usr'
-    ];
+    // Fetch user info from database for response.
+    $user = $this->userRepository->findById($userId);
+
+    if ($user === null) {
+      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'));
+    }
 
     return [
-      'user_id' => (string) $user['user_id'],
-      'email' => $user['email'],
-      'role' => $user['role'],
+      'user_id' => (string) $user['USER_ID'],
+      'email' => $user['EMAIL'],
+      'role' => $user['ROLE'],
     ];
   }
 }
