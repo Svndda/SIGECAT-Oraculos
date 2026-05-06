@@ -23,7 +23,6 @@ try {
   ];
 
   $pdo = new PDO($dsn, OCIConfig::USERNAME, OCIConfig::PASSWORD, $options);
-  echo "Connection successful to Oracle Cloud!\n";
 
   return $pdo;
 } catch (\PDOException $e) {

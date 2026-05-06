@@ -103,15 +103,15 @@ final class AuthController
         throw new ApiException(ErrorType::missingField('refresh_token'), 400);
       }
 
-      $result = $this->authService->refreshTokens($body['refresh_token']);
+      $result = $this->authService->refreshTokens($body['REFRESH_TOKEN']);
 
       //  Updates the access token cookie for web clients.
-      if (isset($result['data']['access_token'], $result['meta']['expires_in'])) {
+      if (isset($result['data']['ACCESS_TOKEN'], $result['meta']['EXPIRES_IN'])) {
         setcookie(
           'sigecat_session_token',
-          $result['data']['access_token'],
+          $result['data']['ACCESS_TOKEN'],
           [
-            'expires' => time() + (int) $result['meta']['expires_in'],
+            'expires' => time() + (int) $result['meta']['EXPIRES_IN'],
             'path' => '/',
             'domain' => '',
             'secure' => false,
