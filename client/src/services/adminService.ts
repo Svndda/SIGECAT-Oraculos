@@ -23,7 +23,7 @@ export interface RegisterUserPayload {
   last_name: string;
   email: string;
   role: 'admin' | 'employee';
-  job_class_id: string;
+  password: string;
   created_by: string;
 }
 
@@ -134,7 +134,6 @@ export const adminService = {
         first_name: payload.first_name,
         last_name: payload.last_name,
         role: payload.role,
-        job_class_id: payload.job_class_id,
       };
       mockUsers = [user, ...mockUsers];
       return user;
