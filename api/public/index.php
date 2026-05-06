@@ -12,6 +12,8 @@ $basePath = realpath(__DIR__ . '/../');
 $srcPath = $basePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
 $configPath = $basePath . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR;
 
+require __DIR__ . '/../vendor/autoload.php';
+
 $safeRequire = function (string $path) {
   if (file_exists($path)) {
     return require $path;
