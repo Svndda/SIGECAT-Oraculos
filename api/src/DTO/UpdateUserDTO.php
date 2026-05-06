@@ -1,6 +1,10 @@
 <?php
 declare(strict_types= 1);
 
+namespace DTO;
+use Http\ApiException;
+use Http\ErrorType;
+
 /**
  * UpdateUserDTO
  * 
@@ -17,63 +21,80 @@ declare(strict_types= 1);
  * - Ensures valid values for user status (is_active).
  */
 class UpdateUserDTO {
-  public string $userId;
   public ?string $email;
   public ?string $firstName;
   public ?string $lastName;
   public ?string $password;
-  public ?string $jobClassId;
+  public ?string $jobPosition;
   public ?string $role;
   public ?int $isActive;
 
-  public function __construct(string $userId, ?string $email, 
+  public function __construct(?string $email, 
       ?string $firstName, ?string $lastName, ?string $password,
-      ?string $jobClassId, ?string $role, ?int $isActive) {
-    $this->userId = $userId;
+      ?string $jobPosition, ?string $role, ?int $isActive) {
     $this->email = $email;
     $this->firstName = $firstName;
     $this->lastName = $lastName;
     $this->password = $password;
-    $this->jobClassId = $jobClassId;
+    $this->jobPosition = $jobPosition;
     $this->role = $role;
     $this->isActive = $isActive;
   }
 
+  /**
+   * @param array{
+   *   email?: string,
+   *   first_name?: string,
+   *   last_name?: string,
+   *   password?: string,
+   *   job_class_id?: string,
+   *   role?: string,
+   *   is_active?: int
+   * } $data
+   */
   public static function fromArray(array $data): self {
-  return new self (
-    $data["user_id"] ?? '',
-    $data["email"] ?? null,
-    $data['first_name'] ?? null,
-    $data['last_name'] ?? null,
-    $data['password'] ?? null,
-    $data['job_class_id'] ?? null,
-    $data['role'] ?? null,
-    $data['is_active'] ?? null);
+    return new self (
+      isset($data['email'])        ? (string) $data['email']        : null,
+      isset($data['first_name'])   ? (string) $data['first_name']   : null,
+      isset($data['last_name'])    ? (string) $data['last_name']    : null,
+      isset($data['password'])     ? (string) $data['password']     : null,
+      isset($data['job_class_id']) ? (string) $data['job_class_id'] : null,
+      isset($data['role'])         ? (string) $data['role']         : null,
+      isset($data['is_active'])    ? (int)    $data['is_active']    : null,
+    );
   }
 
   public function validate(): void {
-    if (empty($this->userId) === TRUE) {
-      throw new InvalidArgumentException("El identificador del usuario es obligatorio");
-    } 
-    
     if ($this->email !== null) {
-      // Normalize the email address
-      $email = strtolower(trim($this->email));
-      if (filter_var($email, FILTER_VALIDATE_EMAIL) === FALSE) {
-        throw new InvalidArgumentException('Formato de email inválido');
+      EmailValidator::validate($this->email);
+    }
+
+    if ($this->firstName !== null) {
+      $this->firstName = trim($this->firstName);
+
+      if ($this->firstName === '') {
+        throw new ApiException(ErrorType::invalidField('first_name'));
       }
     }
 
+    if ($this->lastName !== null) {
+      $this->lastName = trim($this->lastName);
+
+      if ($this->lastName === '') {
+        throw new ApiException(ErrorType::invalidField('last_name'));
+      }
+    }
+    
     if ($this->password !== null) {
       PasswordValidator::validate($this->password);
     }
-
-     if (AllowedUserRoles::isValid($this->role) === FALSE) {
-      throw new InvalidArgumentException('Rol inválido');
+    
+    if ($this->role !== null && AllowedUserRoles::isValid($this->role) === FALSE) {
+      throw new ApiException(ErrorType::invalidField('role'));
     }
 
-    if ($this->isActive !== null && (in_array($this->isActive, [0,1])) === FALSE) {
-      throw new InvalidArgumentException("Valor inválido para definir el usuario activo");
+    if ($this->isActive !== null && (in_array($this->isActive, [0,1], true)) === FALSE) {
+      throw new ApiException(ErrorType::invalidField('is_active'));
     }
   }
 }
