@@ -60,8 +60,8 @@ final class AuthController
       $result = $this->authService->login($dto);
 
       // Set HTTP‑only cookie for the access token for web client convenience.
-      $accessToken = $result['data']['access_token'];
-      $expiresIn = $result['meta']['expires_in'] ?? 3600;
+      $accessToken = $result['data']['ACCESS_TOKEN'] ?? '';
+      $expiresIn = $result['meta']['EXPIRES_IN'] ?? 3600;
 
       // Secure is set to false for development.
       setcookie(
