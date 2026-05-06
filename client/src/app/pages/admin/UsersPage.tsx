@@ -8,7 +8,6 @@ import {
   Stack,
   MenuItem,
   InputAdornment,
-  Autocomplete,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { adminService } from '../../../services/adminService';
@@ -18,14 +17,6 @@ import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import { validateInstitutionalEmail } from '../../../utils/validation';
-import classesData from '../../../data/classes.json';
-
-interface JobClass {
-  id: string;
-  codigo: string;
-  estrato: string;
-  descripcion: string;
-}
 
 const ROLES = [
   { value: 'admin', label: 'Administrador' },
@@ -37,7 +28,7 @@ const EMPTY_FORM = {
   last_name: '',
   email: '',
   role: '' as 'admin' | 'employee' | '',
-  job_class_id: '',
+  password: '',
 };
 
 export default function UsersPage() {
@@ -46,13 +37,10 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [selectedClass, setSelectedClass] = useState<JobClass | null>(null);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
   const [successOpen, setSuccessOpen] = useState(false);
-
-  const classes: JobClass[] = classesData as JobClass[];
 
   useEffect(() => {
     adminService.getUsers().then(setUsers).catch(() => {});
@@ -67,7 +55,6 @@ export default function UsersPage() {
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
-    setSelectedClass(null);
     setFormErrors({});
     setFormOpen(true);
   };
@@ -79,7 +66,7 @@ export default function UsersPage() {
     const emailError = validateInstitutionalEmail(form.email);
     if (emailError) errors.email = emailError;
     if (!form.role) errors.role = 'El rol es requerido.';
-    if (!selectedClass) errors.job_class_id = 'La clase ocupacional es requerida.';
+    if (!form.password.trim()) errors.password = 'La contraseña temporal es requerida.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -93,7 +80,7 @@ export default function UsersPage() {
         last_name: form.last_name,
         email: form.email,
         role: form.role as 'admin' | 'employee',
-        job_class_id: selectedClass!.id,
+        password: form.password,
         created_by: currentUser?.id ?? '',
       });
       setUsers((prev) => [created, ...prev]);
@@ -251,25 +238,16 @@ export default function UsersPage() {
               <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
             ))}
           </TextField>
-          <Autocomplete
-            options={classes}
-            getOptionLabel={(o) => `${o.codigo} - ${o.descripcion}`}
-            value={selectedClass}
-            onChange={(_, val) => {
-              setSelectedClass(val);
-              if (formErrors.job_class_id) setFormErrors((p) => ({ ...p, job_class_id: undefined }));
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Clase ocupacional"
-                size="small"
-                error={!!formErrors.job_class_id}
-                helperText={formErrors.job_class_id}
-                required
-              />
-            )}
-            isOptionEqualToValue={(o, v) => o.id === v?.id}
+          <TextField
+            label="Contraseña temporal"
+            type="password"
+            value={form.password}
+            onChange={handleChange('password')}
+            size="small"
+            fullWidth
+            error={!!formErrors.password}
+            helperText={formErrors.password}
+            required
           />
         </Stack>
       </ModalForm>
