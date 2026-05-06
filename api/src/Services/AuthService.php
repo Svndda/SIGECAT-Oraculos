@@ -90,16 +90,16 @@ final class AuthService
 
     return [
       'data' => [
-        'access_token' => $rawAccessToken,
-        'refresh_token' => $rawRefreshToken,
-        'user_id' => $userId,
-        'email' => $userInfo['EMAIL'],
-        'name' => $userInfo['FIRST_NAME'] . ' ' . $userInfo['LAST_NAME'],
-        'role' => $userInfo['ROLE'] ?? 'usr',
+        'ACCESS_TOKEN' => $rawAccessToken,
+        'REFRESH_TOKEN' => $rawRefreshToken,
+        'USER_ID' => $userId,
+        'EMAIL' => $userInfo['EMAIL'],
+        'NAME' => $userInfo['FIRST_NAME'] . ' ' . $userInfo['LAST_NAME'],
+        'ROLE' => $userInfo['ROLE'] ?? 'usr',
       ],
       'meta' => [
-        'token_type' => 'Bearer',
-        'expires_in' => $accessTtl,
+        'TOKEN_TYPE' => 'Bearer',
+        'EXPIRES_IN' => $accessTtl,
       ],
     ];
   }
@@ -148,14 +148,14 @@ final class AuthService
 
     return [
       'data' => [
-        'access_token' => $rawNewAccess,
-        'access_expires_at' => $accessExpiresAt,
-        'refresh_token' => $rawNewRefresh,
-        'refresh_expires_at' => $refreshExpiresAt,
+        'ACCESS_TOKEN' => $rawNewAccess,
+        'ACCESS_EXPIRES_AT' => $accessExpiresAt,
+        'REFRESH_TOKEN' => $rawNewRefresh,
+        'REFRESH_EXPIRES_AT' => $refreshExpiresAt,
       ],
       'meta' => [
-        'token_type' => 'Bearer',
-        'expires_in' => $accessTtl,
+        'TOKEN_TYPE' => 'Bearer',
+        'EXPIRES_IN' => $accessTtl,
       ],
     ];
   }
@@ -178,7 +178,7 @@ final class AuthService
 
     try {
       $auth = $this->requireAuth();
-      $userId = $auth['user_id'];
+      $userId = $auth['USER_ID'];
     } catch (ApiException $e) {
       // Authentication failed, try to extract token and find user for cleanup.
       $rawToken = $this->extractTokenFromRequest();
@@ -305,9 +305,9 @@ final class AuthService
     }
 
     return [
-      'user_id' => (string) $user['USER_ID'],
-      'email' => $user['EMAIL'],
-      'role' => $user['ROLE'],
+      'USER_ID' => (string) $user['USER_ID'],
+      'EMAIL' => $user['EMAIL'],
+      'ROLE' => $user['ROLE'],
     ];
   }
 }
