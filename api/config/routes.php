@@ -6,9 +6,10 @@ return [
     ['method' => 'POST', 'path' => '/auth/logout', 'controller' => 'AuthController', 'action' => 'logout'],
     
     // User routes
-    ['method' => 'GET', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'show'],
+    ['method' => 'GET', 'path' => '/users/{id}', 'controller' => 'UserController', 'action' => 'getById'],
     ['method' => 'PUT', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'update'],
-    ['method' => 'GET', 'path' => '/users/me/session', 'controller' => 'UserController', 'action' => 'showSession'],
+    // ['method' => 'GET', 'path' => '/users/me/session', 'controller' => 'UserController', 'action' => 'showSession'],
     ['method' => 'POST', 'path' => '/users/register', 'controller' => 'UserController', 'action' => 'register'],
-    ['method' => 'DELETE', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'delete']
+
+    // ['method' => 'DELETE', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'delete']
 ];

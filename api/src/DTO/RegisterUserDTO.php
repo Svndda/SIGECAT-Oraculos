@@ -1,6 +1,10 @@
 <?php 
 declare(strict_types= 1);
 
+namespace DTO;
+use Http\ApiException;
+use Http\ErrorType;
+
 /**
  * RegisterUserDTO
  * 
@@ -15,80 +19,58 @@ declare(strict_types= 1);
  */
 class RegisterUserDTO {
   public string $email;
-  public string $firstname;
-  public string $lastname;
+  public string $firstName;
+  public string $lastName;
   public string $password;
-  public string $jobClassId;
   public string $role;
-  public string $createdBy;
 
-  private function __construct (string $email, string $firstname,
-      string $lastname, string $password, string $jobClassID, string $role,
-      string $createdBy) {
+  private function __construct (string $email, string $firstName,
+      string $lastName, string $password, string $role) {
     $this->email = $email;
-    $this->firstname = $firstname;
-    $this->lastname = $lastname;
+    $this->firstName = $firstName;
+    $this->lastName = $lastName;
     $this->password = $password;
-    $this->jobClassId = $jobClassID;
     $this->role = $role;
-    $this->createdBy = $createdBy;
   }
 
+  /**
+   * @param array{
+   * email?: string,
+   * first_name?: string,
+   * last_name?: string,
+   * password?: string,
+   * role?: string,
+   * } $data
+   */
   public static function fromArray(array $data): self {
     return new self (
-      $data["email"] ?? '',
-      $data['first_name'] ?? '',
-      $data['last_name'] ?? '',
-      $data['password'] ?? '',
-      $data['job_class_id'] ?? '',
-      $data['role'] ?? '',
-      $data['created_by'] ?? ''
+      (string) ($data["email"] ?? ''),
+      (string) ($data['first_name'] ?? ''),
+      (string) ($data['last_name'] ?? ''),
+      (string) ($data['password'] ?? ''),
+      (string) ($data['role'] ?? ''),
     );
   }
 
   public function validate(): void {
-    // Normalize the email address
-    $email = strtolower(trim($this->email) ?? '');
-
-    // Required fields
-    if (empty($email) === TRUE) {
-      throw new InvalidArgumentException('El correo es obligatorio');
-    }
-
-    if (filter_var($this->email, FILTER_VALIDATE_EMAIL) === FALSE) {
-      throw new InvalidArgumentException('Formato de email inválido');
-    }
-
-    // Email Domain
-    [$local, $domain] = explode('@', $email);
-    if ($domain !== 'ucr.ac.cr') {
-      throw new InvalidArgumentException('El email debe pertenecer al dominio @ucr.ac.cr');
-    }
+    EmailValidator::validate($this->email);
     
-    if (empty($this->firstname) === TRUE) {
-      throw new InvalidArgumentException('El nombre es obligatorio');
+    if (empty($this->firstName) === TRUE) {
+      throw new ApiException(ErrorType::missingField("firstName"));
     }
 
-    if (empty($this->lastname) === TRUE) {
-      throw new InvalidArgumentException('El apellido es obligatorio');
+    if (empty($this->lastName) === TRUE) {
+      throw new ApiException(ErrorType::missingField("lastName"));
     }
 
-    if (empty($this->password) === TRUE ) {
-      throw new InvalidArgumentException('La contraseña es obligatoria');
+    if (empty($this->password) === TRUE) {
+      throw new ApiException(ErrorType::missingField("password"));
     }
-    
+
     PasswordValidator::validate($this->password);
 
-    if (empty($this->jobClassId) === TRUE) {
-      throw new InvalidArgumentException('El job class id es obligatorio');
-    }
-
     if (AllowedUserRoles::isValid($this->role) === FALSE) {
-      throw new InvalidArgumentException('Rol inválido');
-    }
-
-    if (empty($this->createdBy) === TRUE) {
-      throw new InvalidArgumentException('Created_by es obligatorio');
+      throw new ApiException(ErrorType::invalidField("role"));
     }
   }
 }
