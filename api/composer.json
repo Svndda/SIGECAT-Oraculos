@@ -1,0 +1,23 @@
+{
+    "name": "sigecat/api",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Sigecat\\Api\\": "src/",
+            "Controllers\\": "src/Controllers/"
+            
+        }
+    },
+    "authors": [
+        {
+            "name": "Aaron Sanchez",
+            "email": "111822002+Svndda@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "symfony/uid": "^8.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1"
+    }
+}
