@@ -104,18 +104,18 @@ export default function UsersPage() {
   };
 
   return (
-    <Box sx={{ p: 4, minHeight: '100%' }}>
+    <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
         Gestión de Usuarios
       </Typography>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
         <TextField
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar"
           size="small"
-          sx={{ width: 260, backgroundColor: 'white', borderRadius: 1 }}
+          sx={{ width: { xs: '100%', sm: 260 }, backgroundColor: 'white', borderRadius: 1 }}
           slotProps={{
             input: {
               endAdornment: (
@@ -126,7 +126,7 @@ export default function UsersPage() {
             },
           }}
         />
-        <Box sx={{ flex: 1 }} />
+        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         <Button
           variant="contained"
           onClick={openCreate}
@@ -137,53 +137,58 @@ export default function UsersPage() {
             fontWeight: 600,
             textTransform: 'none',
             fontSize: '0.9rem',
+            width: { xs: '100%', sm: 'auto' },
           }}
         >
           Añadir Usuario
         </Button>
       </Box>
 
-      {/* Table header */}
-      <Box sx={{ display: 'flex', px: 2.5, py: 1.25, mb: 1 }}>
-        {USER_COLS.map((col) => (
-          <Typography key={col.label} variant="caption" fontWeight={700} sx={{ flex: col.flex, color: '#555', fontSize: '0.8rem' }}>
-            {col.label}
-          </Typography>
-        ))}
-      </Box>
-
-      <Stack spacing={1.5}>
-        {filtered.map((u) => (
-          <Paper key={u.id} elevation={0} sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.75, border: '1px solid #ebebeb', borderRadius: 2 }}>
-            <Typography variant="body2" sx={{ flex: USER_COLS[0].flex, color: '#333' }}>
-              {u.first_name} {u.last_name}
-            </Typography>
-            <Typography variant="body2" sx={{ flex: USER_COLS[1].flex, color: '#555' }}>
-              {u.email}
-            </Typography>
-            <Box sx={{ flex: USER_COLS[2].flex }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  px: 1.5,
-                  py: 0.4,
-                  borderRadius: 4,
-                  fontWeight: 600,
-                  backgroundColor: u.role === 'admin' ? '#e8edf7' : '#f0f0f0',
-                  color: u.role === 'admin' ? '#1a2b4a' : '#555',
-                }}
-              >
-                {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box sx={{ minWidth: 560 }}>
+          {/* Table header */}
+          <Box sx={{ display: 'flex', px: 2.5, py: 1.25, mb: 1 }}>
+            {USER_COLS.map((col) => (
+              <Typography key={col.label} variant="caption" fontWeight={700} sx={{ flex: col.flex, color: '#555', fontSize: '0.8rem' }}>
+                {col.label}
               </Typography>
-            </Box>
-          </Paper>
-        ))}
-        {filtered.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-            No se encontraron usuarios.
-          </Typography>
-        )}
-      </Stack>
+            ))}
+          </Box>
+
+          <Stack spacing={1.5}>
+            {filtered.map((u) => (
+              <Paper key={u.id} elevation={0} sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.75, border: '1px solid #ebebeb', borderRadius: 2 }}>
+                <Typography variant="body2" sx={{ flex: USER_COLS[0].flex, color: '#333' }}>
+                  {u.first_name} {u.last_name}
+                </Typography>
+                <Typography variant="body2" sx={{ flex: USER_COLS[1].flex, color: '#555' }}>
+                  {u.email}
+                </Typography>
+                <Box sx={{ flex: USER_COLS[2].flex }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      px: 1.5,
+                      py: 0.4,
+                      borderRadius: 4,
+                      fontWeight: 600,
+                      backgroundColor: u.role === 'admin' ? '#e8edf7' : '#f0f0f0',
+                      color: u.role === 'admin' ? '#1a2b4a' : '#555',
+                    }}
+                  >
+                    {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+                  </Typography>
+                </Box>
+              </Paper>
+            ))}
+            {filtered.length === 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
+                No se encontraron usuarios.
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      </Box>
 
       {/* Register user modal */}
       <ModalForm

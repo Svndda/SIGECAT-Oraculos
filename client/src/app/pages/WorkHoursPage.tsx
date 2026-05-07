@@ -123,7 +123,7 @@ export default function WorkHoursPage() {
         </Typography>
 
         {/* Objetivo del Puesto */}
-        <Paper sx={{ p: 3, mb: 4, backgroundColor: '#f9f9fd' }}>
+        <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4, backgroundColor: '#f9f9fd' }}>
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: '600', color: '#12457d' }}>
             Indique el objetivo del puesto:
           </Typography>
@@ -149,13 +149,13 @@ export default function WorkHoursPage() {
 
         {/* Tabla de Tareas y Horas */}
         <Paper sx={{ backgroundColor: '#f9f9fd' }}>
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: '600', color: '#12457d' }}>
               Tareas:
             </Typography>
 
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 720 }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#e8f4f8' }}>
                     <TableCell sx={{ fontWeight: 'bold', color: '#12457d' }}>Día</TableCell>
@@ -259,7 +259,7 @@ export default function WorkHoursPage() {
         )}
 
         {/* Botones de Navegación */}
-        <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}

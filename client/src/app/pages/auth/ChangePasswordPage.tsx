@@ -82,7 +82,7 @@ export default function ChangePasswordPage() {
           Actualice su contraseña de acceso
         </Typography>
 
-        <Paper sx={{ p: 4, backgroundColor: '#f9f9fd' }}>
+        <Paper sx={{ p: { xs: 2.5, sm: 4 }, backgroundColor: '#f9f9fd' }}>
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Stack spacing={2.5}>
               <Box>
