@@ -8,10 +8,10 @@ export default function Footer() {
       {/* Main footer content */}
       <Box
         sx={{
-          px: 5,
-          py: 4,
+          px: { xs: 2.5, sm: 5 },
+          py: { xs: 3, sm: 4 },
           display: 'flex',
-          gap: 6,
+          gap: { xs: 3, sm: 6 },
           flexWrap: 'wrap',
         }}
       >
@@ -101,7 +101,7 @@ export default function Footer() {
       </Box>
 
       {/* Copyright strip */}
-      <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', px: 5, py: 1.5 }}>
+      <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', px: { xs: 2.5, sm: 5 }, py: 1.5 }}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>
           © Vicerrectoría de Administración, 2026.
         </Typography>

@@ -124,20 +124,20 @@ export default function OrganizationPage() {
   };
 
   return (
-    <Box sx={{ p: 4, minHeight: '100%' }}>
+    <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
       {/* Header */}
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
         Control Organizacional
       </Typography>
 
       {/* Toolbar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
         <TextField
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar"
           size="small"
-          sx={{ width: 260, backgroundColor: 'white', borderRadius: 1 }}
+          sx={{ width: { xs: '100%', sm: 260 }, backgroundColor: 'white', borderRadius: 1 }}
           slotProps={{
             input: {
               endAdornment: (
@@ -148,7 +148,7 @@ export default function OrganizationPage() {
             },
           }}
         />
-        <Box sx={{ flex: 1 }} />
+        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         <Button
           variant="contained"
           onClick={openCreate}
@@ -159,85 +159,90 @@ export default function OrganizationPage() {
             fontWeight: 600,
             textTransform: 'none',
             fontSize: '0.9rem',
+            width: { xs: '100%', sm: 'auto' },
           }}
         >
           Añadir Entidad
         </Button>
       </Box>
 
-      {/* Table header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          px: 2.5,
-          py: 1.25,
-          mb: 1,
-        }}
-      >
-        {COLS.map((col) => (
-          <Typography
-            key={col.label}
-            variant="caption"
-            fontWeight={700}
-            sx={{ flex: col.flex, color: '#555', textTransform: 'none', fontSize: '0.8rem' }}
-          >
-            {col.label}
-          </Typography>
-        ))}
-        <Box sx={{ width: 72 }} />
-      </Box>
-
-      {/* Rows */}
-      <Stack spacing={1.5}>
-        {filtered.map((entity) => (
-          <Paper
-            key={entity.id}
-            elevation={0}
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box sx={{ minWidth: 880 }}>
+          {/* Table header */}
+          <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
               px: 2.5,
-              py: 1.75,
-              border: '1px solid #ebebeb',
-              borderRadius: 2,
+              py: 1.25,
+              mb: 1,
             }}
           >
-            <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333' }}>
-              {entity.categoria}
-            </Typography>
-            <Typography variant="body2" sx={{ flex: COLS[1].flex, color: '#333' }}>
-              {entity.nombre}
-            </Typography>
-            <Typography
-              variant="body2"
-              noWrap
-              sx={{ flex: COLS[2].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
-            >
-              {entity.descripcion}
-            </Typography>
-            <Typography variant="body2" sx={{ flex: COLS[3].flex, color: '#333' }}>
-              {entity.codigo}
-            </Typography>
-            <Typography variant="body2" sx={{ flex: COLS[4].flex, color: '#555' }}>
-              {formatDate(entity.fechaCreacion)}
-            </Typography>
-            <Box sx={{ width: 72, display: 'flex', gap: 0.5 }}>
-              <IconButton size="small" onClick={() => openEdit(entity)} sx={{ color: '#1a2b4a' }}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" onClick={() => setDeleteTarget(entity)} sx={{ color: '#9e9e9e' }}>
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </Paper>
-        ))}
-        {filtered.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-            No se encontraron entidades.
-          </Typography>
-        )}
-      </Stack>
+            {COLS.map((col) => (
+              <Typography
+                key={col.label}
+                variant="caption"
+                fontWeight={700}
+                sx={{ flex: col.flex, color: '#555', textTransform: 'none', fontSize: '0.8rem' }}
+              >
+                {col.label}
+              </Typography>
+            ))}
+            <Box sx={{ width: 72 }} />
+          </Box>
+
+          {/* Rows */}
+          <Stack spacing={1.5}>
+            {filtered.map((entity) => (
+              <Paper
+                key={entity.id}
+                elevation={0}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 2.5,
+                  py: 1.75,
+                  border: '1px solid #ebebeb',
+                  borderRadius: 2,
+                }}
+              >
+                <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333' }}>
+                  {entity.categoria}
+                </Typography>
+                <Typography variant="body2" sx={{ flex: COLS[1].flex, color: '#333' }}>
+                  {entity.nombre}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  noWrap
+                  sx={{ flex: COLS[2].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
+                >
+                  {entity.descripcion}
+                </Typography>
+                <Typography variant="body2" sx={{ flex: COLS[3].flex, color: '#333' }}>
+                  {entity.codigo}
+                </Typography>
+                <Typography variant="body2" sx={{ flex: COLS[4].flex, color: '#555' }}>
+                  {formatDate(entity.fechaCreacion)}
+                </Typography>
+                <Box sx={{ width: 72, display: 'flex', gap: 0.5 }}>
+                  <IconButton size="small" onClick={() => openEdit(entity)} sx={{ color: '#1a2b4a' }}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setDeleteTarget(entity)} sx={{ color: '#9e9e9e' }}>
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Paper>
+            ))}
+            {filtered.length === 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
+                No se encontraron entidades.
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      </Box>
 
       {/* Create / Edit modal */}
       <ModalForm

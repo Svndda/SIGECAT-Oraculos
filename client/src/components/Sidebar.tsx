@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,6 +9,8 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
@@ -31,11 +33,17 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const [open, setOpen] = useState(true);
+  const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
+  const [open, setOpen] = useState(!isCompact);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    setOpen(!isCompact);
+  }, [isCompact]);
 
   const handleLogout = async () => {
     setConfirmOpen(false);
@@ -89,7 +97,7 @@ export default function Sidebar() {
         <Divider />
 
         {/* Nav items */}
-        <List sx={{ flex: 1, py: 1 }}>
+        <List sx={{ py: 1 }}>
           {NAV_ITEMS.map((item) => {
             const active = location.pathname === item.route;
             return (

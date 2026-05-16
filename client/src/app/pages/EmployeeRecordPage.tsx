@@ -106,7 +106,7 @@ export default function EmployeeRecordPage() {
         </Alert>
 
         {/* Buttons */}
-        <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
           <Button
             variant={isRead ? 'contained' : 'outlined'}
             startIcon={<CheckCircleIcon />}
