@@ -23,7 +23,7 @@ export interface RegisterUserPayload {
   last_name: string;
   email: string;
   role: 'admin' | 'employee';
-  job_class_id: string;
+  password: string;
   created_by: string;
 }
 
@@ -32,8 +32,7 @@ export interface ServiceError {
   message: string;
 }
 
-// Set to false once backend controllers are implemented
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const INITIAL_ENTITIES: OrgEntity[] = [
   { id: '1', categoria: 'Área', nombre: 'Área de Reserva', descripcion: 'Área encargada de la gestión de reservas institucionales', codigo: '12345673', fechaCreacion: '2021-12-08' },
@@ -134,14 +133,19 @@ export const adminService = {
         first_name: payload.first_name,
         last_name: payload.last_name,
         role: payload.role,
-        job_class_id: payload.job_class_id,
       };
       mockUsers = [user, ...mockUsers];
       return user;
     }
     try {
-      const res = await apiClient.post<{ data: AdminUser }>('/users/register', payload);
-      return res.data.data;
+      await apiClient.post('/users/register', payload);
+      return {
+        id: '',
+        email: payload.email,
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        role: payload.role,
+      };
     } catch (e) { throw extractApiError(e); }
   },
 

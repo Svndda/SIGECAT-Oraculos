@@ -8,9 +8,10 @@ import {
   Stack,
   MenuItem,
   InputAdornment,
-  Autocomplete,
+  IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { adminService } from '../../../services/adminService';
 import type { AdminUser, ServiceError } from '../../../services/adminService';
 import { useAuth } from '../../../context/AuthContext';
@@ -18,14 +19,6 @@ import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import { validateInstitutionalEmail } from '../../../utils/validation';
-import classesData from '../../../data/classes.json';
-
-interface JobClass {
-  id: string;
-  codigo: string;
-  estrato: string;
-  descripcion: string;
-}
 
 const ROLES = [
   { value: 'admin', label: 'Administrador' },
@@ -37,7 +30,7 @@ const EMPTY_FORM = {
   last_name: '',
   email: '',
   role: '' as 'admin' | 'employee' | '',
-  job_class_id: '',
+  password: '',
 };
 
 export default function UsersPage() {
@@ -46,13 +39,11 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [selectedClass, setSelectedClass] = useState<JobClass | null>(null);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
   const [successOpen, setSuccessOpen] = useState(false);
-
-  const classes: JobClass[] = classesData as JobClass[];
 
   useEffect(() => {
     adminService.getUsers().then(setUsers).catch(() => {});
@@ -67,8 +58,8 @@ export default function UsersPage() {
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
-    setSelectedClass(null);
     setFormErrors({});
+    setShowPassword(false);
     setFormOpen(true);
   };
 
@@ -79,7 +70,7 @@ export default function UsersPage() {
     const emailError = validateInstitutionalEmail(form.email);
     if (emailError) errors.email = emailError;
     if (!form.role) errors.role = 'El rol es requerido.';
-    if (!selectedClass) errors.job_class_id = 'La clase ocupacional es requerida.';
+    if (!form.password.trim()) errors.password = 'La contraseña temporal es requerida.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -93,7 +84,7 @@ export default function UsersPage() {
         last_name: form.last_name,
         email: form.email,
         role: form.role as 'admin' | 'employee',
-        job_class_id: selectedClass!.id,
+        password: form.password,
         created_by: currentUser?.id ?? '',
       });
       setUsers((prev) => [created, ...prev]);
@@ -113,18 +104,18 @@ export default function UsersPage() {
   };
 
   return (
-    <Box sx={{ p: 4, minHeight: '100%' }}>
+    <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
         Gestión de Usuarios
       </Typography>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
         <TextField
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar"
           size="small"
-          sx={{ width: 260, backgroundColor: 'white', borderRadius: 1 }}
+          sx={{ width: { xs: '100%', sm: 260 }, backgroundColor: 'white', borderRadius: 1 }}
           slotProps={{
             input: {
               endAdornment: (
@@ -135,7 +126,7 @@ export default function UsersPage() {
             },
           }}
         />
-        <Box sx={{ flex: 1 }} />
+        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         <Button
           variant="contained"
           onClick={openCreate}
@@ -146,53 +137,58 @@ export default function UsersPage() {
             fontWeight: 600,
             textTransform: 'none',
             fontSize: '0.9rem',
+            width: { xs: '100%', sm: 'auto' },
           }}
         >
           Añadir Usuario
         </Button>
       </Box>
 
-      {/* Table header */}
-      <Box sx={{ display: 'flex', px: 2.5, py: 1.25, mb: 1 }}>
-        {USER_COLS.map((col) => (
-          <Typography key={col.label} variant="caption" fontWeight={700} sx={{ flex: col.flex, color: '#555', fontSize: '0.8rem' }}>
-            {col.label}
-          </Typography>
-        ))}
-      </Box>
-
-      <Stack spacing={1.5}>
-        {filtered.map((u) => (
-          <Paper key={u.id} elevation={0} sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.75, border: '1px solid #ebebeb', borderRadius: 2 }}>
-            <Typography variant="body2" sx={{ flex: USER_COLS[0].flex, color: '#333' }}>
-              {u.first_name} {u.last_name}
-            </Typography>
-            <Typography variant="body2" sx={{ flex: USER_COLS[1].flex, color: '#555' }}>
-              {u.email}
-            </Typography>
-            <Box sx={{ flex: USER_COLS[2].flex }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  px: 1.5,
-                  py: 0.4,
-                  borderRadius: 4,
-                  fontWeight: 600,
-                  backgroundColor: u.role === 'admin' ? '#e8edf7' : '#f0f0f0',
-                  color: u.role === 'admin' ? '#1a2b4a' : '#555',
-                }}
-              >
-                {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box sx={{ minWidth: 560 }}>
+          {/* Table header */}
+          <Box sx={{ display: 'flex', px: 2.5, py: 1.25, mb: 1 }}>
+            {USER_COLS.map((col) => (
+              <Typography key={col.label} variant="caption" fontWeight={700} sx={{ flex: col.flex, color: '#555', fontSize: '0.8rem' }}>
+                {col.label}
               </Typography>
-            </Box>
-          </Paper>
-        ))}
-        {filtered.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-            No se encontraron usuarios.
-          </Typography>
-        )}
-      </Stack>
+            ))}
+          </Box>
+
+          <Stack spacing={1.5}>
+            {filtered.map((u) => (
+              <Paper key={u.id} elevation={0} sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.75, border: '1px solid #ebebeb', borderRadius: 2 }}>
+                <Typography variant="body2" sx={{ flex: USER_COLS[0].flex, color: '#333' }}>
+                  {u.first_name} {u.last_name}
+                </Typography>
+                <Typography variant="body2" sx={{ flex: USER_COLS[1].flex, color: '#555' }}>
+                  {u.email}
+                </Typography>
+                <Box sx={{ flex: USER_COLS[2].flex }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      px: 1.5,
+                      py: 0.4,
+                      borderRadius: 4,
+                      fontWeight: 600,
+                      backgroundColor: u.role === 'admin' ? '#e8edf7' : '#f0f0f0',
+                      color: u.role === 'admin' ? '#1a2b4a' : '#555',
+                    }}
+                  >
+                    {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+                  </Typography>
+                </Box>
+              </Paper>
+            ))}
+            {filtered.length === 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
+                No se encontraron usuarios.
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      </Box>
 
       {/* Register user modal */}
       <ModalForm
@@ -251,25 +247,27 @@ export default function UsersPage() {
               <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
             ))}
           </TextField>
-          <Autocomplete
-            options={classes}
-            getOptionLabel={(o) => `${o.codigo} - ${o.descripcion}`}
-            value={selectedClass}
-            onChange={(_, val) => {
-              setSelectedClass(val);
-              if (formErrors.job_class_id) setFormErrors((p) => ({ ...p, job_class_id: undefined }));
+          <TextField
+            label="Contraseña temporal"
+            type={showPassword ? 'text' : 'password'}
+            value={form.password}
+            onChange={handleChange('password')}
+            size="small"
+            fullWidth
+            error={!!formErrors.password}
+            helperText={formErrors.password}
+            required
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowPassword((p) => !p)} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
             }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Clase ocupacional"
-                size="small"
-                error={!!formErrors.job_class_id}
-                helperText={formErrors.job_class_id}
-                required
-              />
-            )}
-            isOptionEqualToValue={(o, v) => o.id === v?.id}
           />
         </Stack>
       </ModalForm>

@@ -49,11 +49,11 @@ export default function LoginPage() {
       navigate('/');
     } catch (error) {
       const serviceError = error as ServiceError;
-      const message =
-        serviceError.code === 'INVALID_CREDENTIALS'
-          ? 'Credenciales incorrectas. Verifique su correo y contraseña.'
-          : 'Error del servidor. Intente de nuevo más tarde.';
-      setModalError({ open: true, title: 'Error al iniciar sesión', message });
+      setModalError({
+        open: true,
+        title: 'Error al iniciar sesión',
+        message: serviceError.message ?? 'Error desconocido.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -63,8 +63,8 @@ export default function LoginPage() {
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f5f5' }}>
       <Header />
 
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, px: 2 }}>
-        <Paper sx={{ p: 5, maxWidth: 440, width: '100%', borderRadius: 2, boxShadow: 3 }}>
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: { xs: 3, sm: 6 }, px: 2 }}>
+        <Paper sx={{ p: { xs: 3, sm: 5 }, maxWidth: 440, width: '100%', borderRadius: 2, boxShadow: 3 }}>
           <Stack spacing={3}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="h5" fontWeight="bold" color="#12457d">

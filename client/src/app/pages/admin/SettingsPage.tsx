@@ -59,7 +59,7 @@ export default function SettingsPage() {
           Actualice su información de perfil
         </Typography>
 
-        <Paper elevation={0} sx={{ p: 4, border: '1px solid #ebebeb', borderRadius: 2 }}>
+        <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 4 }, border: '1px solid #ebebeb', borderRadius: 2 }}>
           <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 3, color: '#12457d' }}>
             Número de plaza
           </Typography>
