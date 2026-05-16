@@ -72,11 +72,36 @@ final class ErrorType implements JsonSerializable
 	 * Triggered when a specific field fails validation logic.
 	 * 
 	 * @param string $field The name of the invalid field.
+	 * @param string|null $message Optional additional details about the validation failure.
 	 * @return self
 	 */
-	public static function invalidField(string $field): self
+	public static function invalidField(string $field, ?string $message = null): self
 	{
-		return new self("INVALID_FIELD", "El valor proporcionado para el campo '{$field}' no es válido");
+		$suffix = $message ? ": {$message}" : '';
+
+		return new self(
+			"INVALID_FIELD",
+			"El valor proporcionado para el campo '{$field}' no es válido{$suffix}"
+		);
+	}
+	
+	/** 
+	 * Triggered when a provided area_id does not correspond to an existing area in the system.
+	 * @return self
+	*/
+	public static function invalidArea(): self
+	{
+		return new self('INVALID_AREA', 'El área especificada no es válida o no existe');
+	}
+
+	/** 
+	 * Triggered when a department update request is made without any valid fields to update (area_id, name, description).
+	 * This indicates that the client attempted to update a department but did not provide any valid data for the update operation.
+	 * @return self
+	*/
+	public static function invalidDepartmentUpdate(): self
+	{
+		return new self('INVALID_DEPARTMENT_UPDATE', 'No se pudo actualizar el departamento debido a datos inválidos o inconsistentes');
 	}
 
 	/**
