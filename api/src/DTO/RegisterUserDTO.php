@@ -56,11 +56,11 @@ class RegisterUserDTO {
     EmailValidator::validate($this->email);
     
     if (empty($this->firstName) === TRUE) {
-      throw new ApiException(ErrorType::missingField("firstName"));
+      throw new ApiException(ErrorType::missingField("first_name"));
     }
 
     if (empty($this->lastName) === TRUE) {
-      throw new ApiException(ErrorType::missingField("lastName"));
+      throw new ApiException(ErrorType::missingField("last_name"));
     }
 
     if (empty($this->password) === TRUE) {

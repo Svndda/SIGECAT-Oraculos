@@ -182,9 +182,9 @@ final class AuthRepository extends Repository
     }
 
     return [
-      'USER_ID' => $tokenRow['USER_ID'],
-      'TOKEN_HASH' => $tokenRow['TOKEN_HASH'],
-      'EXPIRES_AT' => $tokenRow['EXPIRES_AT']
+      'user_id' => $tokenRow['user_id'],
+      'token_hash' => $tokenRow['token_hash'],
+      'expires_at' => $tokenRow['expires_at']
     ];
   }
 
@@ -214,9 +214,9 @@ final class AuthRepository extends Repository
     }
 
     return [
-      'USER_ID' => $tokenRow['USER_ID'],
-      'TOKEN_HASH' => $tokenRow['TOKEN_HASH'],
-      'EXPIRES_AT' => $tokenRow['EXPIRES_AT']
+      'user_id' => $tokenRow['user_id'],
+      'token_hash' => $tokenRow['token_hash'],
+      'expires_at' => $tokenRow['expires_at']
     ];
   }
 
@@ -247,10 +247,10 @@ final class AuthRepository extends Repository
     }
 
     return [
-      'USER_ID' => $tokenRow['USER_ID'],
-      'TOKEN_HASH' => $tokenRow['TOKEN_HASH'],
-      'EXPIRES_AT' => $tokenRow['EXPIRES_AT'],
-      'REVOKED_AT' => $tokenRow['REVOKED_AT']
+      'user_id' => $tokenRow['user_id'],
+      'token_hash' => $tokenRow['token_hash'],
+      'expires_at' => $tokenRow['expires_at'],
+      'revoked_at' => $tokenRow['revoked_at']
     ];
   }
 
