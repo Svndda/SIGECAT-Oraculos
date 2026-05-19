@@ -19,22 +19,21 @@ use Http\ErrorType;
  * @package DTO
  */
 final class CreateUnitDTO {
-  public string $unitID;
   public string $name;
   public string $description;
-  public string $belongingID;
+  
+   // sectionId or departmentId
+  public string $belongingId;
 
-  private function __construct(string $unitID, string $name,
-      ?string $description, string $belongingID) {
-    $this->unitID = $unitID;
+  private function __construct(string $name,
+      ?string $description, string $belongingId) {
     $this->name = $name;
     $this->description = $description;
-    $this->belongingID = $belongingID;
+    $this->belongingId = $belongingId;
   }
 
   /**
    * @param array{
-   *     unit_id?: string,
    *     name?: string,
    *     description?: string
    *     belonging?: string
@@ -42,7 +41,6 @@ final class CreateUnitDTO {
    */
   public static function fromArray(array $data): self {
     return new self (
-      (string) ($data['unit_id'] ?? ''),
       (string) ($data['name'] ?? ''),
       isset($data['description']) ? (string) $data['description'] : null,
       (string) ($data['belonging_id'] ?? ''),
@@ -50,10 +48,6 @@ final class CreateUnitDTO {
   }
 
   public function validate(): void {
-    if (empty($this->unitID)) {
-      throw new ApiException(ErrorType::missingField('unit_id'));
-    }
-
     if (empty($this->name)) {
       throw new ApiException(ErrorType::missingField('name'));
     }
@@ -66,8 +60,9 @@ final class CreateUnitDTO {
       throw new ApiException(ErrorType::from('INVALID_UNIT_DESC', 'La descripción de la unidad no puede exceder los 255 caracteres'));
     }
 
-    if (empty($this->belongingID)) {
-      throw new ApiException(ErrorType::missingField('belongingID'));
+    // A unit must be assigned to a department or a section.
+    if (empty($this->belongingId)) {
+      throw new ApiException(ErrorType::missingField('belongingId'));
     }
   }
 }
