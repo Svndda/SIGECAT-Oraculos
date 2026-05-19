@@ -20,8 +20,8 @@ use Http\ErrorType;
  */
 final class CreateUnitDTO {
   public string $name;
-  public string $description;
-  
+  public ?string $description;
+
    // sectionId or departmentId
   public string $belongingId;
 
