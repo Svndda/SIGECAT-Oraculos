@@ -1,12 +1,24 @@
-import { Container, Box, Button, Typography, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
+import { Container, Box, Button, Typography, Stack, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useRecords } from '../../context/RecordsContext';
 
-export default function Screen1() {
+const DEFAULT_RECORD = {
+  name: '', idNumber: '', institutionalEmail: '', employeeCode: '',
+  ucrRelationship: '', workLocation: '', plazaNumber: '', occupationalClass: null,
+  workShift: '', startTime: '', endTime: '', objective: '',
+  isRead: false, hours: [],
+};
+
+export default function EmployeeRecordPage() {
   const navigate = useNavigate();
+  const { currentRecord, setCurrentRecord } = useRecords();
+  const [isRead, setIsRead] = useState(currentRecord?.isRead === true);
 
-  const indicaciones = [
+  const instructions = [
     {
       title: 'Información General',
       content: 'En este apartado debe registrar la información general relacionada al puesto que ocupa actualmente en la Unidad de Trabajo.'
@@ -20,6 +32,11 @@ export default function Screen1() {
       content: 'Complete cualquier información adicional que considere relevante para el análisis.'
     },
   ];
+
+  const handleBegin = () => {
+    setCurrentRecord({ ...(currentRecord ?? DEFAULT_RECORD), isRead });
+    navigate('/employee-form');
+  };
 
   return (
     <Container maxWidth="lg">
@@ -43,7 +60,7 @@ export default function Screen1() {
         </Typography>
 
         <Box sx={{ mb: 4 }}>
-          {indicaciones.map((item, index) => (
+          {instructions.map((item, index) => (
             <Accordion key={index} sx={{ mb: 1 }}>
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
@@ -88,12 +105,27 @@ export default function Screen1() {
           </Typography>
         </Alert>
 
-        {/* Botón */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        {/* Buttons */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+          <Button
+            variant={isRead ? 'contained' : 'outlined'}
+            startIcon={<CheckCircleIcon />}
+            onClick={() => setIsRead(!isRead)}
+            sx={isRead ? {
+              backgroundColor: '#388e3c',
+              '&:hover': { backgroundColor: '#2e7d32' },
+            } : {
+              color: '#12457d',
+              borderColor: '#12457d',
+              '&:hover': { backgroundColor: '#f0f4ff' },
+            }}
+          >
+            {isRead ? 'Leído' : 'Marcar como leído'}
+          </Button>
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/screen2')}
+            onClick={handleBegin}
             sx={{
               px: 4,
               py: 1.5,
@@ -106,7 +138,7 @@ export default function Screen1() {
           >
             Comenzar
           </Button>
-        </Box>
+        </Stack>
       </Box>
     </Container>
   );

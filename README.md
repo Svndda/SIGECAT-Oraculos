@@ -25,13 +25,13 @@ This generates optimized files in the `dist/` folder.
 
 ## Navigation Flow
 ```
-Screen1 (/) 
+EmployeeRecordPage (/) 
     ↓ "Begin"
-Screen2 (/screen2)
+EmployeeFormPage (/employee-form)
     ├→ "Back" (returns to /)
     ↓ "Next"
-Screen3 (/screen3)
-    ├→ "Back" (returns to /screen2)
+WorkHoursPage (/work-hours)
+    ├→ "Back" (returns to /employee-form)
     ↓ "Complete"
 Home (/home)
 

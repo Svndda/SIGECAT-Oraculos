@@ -30,8 +30,9 @@ function validateSessionToken(PDO $db): void
   }
 
   try {
-    // TODO : Implement AuthService::requireAuth() to handle both cookies.
-      
+    $authService = new \Services\AuthService($db);
+    $user = $authService->requireAuth();
+    \Http\Request::setUser($user);
   } catch (\Exception $e) { // @phpstan-ignore-line
     /**
      * Authentication failures are logged but not fatal here, 

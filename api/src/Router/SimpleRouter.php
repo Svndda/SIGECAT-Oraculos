@@ -120,7 +120,7 @@ class SimpleRouter
      */
     private function createController(string $name)
     {
-        $controllerClass = "\\Controllers\\{$name}";
+        $controllerClass = "Controllers\\{$name}";
         return new $controllerClass($this->db);
     }
 }

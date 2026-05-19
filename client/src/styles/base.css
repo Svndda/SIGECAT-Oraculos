@@ -1,3 +1,12 @@
+@font-face {
+  font-family: 'Cicero';
+  src: url('/assets/CiceroMedium.woff2') format('woff2'),
+       url('/assets/CiceroMedium.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 *,
 *::before,
 *::after {

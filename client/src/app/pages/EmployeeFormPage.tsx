@@ -22,29 +22,29 @@ interface Job {
   descripcion: string;
 }
 
-export default function Screen2() {
+export default function EmployeeFormPage() {
   const navigate = useNavigate();
   const { currentRecord, setCurrentRecord } = useRecords();
-  
+
   const [formData, setFormData] = useState({
-    nombre: currentRecord?.nombre || '',
-    cedula: currentRecord?.cedula || '',
-    correoInstitucional: currentRecord?.correoInstitucional || '',
-    codigoEmpleado: currentRecord?.codigoEmpleado || '',
-    relacionUCR: currentRecord?.relacionUCR || '',
-    lugarTrabajo: currentRecord?.lugarTrabajo || '',
-    numeroPlaza: currentRecord?.numeroPlaza || '',
-    claseOcupacional: currentRecord?.claseOcupacional || null,
-    cargoDelPuesto: (currentRecord as any)?.cargoDelPuesto || null,
-    jornadaLaboral: currentRecord?.jornadaLaboral || 'Diurna',
-    horarioInicio: currentRecord?.horarioInicio || '08:00',
-    horarioFinal: currentRecord?.horarioFinal || '16:30',
+    name: currentRecord?.name || '',
+    idNumber: currentRecord?.idNumber || '',
+    institutionalEmail: currentRecord?.institutionalEmail || '',
+    employeeCode: currentRecord?.employeeCode || '',
+    ucrRelationship: currentRecord?.ucrRelationship || '',
+    workLocation: currentRecord?.workLocation || '',
+    plazaNumber: currentRecord?.plazaNumber || '',
+    occupationalClass: currentRecord?.occupationalClass || null,
+    jobPosition: (currentRecord as any)?.jobPosition || null,
+    workShift: currentRecord?.workShift || 'Diurna',
+    startTime: currentRecord?.startTime || '08:00',
+    endTime: currentRecord?.endTime || '16:30',
   });
 
   const [classes, setClasses] = useState<Class[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [ssoExpanded, setSsoExpanded] = useState(false);
+  const [isSsoExpanded, setIsSsoExpanded] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -59,55 +59,54 @@ export default function Screen2() {
   };
 
   const handleClassChange = (_: any, value: Class | null) => {
-    setFormData(prev => ({ ...prev, claseOcupacional: value }));
-    if (errors.claseOcupacional) {
+    setFormData(prev => ({ ...prev, occupationalClass: value }));
+    if (errors.occupationalClass) {
       setErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors.claseOcupacional;
+        delete newErrors.occupationalClass;
         return newErrors;
       });
     }
   };
 
   const handleJobChange = (_: any, value: Job | null) => {
-    setFormData(prev => ({ ...prev, cargoDelPuesto: value }));
+    setFormData(prev => ({ ...prev, jobPosition: value }));
   };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!formData.nombre.trim()) newErrors.nombre = 'Nombre es requerido';
-    if (!formData.lugarTrabajo.trim()) newErrors.lugarTrabajo = 'Lugar de trabajo es requerido';
-    if (!formData.numeroPlaza.trim()) newErrors.numeroPlaza = 'Número de plaza es requerido';
-    if (!formData.claseOcupacional) newErrors.claseOcupacional = 'Clase ocupacional es requerida';
+    if (!formData.name.trim()) newErrors.name = 'Nombre es requerido';
+    if (!formData.workLocation.trim()) newErrors.workLocation = 'Lugar de trabajo es requerido';
+    if (!formData.plazaNumber.trim()) newErrors.plazaNumber = 'Número de plaza es requerido';
+    if (!formData.occupationalClass) newErrors.occupationalClass = 'Clase ocupacional es requerida';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSiguiente = () => {
+  const handleNext = () => {
     if (!validateForm()) {
       return;
     }
 
-    // Save form data to context so Screen3 can access
     setCurrentRecord({
-      nombre: formData.nombre,
-      cedula: formData.cedula,
-      correoInstitucional: formData.correoInstitucional,
-      codigoEmpleado: formData.codigoEmpleado,
-      relacionUCR: formData.relacionUCR,
-      lugarTrabajo: formData.lugarTrabajo,
-      numeroPlaza: formData.numeroPlaza,
-      claseOcupacional: formData.claseOcupacional,
-      jornadaLaboral: formData.jornadaLaboral,
-      horarioInicio: formData.horarioInicio,
-      horarioFinal: formData.horarioFinal,
-      objetivo: '',
-      estadoLeido: false,
-      horas: [],
+      name: formData.name,
+      idNumber: formData.idNumber,
+      institutionalEmail: formData.institutionalEmail,
+      employeeCode: formData.employeeCode,
+      ucrRelationship: formData.ucrRelationship,
+      workLocation: formData.workLocation,
+      plazaNumber: formData.plazaNumber,
+      occupationalClass: formData.occupationalClass,
+      workShift: formData.workShift,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      objective: '',
+      isRead: false,
+      hours: [],
     });
-    navigate('/screen3');
+    navigate('/work-hours');
   };
 
   useEffect(() => {
@@ -127,7 +126,7 @@ export default function Screen2() {
         </Typography>
 
         {/* Formulario */}
-        <Paper sx={{ p: 4, backgroundColor: '#f9f9fd' }}>
+        <Paper sx={{ p: { xs: 2, sm: 4 }, backgroundColor: '#f9f9fd' }}>
           <Stack spacing={3}>
             {/* SECCIÓN 1: CAMPOS PRINCIPALES */}
             <Box>
@@ -142,14 +141,14 @@ export default function Screen2() {
                   </Typography>
                   <TextField
                     fullWidth
-                    name="nombre"
-                    value={formData.nombre}
+                    name="name"
+                    value={formData.name}
                     onChange={handleChange}
                     placeholder="Carlos Pérez García"
                     variant="outlined"
                     size="small"
-                    error={!!errors.nombre}
-                    helperText={errors.nombre}
+                    error={!!errors.name}
+                    helperText={errors.name}
                     sx={{ backgroundColor: 'white' }}
                     required
                   />
@@ -162,16 +161,16 @@ export default function Screen2() {
                   </Typography>
                   <TextField
                     fullWidth
-                    name="lugarTrabajo"
-                    value={formData.lugarTrabajo}
+                    name="workLocation"
+                    value={formData.workLocation}
                     onChange={handleChange}
                     placeholder="Unidad de Investigación en Ciencias de la Materia..."
                     variant="outlined"
                     size="small"
                     multiline
                     rows={2}
-                    error={!!errors.lugarTrabajo}
-                    helperText={errors.lugarTrabajo}
+                    error={!!errors.workLocation}
+                    helperText={errors.workLocation}
                     sx={{ backgroundColor: 'white' }}
                     required
                   />
@@ -184,14 +183,14 @@ export default function Screen2() {
                   </Typography>
                   <TextField
                     fullWidth
-                    name="numeroPlaza"
-                    value={formData.numeroPlaza}
+                    name="plazaNumber"
+                    value={formData.plazaNumber}
                     onChange={handleChange}
                     placeholder="00333"
                     variant="outlined"
                     size="small"
-                    error={!!errors.numeroPlaza}
-                    helperText={errors.numeroPlaza}
+                    error={!!errors.plazaNumber}
+                    helperText={errors.plazaNumber}
                     sx={{ backgroundColor: 'white' }}
                     required
                   />
@@ -205,7 +204,7 @@ export default function Screen2() {
                   <Autocomplete
                     options={classes}
                     getOptionLabel={(option) => `${option.codigo} - ${option.descripcion}`}
-                    value={formData.claseOcupacional}
+                    value={formData.occupationalClass}
                     onChange={handleClassChange}
                     renderInput={(params) => (
                       <TextField
@@ -213,8 +212,8 @@ export default function Screen2() {
                         placeholder="Buscar clase ocupacional..."
                         variant="outlined"
                         size="small"
-                        error={!!errors.claseOcupacional}
-                        helperText={errors.claseOcupacional}
+                        error={!!errors.occupationalClass}
+                        helperText={errors.occupationalClass}
                         sx={{ backgroundColor: 'white' }}
                         required
                       />
@@ -231,7 +230,7 @@ export default function Screen2() {
                   <Autocomplete
                     options={jobs}
                     getOptionLabel={(option) => `${option.codigo} - ${option.nombre}`}
-                    value={formData.cargoDelPuesto}
+                    value={formData.jobPosition}
                     onChange={handleJobChange}
                     renderInput={(params) => (
                       <TextField
@@ -265,8 +264,8 @@ export default function Screen2() {
                   <TextField
                     fullWidth
                     select
-                    name="jornadaLaboral"
-                    value={formData.jornadaLaboral}
+                    name="workShift"
+                    value={formData.workShift}
                     onChange={handleChange}
                     variant="outlined"
                     size="small"
@@ -291,8 +290,8 @@ export default function Screen2() {
                       <TextField
                         fullWidth
                         type="time"
-                        name="horarioInicio"
-                        value={formData.horarioInicio}
+                        name="startTime"
+                        value={formData.startTime}
                         onChange={handleChange}
                         variant="outlined"
                         size="small"
@@ -307,8 +306,8 @@ export default function Screen2() {
                       <TextField
                         fullWidth
                         type="time"
-                        name="horarioFinal"
-                        value={formData.horarioFinal}
+                        name="endTime"
+                        value={formData.endTime}
                         onChange={handleChange}
                         variant="outlined"
                         size="small"
@@ -327,7 +326,7 @@ export default function Screen2() {
             {/* SECCIÓN 3: INFORMACIÓN DEL SSO */}
             <Box sx={{ p: 2, bgcolor: '#f0f8ff', borderRadius: 1 }}>
               <Stack spacing={2}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
                     Esta información puede venir del SSO:
                   </Typography>
@@ -335,18 +334,18 @@ export default function Screen2() {
                     variant="contained"
                     size="small"
                     color="primary"
-                    onClick={() => setSsoExpanded(!ssoExpanded)}
-                    sx={{ backgroundColor: '#1565c0' }}
+                    onClick={() => setIsSsoExpanded(!isSsoExpanded)}
+                    sx={{ backgroundColor: '#1565c0', alignSelf: { xs: 'flex-end', sm: 'auto' } }}
                   >
-                    {ssoExpanded ? 'Ocultar' : 'Autocompletar datos'}
+                    {isSsoExpanded ? 'Ocultar' : 'Autocompletar datos'}
                   </Button>
                 </Box>
 
-                {ssoExpanded && (
+                {isSsoExpanded && (
                   <Stack spacing={2}>
                     <TextField
                       label="Nombre Completo"
-                      value={formData.nombre}
+                      value={formData.name}
                       fullWidth
                       disabled
                       size="small"
@@ -354,7 +353,7 @@ export default function Screen2() {
                     />
                     <TextField
                       label="Número de Cédula"
-                      value={formData.cedula}
+                      value={formData.idNumber}
                       fullWidth
                       disabled
                       size="small"
@@ -362,7 +361,7 @@ export default function Screen2() {
                     />
                     <TextField
                       label="Correo Institucional"
-                      value={formData.correoInstitucional}
+                      value={formData.institutionalEmail}
                       fullWidth
                       disabled
                       size="small"
@@ -370,7 +369,7 @@ export default function Screen2() {
                     />
                     <TextField
                       label="Código de Empleado"
-                      value={formData.codigoEmpleado}
+                      value={formData.employeeCode}
                       fullWidth
                       disabled
                       size="small"
@@ -378,7 +377,7 @@ export default function Screen2() {
                     />
                     <TextField
                       label="UCR Relación"
-                      value={formData.relacionUCR}
+                      value={formData.ucrRelationship}
                       fullWidth
                       disabled
                       size="small"
@@ -390,7 +389,7 @@ export default function Screen2() {
             </Box>
 
             {/* Botones */}
-            <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+            <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
@@ -402,7 +401,7 @@ export default function Screen2() {
               <Button
                 variant="contained"
                 endIcon={<ArrowForwardIcon />}
-                onClick={handleSiguiente}
+                onClick={handleNext}
                 sx={{
                   backgroundColor: '#2c2c2c',
                   '&:hover': {

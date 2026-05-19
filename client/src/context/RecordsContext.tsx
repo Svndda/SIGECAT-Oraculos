@@ -5,17 +5,17 @@ import { recordsService } from '../services/recordsService';
 interface RecordsContextType {
   records: CompleteRecord[];
   loadRecords: () => Promise<void>;
-  saveRecord: (record: Omit<CompleteRecord, 'id' | 'fecha'>) => Promise<CompleteRecord>;
+  saveRecord: (record: Omit<CompleteRecord, 'id' | 'createdAt'>) => Promise<CompleteRecord>;
   deleteRecord: (id: string) => Promise<void>;
-  currentRecord: Omit<CompleteRecord, 'id' | 'fecha'> | null;
-  setCurrentRecord: (record: Omit<CompleteRecord, 'id' | 'fecha'> | null) => void;
+  currentRecord: Omit<CompleteRecord, 'id' | 'createdAt'> | null;
+  setCurrentRecord: (record: Omit<CompleteRecord, 'id' | 'createdAt'> | null) => void;
 }
 
 const RecordsContext = createContext<RecordsContextType | undefined>(undefined);
 
 export const RecordsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [records, setRecords] = useState<CompleteRecord[]>([]);
-  const [currentRecord, setCurrentRecordState] = useState<Omit<CompleteRecord, 'id' | 'fecha'> | null>(null);
+  const [currentRecord, setCurrentRecordState] = useState<Omit<CompleteRecord, 'id' | 'createdAt'> | null>(null);
 
   const loadRecords = async () => {
     try {
@@ -26,7 +26,7 @@ export const RecordsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const saveRecord = async (record: Omit<CompleteRecord, 'id' | 'fecha'>) => {
+  const saveRecord = async (record: Omit<CompleteRecord, 'id' | 'createdAt'>) => {
     try {
       const newRecord = await recordsService.saveRecord(record);
       setRecords([...records, newRecord]);

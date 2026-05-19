@@ -2,33 +2,33 @@ import axios from 'axios';
 
 export interface CompleteRecord {
   id: string;
-  fecha: string;
-  nombre: string;
-  cedula: string;
-  correoInstitucional: string;
-  codigoEmpleado: string;
-  relacionUCR: string;
-  lugarTrabajo: string;
-  numeroPlaza: string;
-  claseOcupacional: {
+  createdAt: string;
+  name: string;
+  idNumber: string;
+  institutionalEmail: string;
+  employeeCode: string;
+  ucrRelationship: string;
+  workLocation: string;
+  plazaNumber: string;
+  occupationalClass: {
     id: string;
     codigo: string;
     estrato: string;
     descripcion: string;
   } | null;
-  jornadaLaboral: string;
-  horarioInicio: string;
-  horarioFinal: string;
-  objetivo: string;
-  estadoLeido: boolean;
-  horas: Array<{
+  workShift: string;
+  startTime: string;
+  endTime: string;
+  objective: string;
+  isRead: boolean;
+  hours: Array<{
     id: number;
     dia: string;
-    tipoTarea: 'propias' | 'apoyo' | 'otros';
-    horaInicio: string;
-    horaFin: string;
-    horas: number;
-    minutos: number;
+    taskType: 'propias' | 'apoyo' | 'otros';
+    startTime: string;
+    endTime: string;
+    hours: number;
+    minutes: number;
   }>;
 }
 
@@ -49,12 +49,12 @@ export const recordsService = {
   },
 
   // Save a new record
-  async saveRecord(record: Omit<CompleteRecord, 'id' | 'fecha'>): Promise<CompleteRecord> {
+  async saveRecord(record: Omit<CompleteRecord, 'id' | 'createdAt'>): Promise<CompleteRecord> {
     try {
       const newRecord: CompleteRecord = {
         ...record,
         id: Date.now().toString(),
-        fecha: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
 
       const response = await axios.post(`${API_BASE}/records`, newRecord);
@@ -77,7 +77,7 @@ export const recordsService = {
   },
 
   // Update a record
-  async updateRecord(id: string, record: Omit<CompleteRecord, 'id' | 'fecha'>): Promise<CompleteRecord> {
+  async updateRecord(id: string, record: Omit<CompleteRecord, 'id' | 'createdAt'>): Promise<CompleteRecord> {
     try {
       const response = await axios.put(`${API_BASE}/records/${id}`, record);
       return response.data;
