@@ -60,8 +60,8 @@ final class AuthController
       $result = $this->authService->login($dto);
 
       // Set HTTP‑only cookie for the access token for web client convenience.
-      $accessToken = $result['data']['ACCESS_TOKEN'] ?? '';
-      $expiresIn = $result['meta']['EXPIRES_IN'] ?? 3600;
+      $accessToken = $result['data']['access_token'] ?? '';
+      $expiresIn = $result['meta']['expires_in'] ?? 3600;
 
       // Secure is set to false for development.
       setcookie(
@@ -103,15 +103,15 @@ final class AuthController
         throw new ApiException(ErrorType::missingField('refresh_token'), 400);
       }
 
-      $result = $this->authService->refreshTokens($body['REFRESH_TOKEN']);
+      $result = $this->authService->refreshTokens($body['refresh_token']);
 
       //  Updates the access token cookie for web clients.
-      if (isset($result['data']['ACCESS_TOKEN'], $result['meta']['EXPIRES_IN'])) {
+      if (isset($result['data']['access_token'], $result['meta']['expires_in'])) {
         setcookie(
           'sigecat_session_token',
-          $result['data']['ACCESS_TOKEN'],
+          $result['data']['access_token'],
           [
-            'expires' => time() + (int) $result['meta']['EXPIRES_IN'],
+            'expires' => time() + (int) $result['meta']['expires_in'],
             'path' => '/',
             'domain' => '',
             'secure' => false,
