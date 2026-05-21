@@ -56,8 +56,6 @@ final class AuthService
    */
   public function login(LoginUserDTO $dto): array
   {
-
-    echo "Attempting login for email: {$dto->email}\n"; // Debug log
     $dto->validate();
 
     $user = $this->userRepository->findByEmail($dto->email);
@@ -83,10 +81,15 @@ final class AuthService
     // Perform atomic replace of all user tokens.
     $this->authRepository->rotateTokensAtomic($rotationDto);
 
-    echo "Login successful for user_id: {$userId}\n"; // Debug log
-
     // Fetch user info from database for response.
     $userInfo = $this->userRepository->findById($userId);
+
+    $nameParts = array_filter(array_map('trim', [
+      $userInfo['first_name'] ?? '',
+      $userInfo['second_name'] ?? '',
+      $userInfo['first_last_name'] ?? '',
+      $userInfo['second_last_name'] ?? ''
+    ]));
 
     return [
       'data' => [
@@ -94,7 +97,7 @@ final class AuthService
         'refresh_token' => $rawRefreshToken,
         'user_id' => $userId,
         'email' => $userInfo['email'],
-        'name' => $userInfo['first_name'] . ' ' . $userInfo['last_name'],
+        'name' => implode(' ', $nameParts),
         'role' => $userInfo['role'] ?? 'usr',
       ],
       'meta' => [
@@ -225,6 +228,15 @@ final class AuthService
     }
 
     return $this->authenticate($rawToken);
+  }
+
+  public function requireAdmin(): array
+  {
+    $auth = $this->requireAuth();
+    if ($auth['role'] !== 'admin') {
+      throw new ApiException(ErrorType::forbidden(), 403);
+    }
+    return $auth;
   }
 
   /**

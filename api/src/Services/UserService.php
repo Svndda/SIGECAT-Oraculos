@@ -25,12 +25,14 @@ use PDO;
  *   locked accounts, etc.) by throwing ApiExceptions.
  * - Has no knowledge of HTTP transport (no $_POST, $_SESSION, headers).
  */
-class UserService {
+class UserService
+{
   private const MAX_FAILED_ATTEMPTS = 5;
 
   private UserRepository $userRepository;
 
-  public function __construct(private PDO $pdo) {
+  public function __construct(private PDO $pdo)
+  {
     $this->userRepository = new UserRepository($this->pdo);
   }
 
@@ -47,7 +49,8 @@ class UserService {
    * @return array<string, mixed>  Authenticated user row (no password_hash).
    * @throws ApiException
    */
-  public function login(LoginUserDTO $dto): array {
+  public function login(LoginUserDTO $dto): array
+  {
     $dto->validate();
 
     $user = $this->userRepository->findByEmail($dto->email);
@@ -85,12 +88,13 @@ class UserService {
    *
    * @throws ApiException
    */
-  public function register(string $createdBy, RegisterUserDTO $dto): void  {
+  public function register(string $createdBy, RegisterUserDTO $dto): void
+  {
     $dto->validate();
 
     $existing = $this->userRepository->findByEmail($dto->email);
     if ($existing !== null) {
-        throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está registrado'));
+      throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está registrado'));
     }
 
     $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
@@ -106,18 +110,19 @@ class UserService {
    *
    * @throws ApiException
    */
-  public function update(string $userId, UpdateUserDTO $dto): void  {
+  public function update(string $userId, UpdateUserDTO $dto): void
+  {
     $dto->validate();
 
     if ($dto->email !== null) {
-        $emailOwner = $this->userRepository->findByEmail($dto->email);
-        if ($emailOwner !== null && $emailOwner['user_id'] !== $userId) {
+      $emailOwner = $this->userRepository->findByEmail($dto->email);
+      if ($emailOwner !== null && $emailOwner['user_id'] !== $userId) {
         throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está en uso por otro usuario'));
-        }
+      }
     }
 
     if ($dto->password !== null) {
-        $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
+      $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
     }
 
     $this->userRepository->update($userId, $dto);
@@ -129,7 +134,8 @@ class UserService {
    * @return array<string, mixed>
    * @throws ApiException
    */
-  public function getById(string $userId): array  {
+  public function getById(string $userId): array
+  {
     if (empty($userId)) {
       throw new ApiException(ErrorType::missingField('user_id'));
     }
