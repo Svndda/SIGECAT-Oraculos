@@ -3,50 +3,65 @@ declare(strict_types=1);
 
 namespace Services;
 
+use Http\ApiException;
+use Http\ErrorType;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception as MailerException;
+
 /**
  * EmailService
  *
- * Sends transactional emails via PHP's mail() function.
- * All emails originate from the institutional noreply address.
- *
- * To replace this with a proper SMTP library (e.g. PHPMailer),
- * only this class needs to change — callers remain unaffected.
+ * Sends transactional emails via PHPMailer over authenticated SMTP.
+ * Credentials and server settings are loaded from mail_config.php,
+ * which is excluded from VCS (see mail_config.example.php for setup).
  */
 class EmailService {
 
-  private const FROM_ADDRESS = 'noreply@ucr.ac.cr';
-  private const FROM_NAME    = 'SIGECAT – UCR';
-
   /**
    * Sends a password recovery email containing a single-use token.
-   *
-   * The user must submit this token to POST /auth/password-recovery/reset
-   * together with the new password.
    *
    * @param string $toEmail          Recipient's institutional email.
    * @param string $toName           Recipient's full name for the greeting.
    * @param string $rawToken         The plain-text token (never stored).
    * @param int    $expiresInMinutes How long the token remains valid.
-   * @return bool                    True if mail() accepted the message.
+   * @throws ApiException            When the email cannot be dispatched.
    */
   public function sendPasswordRecoveryEmail(
     string $toEmail,
     string $toName,
     string $rawToken,
     int $expiresInMinutes = 60
-  ): bool {
-    $subject = 'Recuperación de contraseña – SIGECAT UCR';
-    $headers = implode("\r\n", [
-      'MIME-Version: 1.0',
-      'Content-Type: text/plain; charset=UTF-8',
-      'From: ' . self::FROM_NAME . ' <' . self::FROM_ADDRESS . '>',
-      'Reply-To: ' . self::FROM_ADDRESS,
-      'X-Mailer: SIGECAT-API',
-    ]);
+  ): void {
+    require_once __DIR__ . '/../../config/mail_config.php';
 
-    $body = $this->buildRecoveryBody($toName, $rawToken, $expiresInMinutes);
+    $mail = new PHPMailer(true);
 
-    return mail($toEmail, $subject, $body, $headers);
+    try {
+      $mail->isSMTP();
+      $mail->Host       = \MailConfig::SMTP_HOST;
+      $mail->SMTPAuth   = true;
+      $mail->Username   = \MailConfig::SMTP_USER;
+      $mail->Password   = \MailConfig::SMTP_PASS;
+      $mail->SMTPSecure = \MailConfig::SMTP_ENCRYPTION === 'ssl'
+        ? PHPMailer::ENCRYPTION_SMTPS
+        : PHPMailer::ENCRYPTION_STARTTLS;
+      $mail->Port       = \MailConfig::SMTP_PORT;
+      $mail->CharSet    = 'UTF-8';
+
+      $mail->setFrom(\MailConfig::FROM_ADDRESS, \MailConfig::FROM_NAME);
+      $mail->addAddress($toEmail, $toName);
+
+      $mail->isHTML(false);
+      $mail->Subject = 'Recuperación de contraseña – SIGECAT UCR';
+      $mail->Body    = $this->buildRecoveryBody($toName, $rawToken, $expiresInMinutes);
+
+      $mail->send();
+    } catch (MailerException $e) {
+      throw new ApiException(
+        ErrorType::from('EMAIL_DISPATCH_FAILED', 'No fue posible enviar el correo de recuperación. Intente de nuevo más tarde.')
+      );
+    }
   }
 
   private function buildRecoveryBody(
