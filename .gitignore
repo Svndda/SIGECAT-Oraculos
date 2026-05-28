@@ -6,6 +6,9 @@ node_modules/
 .pnp.js
 .vite/
 
+# JetBrains IDEs
+.idea/
+
 # testing
 coverage/
 

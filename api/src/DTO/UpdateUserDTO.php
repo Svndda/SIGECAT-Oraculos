@@ -23,18 +23,30 @@ use Http\ErrorType;
 class UpdateUserDTO {
   public ?string $email;
   public ?string $firstName;
-  public ?string $lastName;
+  public ?string $secondName;
+  public ?string $firstLastName;
+  public ?string $secondLastName;
   public ?string $password;
   public ?string $jobPosition;
   public ?string $role;
   public ?int $isActive;
 
-  public function __construct(?string $email, 
-      ?string $firstName, ?string $lastName, ?string $password,
-      ?string $jobPosition, ?string $role, ?int $isActive) {
+  public function __construct(
+    ?string $email,
+    ?string $firstName,
+    ?string $secondName,
+    ?string $firstLastName,
+    ?string $secondLastName,
+    ?string $password,
+    ?string $jobPosition,
+    ?string $role,
+    ?int $isActive
+  ) {
     $this->email = $email;
     $this->firstName = $firstName;
-    $this->lastName = $lastName;
+    $this->secondName = $secondName;
+    $this->firstLastName = $firstLastName;
+    $this->secondLastName = $secondLastName;
     $this->password = $password;
     $this->jobPosition = $jobPosition;
     $this->role = $role;
@@ -43,24 +55,28 @@ class UpdateUserDTO {
 
   /**
    * @param array{
-   *   email?: string,
-   *   first_name?: string,
-   *   last_name?: string,
-   *   password?: string,
-   *   job_class_id?: string,
-   *   role?: string,
-   *   is_active?: int
+   * email?: string,
+   * first_name?: string,
+   * second_name?: ?string,
+   * first_last_name?: string,
+   * second_last_name?: string,
+   * password?: string,
+   * job_class_id?: string,
+   * role?: string,
+   * is_active?: int
    * } $data
    */
   public static function fromArray(array $data): self {
     return new self (
-      isset($data['email'])        ? (string) $data['email']        : null,
-      isset($data['first_name'])   ? (string) $data['first_name']   : null,
-      isset($data['last_name'])    ? (string) $data['last_name']    : null,
-      isset($data['password'])     ? (string) $data['password']     : null,
-      isset($data['job_class_id']) ? (string) $data['job_class_id'] : null,
-      isset($data['role'])         ? (string) $data['role']         : null,
-      isset($data['is_active'])    ? (int)    $data['is_active']    : null,
+      isset($data['email'])            ? (string) $data['email']            : null,
+      isset($data['first_name'])       ? (string) $data['first_name']       : null,
+      array_key_exists('second_name', $data) ? ($data['second_name'] !== null ? (string)$data['second_name'] : null) : null,
+      isset($data['first_last_name'])  ? (string) $data['first_last_name']  : null,
+      isset($data['second_last_name']) ? (string) $data['second_last_name'] : null,
+      isset($data['password'])         ? (string) $data['password']         : null,
+      isset($data['job_class_id'])     ? (string) $data['job_class_id']     : null,
+      isset($data['role'])             ? (string) $data['role']             : null,
+      isset($data['is_active'])        ? (int)    $data['is_active']        : null,
     );
   }
 
@@ -71,29 +87,38 @@ class UpdateUserDTO {
 
     if ($this->firstName !== null) {
       $this->firstName = trim($this->firstName);
-
       if ($this->firstName === '') {
         throw new ApiException(ErrorType::invalidField('first_name'));
       }
     }
 
-    if ($this->lastName !== null) {
-      $this->lastName = trim($this->lastName);
+    if ($this->secondName !== null) {
+      $this->secondName = trim($this->secondName);
+    }
 
-      if ($this->lastName === '') {
-        throw new ApiException(ErrorType::invalidField('last_name'));
+    if ($this->firstLastName !== null) {
+      $this->firstLastName = trim($this->firstLastName);
+      if ($this->firstLastName === '') {
+        throw new ApiException(ErrorType::invalidField('first_last_name'));
       }
     }
-    
+
+    if ($this->secondLastName !== null) {
+      $this->secondLastName = trim($this->secondLastName);
+      if ($this->secondLastName === '') {
+        throw new ApiException(ErrorType::invalidField('second_last_name'));
+      }
+    }
+
     if ($this->password !== null) {
       PasswordValidator::validate($this->password);
     }
-    
+
     if ($this->role !== null && AllowedUserRoles::isValid($this->role) === FALSE) {
       throw new ApiException(ErrorType::invalidField('role'));
     }
 
-    if ($this->isActive !== null && (in_array($this->isActive, [0,1], true)) === FALSE) {
+    if ($this->isActive !== null && (in_array($this->isActive, [0, 1], true)) === FALSE) {
       throw new ApiException(ErrorType::invalidField('is_active'));
     }
   }

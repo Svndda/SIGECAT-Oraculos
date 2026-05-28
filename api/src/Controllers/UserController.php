@@ -25,12 +25,14 @@ use PDO;
  * - Captures ApiException and returns formatted errors via Response::error().
  * - Obtains authenticated user context via AuthService::requireAuth().
  */
-class UserController {
+class UserController
+{
 
   private AuthService $authService;
   private UserService $userService;
-  
-  public function __construct(private PDO $pdo) {
+
+  public function __construct(private PDO $pdo)
+  {
     $this->authService = new AuthService($this->pdo);
     $this->userService = new UserService($this->pdo);
   }
@@ -38,10 +40,11 @@ class UserController {
   /**
    * POST /users/login
    */
-  public function login(): void {
+  public function login(): void
+  {
     try {
       $data = Request::parseJsonRequest();
-      $dto  = LoginUserDTO::fromArray($data);
+      $dto = LoginUserDTO::fromArray($data);
 
       $result = $this->userService->login($dto);
 
@@ -55,16 +58,18 @@ class UserController {
    * POST /users
    * Requires authentication — only an authenticated user can register another.
    */
-  public function register(): void {
+  public function register(): void
+  {
     try {
-      // $auth      = $this->authService->requireAuth();
+      $auth = $this->authService->requireAdmin();
 
-      // $createdBy = $auth['user_id'];
+      error_log('User Info: ' . json_encode($auth));
 
-      $createdBy = 'SYSTEM_FIRST_USER________';
+
+      $createdBy = $auth['user_id'];
 
       $data = Request::parseJsonRequest();
-      $dto  = RegisterUserDTO::fromArray($data);
+      $dto = RegisterUserDTO::fromArray($data);
 
       $this->userService->register($createdBy, $dto);
 
@@ -81,15 +86,38 @@ class UserController {
   public function update(): void
   {
     try {
-      $auth   = $this->authService->requireAuth();
+      $auth = $this->authService->requireAuth();
       $userId = $auth['user_id'];
 
       $data = Request::parseJsonRequest();
-      $dto  = UpdateUserDTO::fromArray($data);
+      $dto = UpdateUserDTO::fromArray($data);
 
       $this->userService->update($userId, $dto);
 
       Response::success(null, null, 200);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * GET /users/me
+   * Returns public profile of a user by ID.
+   */
+  public function show(): void
+  {
+    try {
+      $userInfo = $this->authService->requireAuth();
+
+      $userId = $userInfo['user_id'] ?? null;
+
+      if ($userId === null) {
+        throw new ApiException(ErrorType::missingField('user_id'), 400);
+      }
+
+      $user = $this->userService->getById($userId);
+
+      Response::success($user, null, 200);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }

@@ -29,9 +29,9 @@ final class UserRepository extends Repository {
   public function findById(string $userId): ?array{
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
-              first_name, last_name, password_hash,
-              is_active, is_password_temp, failed_logging_attempts,
-              created_at, created_by
+              first_name, second_name, first_last_name, second_last_name,
+              password_hash, is_active, is_password_temp,
+              failed_logging_attempts, created_at, created_by
        FROM USERS
        WHERE user_id = :user_id
        AND ROWNUM = 1'
@@ -45,8 +45,9 @@ final class UserRepository extends Repository {
   public function findByEmail(string $email): ?array {
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
-              first_name, last_name, password_hash,
-              is_active, is_password_temp, failed_logging_attempts
+              first_name, second_name, first_last_name,second_last_name,
+              password_hash, is_active, is_password_temp,
+              failed_logging_attempts, created_at, created_by
        FROM USERS
        WHERE email = :email
        AND ROWNUM = 1'
@@ -63,22 +64,28 @@ final class UserRepository extends Repository {
     try {
       $stmt = $this->db->prepare(
         'INSERT INTO USERS
-          (user_id, role, email, first_name, last_name,
-            password_hash, is_active, is_password_temp,
-            failed_logging_attempts, created_by, created_at)
-        VALUES
-          (:user_id, :role, :email, :first_name, :last_name,
-            :password_hash, 1, 1, 0, :created_by, CURRENT_TIMESTAMP)'
+        ( user_id, role, email,
+          first_name, second_name, first_last_name, second_last_name,
+          password_hash, is_active, is_password_temp,
+          failed_logging_attempts, created_by, created_at
+          )
+      VALUES (
+         :user_id, :role, :email,
+         :first_name, :second_name, :first_last_name, :second_last_name,
+         :password_hash, 1, 1, 0, :created_by, CURRENT_TIMESTAMP
+         )'
       );
 
       $stmt->execute([
-        ':user_id'       => $newUserId,
-        ':role'          => $dto->role,
-        ':email'         => strtolower(trim($dto->email)),
-        ':first_name'    => trim($dto->firstName),
-        ':last_name'     => trim($dto->lastName),
-        ':password_hash' => $dto->password,
-        ':created_by'    => $newUserId
+        ':user_id'          => $newUserId,
+        ':role'             => $dto->role,
+        ':email'            => strtolower(trim($dto->email)),
+        ':first_name'       => trim($dto->firstName),
+        ':second_name'      => $dto->secondName !== null ? trim($dto->secondName) : null,
+        ':first_last_name'  => trim($dto->firstLastName),
+        ':second_last_name' => trim($dto->secondLastName),
+        ':password_hash'    => $dto->password,
+        ':created_by'       => $createdBy
       ]);
 
       $this->commit();
@@ -89,7 +96,6 @@ final class UserRepository extends Repository {
   }
 
   public function update(string $userId, UpdateUserDTO $dto): void {
-    // Build SET clause dynamically from non-null fields
     $fields = [];
     $params = [':user_id' => $userId];
 
@@ -99,11 +105,19 @@ final class UserRepository extends Repository {
     }
     if ($dto->firstName !== null) {
       $fields[] = 'first_name = :first_name';
-      $params[':first_name'] = trim($dto->firstName);
+      $params[':first_name'] = $dto->firstName;
     }
-    if ($dto->lastName !== null) {
-      $fields[] = 'last_name = :last_name';
-      $params[':last_name'] = trim($dto->lastName);
+    if ($dto->secondName !== null) {
+      $fields[] = 'second_name = :second_name';
+      $params[':second_name'] = $dto->secondName;
+    }
+    if ($dto->firstLastName !== null) {
+      $fields[] = 'first_name_last = :first_last_name';
+      $params[':first_last_name'] = $dto->firstLastName;
+    }
+    if ($dto->secondLastName !== null) {
+      $fields[] = 'second_last_name = :second_last_name';
+      $params[':second_last_name'] = $dto->secondLastName;
     }
     if ($dto->password !== null) {
       $fields[] = 'password_hash = :password_hash';
@@ -122,8 +136,7 @@ final class UserRepository extends Repository {
       throw new \RuntimeException('No fields provided for update.');
     }
 
-    $sql = 'UPDATE USERS SET ' . implode(', ', $fields)
-         . ' WHERE user_id = :user_id';
+    $sql = 'UPDATE USERS SET ' . implode(', ', $fields) . ' WHERE user_id = :user_id';
 
     $this->beginTransaction();
     try {
@@ -140,9 +153,9 @@ final class UserRepository extends Repository {
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare(
-        'UPDATE USERS
+        "UPDATE USERS
          SET failed_logging_attempts = failed_logging_attempts + 1
-         WHERE user_id = :user_id'
+         WHERE user_id = :user_id"
       );
       $stmt->execute([':user_id' => $userId]);
       $this->commit();
