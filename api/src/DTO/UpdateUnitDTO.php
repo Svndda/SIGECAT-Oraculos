@@ -5,20 +5,34 @@ namespace DTO;
 use Http\ApiException;
 use Http\ErrorType;
 
+/**
+ * UpdateUnitDTO
+ *
+ * Encapsulates and validates the data used to update an existing unit.
+ *
+ * Responsibilities:
+ * - Maps incoming request data using fromArray().
+ * - Ensures the unit identifier (unit_id) is provided.
+ * - Supports partial updates (area_id, name, description, sectionId, departmentId are optional).
+ * - Validates each field only if it is present in the request.
+ * - At least one updatable field must be provided.
+ *
+ * @package DTO
+ */
 final class UpdateUnitDTO {
   public string $unitId;
   public ?string $name;
   public ?string $description;
-
-  // sectionId or departmentId
-  public ?string $belongingId;
+  public ?string $sectionId;
+   public ?string $departmentId;
 
   private function __construct(string $unitId, ?string $name, 
-      ?string $description, ?string $belongingId) {
+      ?string $description, ?string $sectionId, ?string $departmentId) {
     $this->unitId = $unitId;
     $this->name = $name;
     $this->description = $description;
-    $this->belongingId = $belongingId;
+    $this->sectionId = $sectionId;
+    $this->departmentId = $departmentId;
   }
 
   /**
@@ -26,7 +40,8 @@ final class UpdateUnitDTO {
    *     unit_id: string,
    *     name?: string,
    *     description?: string,
-   *     belonging_id?: string
+   *     section_id?: string,
+   *     department_id?: string
    * } $data
    */
   public static function fromArray(array $data): self {
@@ -34,7 +49,8 @@ final class UpdateUnitDTO {
       (string) ($data['unit_id'] ?? ''),
       isset($data['name']) ? (string) $data['name'] : null,
       isset($data['description']) ? (string) $data['description'] : null,
-      isset($data['belonging_id']) ? (string) $data['belonging_id'] : null
+      isset($data['section_id']) ? (string) $data['section_id'] : null,
+      isset($data['department_id']) ? (string) $data['department_id'] : null
     );
   }
 
@@ -47,16 +63,6 @@ final class UpdateUnitDTO {
     // Validate unit_id if it is provided (optional field)
     if ($this->unitId !== null && empty($this->unitId)) {
       throw new ApiException(ErrorType::invalidField('unit_id'));
-    }
-
-    // belonging_id is required for identifying which section or department belonging a unit.
-    if (empty($this->belongingId)) {
-      throw new ApiException(ErrorType::missingField('belonging_id'));
-    }
-
-    // Validate belonging_id if it is provided (optional field)
-    if ($this->belongingId !== null && empty($this->belonging_id)) {
-      throw new ApiException(ErrorType::invalidField('belonging_id'));
     }
     
     // Validate name if it is provided (optional field)
@@ -86,7 +92,7 @@ final class UpdateUnitDTO {
 
     // Ensure that at least one updatable field is provided.
     if ($this->unitId === null && $this->name === null &&
-        $this->description === null && $this->belongingId === null) {
+        $this->description === null) {
       throw new ApiException(
         ErrorType::from(
         'INVALID_UNIT_UPDATE',
