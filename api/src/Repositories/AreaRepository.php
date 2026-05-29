@@ -142,6 +142,24 @@ final class AreaRepository extends Repository {
     }
   }
 
+  public function hasChildEntities(string $areaId): bool {
+    $stmt = $this->db->prepare(
+      'SELECT COUNT(*) AS cnt FROM DEPARTMENTS WHERE area_id = :area_id AND ROWNUM = 1'
+    );
+    $stmt->execute([':area_id' => $areaId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ((int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0) {
+      return true;
+    }
+
+    $stmt = $this->db->prepare(
+      'SELECT COUNT(*) AS cnt FROM SECTIONS WHERE area_id = :area_id AND ROWNUM = 1'
+    );
+    $stmt->execute([':area_id' => $areaId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
+  }
+
   public function deleteArea(string $areaId): void {
     $this->beginTransaction();
     try {

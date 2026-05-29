@@ -181,4 +181,25 @@ final class UserRepository extends Repository {
       throw $e;
     }
   }
+
+  public function updatePasswordById(string $userId, string $hashedPassword): void {
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare(
+        'UPDATE USERS
+         SET password_hash = :password_hash,
+             is_password_temp = 0,
+             failed_logging_attempts = 0
+         WHERE user_id = :user_id'
+      );
+      $stmt->execute([
+        ':password_hash' => $hashedPassword,
+        ':user_id'       => $userId,
+      ]);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
 }
