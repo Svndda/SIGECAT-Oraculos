@@ -20,17 +20,20 @@ final class AreaResponseDTO {
   public readonly string $name;
   public readonly ?string $description;
   public readonly string $createdAt;
+  public readonly string $createdBy;
 
   private function __construct(
     string $id,
     string $name,
     ?string $description,
-    string $createdAt
+    string $createdAt,
+    string $createdBy
   ) {
     $this->id          = $id;
     $this->name        = $name;
     $this->description = $description;
     $this->createdAt   = $createdAt;
+    $this->createdBy   = $createdBy;
   }
 
   /**
@@ -46,16 +49,18 @@ final class AreaResponseDTO {
       (string) ($data['NAME']       ?? $data['name']       ?? ''),
       $description !== null ? (string) $description : null,
       (string) ($data['CREATED_AT'] ?? $data['created_at'] ?? ''),
+      (string) ($data['CREATED_BY'] ?? $data['created_by'] ?? ''),
     );
   }
 
-  /** @return array{id: string, name: string, description: string|null, created_at: string} */
+  /** @return array{id: string, name: string, description: string|null, created_at: string, created_by: string} */
   public function toArray(): array {
     return [
       'id'          => $this->id,
       'name'        => $this->name,
       'description' => $this->description,
       'created_at'  => $this->createdAt,
+      'created_by'  => $this->createdBy,
     ];
   }
 }
