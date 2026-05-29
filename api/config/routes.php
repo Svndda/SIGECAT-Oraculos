@@ -2,8 +2,12 @@
 return [
     // Auth routes
     ['method' => 'POST', 'path' => '/auth/refresh', 'controller' => 'AuthController', 'action' => 'refresh'],
-    ['method' => 'POST', 'path' => '/auth/login', 'controller' => 'AuthController', 'action' => 'login'],
-    ['method' => 'POST', 'path' => '/auth/logout', 'controller' => 'AuthController', 'action' => 'logout'],
+    ['method' => 'POST', 'path' => '/auth/login',   'controller' => 'AuthController', 'action' => 'login'],
+    ['method' => 'POST', 'path' => '/auth/logout',  'controller' => 'AuthController', 'action' => 'logout'],
+
+    // Password recovery routes (public — no auth token required)
+    ['method' => 'POST', 'path' => '/auth/password-recovery/request', 'controller' => 'PasswordRecoveryController', 'action' => 'request'],
+    ['method' => 'POST', 'path' => '/auth/password-recovery/reset',   'controller' => 'PasswordRecoveryController', 'action' => 'reset'],
     
     // User routes
     ['method' => 'PUT', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'update'],

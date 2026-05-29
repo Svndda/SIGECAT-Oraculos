@@ -15,7 +15,8 @@
         }
     ],
     "require": {
-        "symfony/uid": "^8.0"
+        "symfony/uid": "^8.0",
+        "phpmailer/phpmailer": "^7.1"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1"
