@@ -113,6 +113,7 @@ class AreaService {
    *
    * Business rules:
    * - Area must exist before deletion.
+   * - Area must have no child departments or sections.
    *
    * @throws ApiException
    */
@@ -123,6 +124,12 @@ class AreaService {
 
     if ($this->areaRepository->findById($areaId) === null) {
       throw new ApiException(ErrorType::notFound('Área'));
+    }
+
+    if ($this->areaRepository->hasChildEntities($areaId)) {
+      throw new ApiException(
+        ErrorType::conflict('No es posible eliminar el área porque tiene departamentos o secciones asociadas.')
+      );
     }
 
     $this->areaRepository->deleteArea($areaId);
