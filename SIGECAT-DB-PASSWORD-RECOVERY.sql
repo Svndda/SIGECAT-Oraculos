@@ -17,6 +17,6 @@ CREATE TABLE PASSWORD_RESET_TOKENS (
     CONSTRAINT fk_prt_user FOREIGN KEY (user_id) REFERENCES USERS(user_id)
 );
 
-CREATE INDEX idx_prt_user       ON PASSWORD_RESET_TOKENS(user_id);
-CREATE INDEX idx_prt_token_hash ON PASSWORD_RESET_TOKENS(token_hash);
-CREATE INDEX idx_prt_expires    ON PASSWORD_RESET_TOKENS(expires_at);
+-- idx_prt_token_hash is omitted: the UNIQUE constraint already creates it.
+CREATE INDEX idx_prt_user    ON PASSWORD_RESET_TOKENS(user_id);
+CREATE INDEX idx_prt_expires ON PASSWORD_RESET_TOKENS(expires_at);
