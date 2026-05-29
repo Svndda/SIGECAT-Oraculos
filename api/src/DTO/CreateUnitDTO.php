@@ -13,7 +13,7 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Validates required fields: unit_id, name, sectionId or departmentId.
+ * - Validates required fields: name, and at least one of section_id or department_id.
  * - Ensures name does not exceed 110 characters and description does not exceed 255.
  *
  * @package DTO
@@ -35,17 +35,17 @@ final class CreateUnitDTO {
   /**
    * @param array{
    *     name?: string,
-   *     description?: string
-   *     sectionId?: string
-   *     departmentId?: string
+   *     description?: string,
+   *     section_id?: string,
+   *     department_id?: string
    * } $data
    */
   public static function fromArray(array $data): self {
     return new self (
       (string) ($data['name'] ?? ''),
-      isset($data['description']) ? (string) $data['description'] : null,
-      isset($data['sectionId']) ? (string) $data['section_id'] : null,
-      isset($data['departmentId']) ? (string) $data['department_id'] : null
+      isset($data['description'])   ? (string) $data['description']   : null,
+      isset($data['section_id'])    ? (string) $data['section_id']    : null,
+      isset($data['department_id']) ? (string) $data['department_id'] : null
     );
   }
 
@@ -72,12 +72,12 @@ final class CreateUnitDTO {
       );
     }
 
-    // A unit must be assigned to a department or a section.
-    if ($this->departmentId === null && $this->sectionId !== null) {
+    // A unit must be assigned to at least one of: department or section.
+    if ($this->departmentId === null && $this->sectionId === null) {
       throw new ApiException(
         ErrorType::from(
           'INVALID_UNIT_ASSIGNMENT',
-          'El nombre de la unidad no puede exceder los 110 caracteres'
+          'La unidad debe estar asignada a un departamento o una sección'
         )
       );
     }
