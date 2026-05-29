@@ -80,8 +80,8 @@ class UserController
   }
 
   /**
-   * PUT /users
-   * Updates the authenticated user's own profile.
+   * PATCH /users/me
+   * Applies a partial update to the authenticated user's own profile.
    */
   public function update(): void
   {

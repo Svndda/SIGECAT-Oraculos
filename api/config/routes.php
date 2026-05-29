@@ -10,7 +10,7 @@ return [
     ['method' => 'POST', 'path' => '/auth/password-recovery/reset',   'controller' => 'PasswordRecoveryController', 'action' => 'reset'],
     
     // User routes
-    ['method' => 'PUT', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'update'],
+    ['method' => 'PATCH', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'update'],
     ['method' => 'GET', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'show'],
     ['method' => 'GET', 'path' => '/users/{id}', 'controller' => 'UserController', 'action' => 'getById'],
     ['method' => 'GET', 'path' => '/users/me/session', 'controller' => 'UserController', 'action' => 'showSession'],
