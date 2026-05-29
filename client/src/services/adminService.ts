@@ -155,7 +155,7 @@ export const adminService = {
       return;
     }
     try {
-      await apiClient.put('/users/me', { plaza_number: plazaNumber });
+      await apiClient.patch('/users/me', { plaza_number: plazaNumber });
     } catch (e) { throw extractApiError(e); }
   },
 };

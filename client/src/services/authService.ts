@@ -161,7 +161,7 @@ export const authService = {
     }
     void currentPassword;
     try {
-      await apiClient.put('/users/me', { password: newPassword });
+      await apiClient.patch('/users/me', { password: newPassword });
     } catch (error) {
       throw extractApiError(error);
     }
