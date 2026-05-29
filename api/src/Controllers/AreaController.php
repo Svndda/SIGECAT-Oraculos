@@ -51,6 +51,21 @@ class AreaController {
   }
 
   /**
+   * GET /areas/{id}
+   */
+  public function show(string $areaId): void {
+    try {
+      $this->authService->requireAuth();
+
+      $area = $this->areaService->getById($areaId);
+
+      Response::success($area, null, 200);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
    * GET /areas
    * Query params: page (int), limit (int), filter (string)
    */

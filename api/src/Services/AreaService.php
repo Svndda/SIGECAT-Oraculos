@@ -109,6 +109,25 @@ class AreaService {
   }
 
   /**
+   * Returns a single area by its ID.
+   *
+   * @return array{id: string, name: string, description: string|null, created_at: string}
+   * @throws ApiException
+   */
+  public function getById(string $areaId): array {
+    if (empty($areaId)) {
+      throw new ApiException(ErrorType::missingField('area_id'));
+    }
+
+    $row = $this->areaRepository->findById($areaId);
+    if ($row === null) {
+      throw new ApiException(ErrorType::notFound('Área'));
+    }
+
+    return AreaResponseDTO::fromArray($row)->toArray();
+  }
+
+  /**
    * Removes an existing area.
    *
    * Business rules:
