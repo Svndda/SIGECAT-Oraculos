@@ -4,23 +4,23 @@ declare(strict_types=1);
 /**
  * SMTP mail configuration.
  *
- * Copy this file to mail_config.php and fill in the real credentials.
- * mail_config.php is listed in .gitignore and must never be committed.
+ * 1. Copy this file:  cp mail_config.example.php mail_config.php
+ * 2. Fill in your Mailtrap credentials (mail_config.php is gitignored).
  *
- * For UCR Google Workspace accounts use:
- *   SMTP_HOST = 'smtp.gmail.com'
- *   SMTP_PORT = 587
- *   SMTP_ENCRYPTION = 'tls'
- *   SMTP_USER = 'your-account@ucr.ac.cr'
- *   SMTP_PASS = 'your-app-password'   <- generate in Google account settings
+ * HOW TO GET YOUR CREDENTIALS (Mailtrap — free):
+ *   a. Create a free account at https://mailtrap.io
+ *   b. Go to:  Email Testing → Inboxes → your inbox → SMTP Settings
+ *   c. Copy Host, Port, Username and Password into the constants below.
+ *
+ * Leave FROM_ADDRESS and FROM_NAME as-is — Mailtrap accepts any sender.
  */
 final class MailConfig
 {
-  const SMTP_HOST       = 'smtp.gmail.com';
-  const SMTP_PORT       = 587;
-  const SMTP_ENCRYPTION = 'tls';           // 'tls' (587) or 'ssl' (465)
-  const SMTP_USER       = 'your-account@ucr.ac.cr';
-  const SMTP_PASS       = 'your-app-password';
+  const SMTP_HOST       = 'sandbox.smtp.mailtrap.io';
+  const SMTP_PORT       = 2525;
+  const SMTP_ENCRYPTION = 'tls';
+  const SMTP_USER       = 'your-mailtrap-username';
+  const SMTP_PASS       = 'your-mailtrap-password';
 
   const FROM_ADDRESS    = 'noreply@ucr.ac.cr';
   const FROM_NAME       = 'SIGECAT – UCR';
