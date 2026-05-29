@@ -109,10 +109,30 @@ class AreaService {
   }
 
   /**
+   * Returns a single area by its ID.
+   *
+   * @return array{id: string, name: string, description: string|null, created_at: string}
+   * @throws ApiException
+   */
+  public function getById(string $areaId): array {
+    if (empty($areaId)) {
+      throw new ApiException(ErrorType::missingField('area_id'));
+    }
+
+    $row = $this->areaRepository->findById($areaId);
+    if ($row === null) {
+      throw new ApiException(ErrorType::notFound('Área'));
+    }
+
+    return AreaResponseDTO::fromArray($row)->toArray();
+  }
+
+  /**
    * Removes an existing area.
    *
    * Business rules:
    * - Area must exist before deletion.
+   * - Area must have no child departments or sections.
    *
    * @throws ApiException
    */
@@ -123,6 +143,12 @@ class AreaService {
 
     if ($this->areaRepository->findById($areaId) === null) {
       throw new ApiException(ErrorType::notFound('Área'));
+    }
+
+    if ($this->areaRepository->hasChildEntities($areaId)) {
+      throw new ApiException(
+        ErrorType::conflict('No es posible eliminar el área porque tiene departamentos o secciones asociadas.')
+      );
     }
 
     $this->areaRepository->deleteArea($areaId);

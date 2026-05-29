@@ -42,9 +42,24 @@ class AreaController {
       $data = Request::parseJsonRequest();
       $dto  = AreaRequestDTO::fromArray($data);
 
-      $this->areaService->createArea($auth['user_id'], $dto);
+      $this->areaService->createArea($auth['USER_ID'], $dto);
 
       Response::success(null, null, 201);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * GET /areas/{id}
+   */
+  public function show(string $areaId): void {
+    try {
+      $this->authService->requireAuth();
+
+      $area = $this->areaService->getById($areaId);
+
+      Response::success($area, null, 200);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }
