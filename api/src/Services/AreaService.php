@@ -77,7 +77,7 @@ class AreaService {
   /**
    * Returns a paginated and optionally filtered list of areas.
    *
-   * @return array{data: array<int, array<string, string>>, meta: array<string, int>}
+   * @return array{data: array<int, array<string, string|null>>, meta: array<string, int>}
    * @throws ApiException
    */
   public function getAreas(int $page, int $limit, string $filter = ''): array {
@@ -103,7 +103,7 @@ class AreaService {
         'page'       => $page,
         'limit'      => $limit,
         'total'      => $total,
-        'totalPages' => (int) ceil($total / $limit),
+        'total_pages' => (int) ceil($total / $limit),
       ],
     ];
   }
@@ -111,7 +111,7 @@ class AreaService {
   /**
    * Returns a single area by its ID.
    *
-   * @return array{id: string, name: string, description: string|null, created_at: string}
+   * @return array{id: string, name: string, description: string|null, created_at: string, created_by: string}
    * @throws ApiException
    */
   public function getById(string $areaId): array {

@@ -42,7 +42,7 @@ class AreaController {
       $data = Request::parseJsonRequest();
       $dto  = AreaRequestDTO::fromArray($data);
 
-      $this->areaService->createArea($auth['USER_ID'], $dto);
+      $this->areaService->createArea((string) $auth['user_id'], $dto);
 
       Response::success(null, null, 201);
     } catch (ApiException $e) {
