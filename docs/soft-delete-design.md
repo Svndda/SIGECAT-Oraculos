@@ -217,11 +217,16 @@ Proposed query parameter:
 
 - **Default = `active`** to avoid breaking current clients.
 - `show` of a deleted entity with `status=active` → `404`.
+- An invalid `status` value → `400` (`invalidField('status')`).
+
+**Reactivation** (decided to ship — see §12): `POST /<resource>/{id}/restore` flips
+`is_deleted` back to `0`, after validating the §5 conflict rule. Implemented for Area as
+`POST /areas/{id}/restore`.
 
 ## 10. Reverting the block in Area
 
-`AreaService::deleteArea()` currently throws a conflict if children exist. Under the new
-policy **that is removed**: instead of blocking, it runs the cascade from §6.
+`AreaService::deleteArea()` used to throw a conflict if children existed. Under the new policy
+**that block is removed**: instead of blocking, it runs the cascade from §6 (done).
 
 ## 11. Per-entity checklist
 
@@ -239,20 +244,25 @@ Each owner applies the same pattern to their entity:
 | Entity | Owner | Status |
 |---|---|---|
 | USERS | _unassigned_ | pending |
-| AREAS | _unassigned_ | pending |
-| DEPARTMENTS | _unassigned_ | pending |
-| SECTIONS | _unassigned_ | pending |
-| UNITS | _unassigned_ | pending |
-| JOB_POSITIONS | _unassigned_ | pending |
+| AREAS | _unassigned_ | **done — reference implementation** |
+| DEPARTMENTS | _unassigned_ | repository soft-delete ready (no controller/routes yet) |
+| SECTIONS | _unassigned_ | pending (entity not built yet) |
+| UNITS | _unassigned_ | pending (entity not built yet) |
+| JOB_POSITIONS | _unassigned_ | pending (entity not built yet) |
 
-## 12. Decisions to confirm before implementing
+> **Reference:** Area is fully implemented end-to-end (repository + service +
+> controller + routes) and should be copied as the pattern for the rest. Department's
+> repository is soft-delete ready but has no controller/service/routes yet, so its
+> endpoints can't be wired until that entity is built.
 
-1. ✅ **RESOLVED — user↔plaza link**: it's `JOB_POSITIONS.USER_ID`, not a column on `USERS`.
-   See §7.
-2. ✅ **RESOLVED — deleting an area with plazas**: Option B (cascade to plazas). See §7.
-3. ✅ **RESOLVED — `JOB_POSITIONS` in scope**: yes. Migration Section 4 active.
-4. **`deleted_by`**: included (symmetry with `created_by`). If the professor wants the bare
+## 12. Decisions (all resolved)
+
+1. ✅ **user↔plaza link**: it's `JOB_POSITIONS.USER_ID`, not a column on `USERS`. See §7.
+2. ✅ **deleting an area with plazas**: Option B (cascade to plazas). See §7.
+3. ✅ **`JOB_POSITIONS` in scope**: yes. Migration Section 4 active.
+4. ✅ **`deleted_by`**: included (symmetry with `created_by`). If the professor wants the bare
    minimum, drop the `deleted_by` columns/FKs.
-5. **Reactivation endpoint**: does it ship in this delivery or stay documented for later (§5)?
-6. **`status=deleted`/`all`**: does the admin need to see deleted rows in this delivery, or do
-   we only filter to active for now?
+5. ✅ **Reactivation endpoint**: ships this delivery. `POST /<resource>/{id}/restore` with the
+   §5 conflict validation. Implemented for Area.
+6. ✅ **`status=deleted`/`all`**: admins can see deleted rows via `?status=`. Default stays
+   `active`.
