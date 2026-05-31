@@ -18,7 +18,7 @@ use Repositories\AreaRepository;
  * Responsibilities:
  * - Delegates structural validation to AreaRequestDTO.
  * - Delegates persistence to AreaRepository.
- * - Enforces business rules (unique name, area existence).
+ * - Enforces business rules (unique name, area existence, soft-delete).
  * - Has no knowledge of HTTP transport.
  */
 class AreaService {
@@ -30,10 +30,23 @@ class AreaService {
   }
 
   /**
+   * Normalizes and validates the read status filter.
+   *
+   * @throws ApiException when the value is not one of active|deleted|all.
+   */
+  private function normalizeStatus(string $status): string {
+    $normalized = $status === '' ? 'active' : strtolower($status);
+    if (!in_array($normalized, ['active', 'deleted', 'all'], true)) {
+      throw new ApiException(ErrorType::invalidField('status'));
+    }
+    return $normalized;
+  }
+
+  /**
    * Registers a new area.
    *
    * Business rules:
-   * - Area name must be unique (case-insensitive).
+   * - Area name must be unique among active areas (case-insensitive).
    *
    * @throws ApiException
    */
@@ -50,11 +63,11 @@ class AreaService {
   }
 
   /**
-   * Updates name and/or description of an existing area.
+   * Updates name and/or description of an existing (active) area.
    *
    * Business rules:
-   * - Area must exist.
-   * - New name must be unique excluding the current area.
+   * - Area must exist and be active.
+   * - New name must be unique among active areas, excluding the current one.
    *
    * @throws ApiException
    */
@@ -77,10 +90,11 @@ class AreaService {
   /**
    * Returns a paginated and optionally filtered list of areas.
    *
-   * @return array{data: array<int, array<string, string>>, meta: array<string, int>}
+   * @param string $status One of active|deleted|all (default active).
+   * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
    * @throws ApiException
    */
-  public function getAreas(int $page, int $limit, string $filter = ''): array {
+  public function getAreas(int $page, int $limit, string $filter = '', string $status = 'active'): array {
     if ($page < 1) {
       throw new ApiException(ErrorType::invalidField('page'));
     }
@@ -88,9 +102,11 @@ class AreaService {
       throw new ApiException(ErrorType::invalidField('limit'));
     }
 
+    $status = $this->normalizeStatus($status);
+
     $offset = ($page - 1) * $limit;
-    $total  = $this->areaRepository->countAreas($filter);
-    $rows   = $this->areaRepository->getAreas($offset, $limit, $filter);
+    $total  = $this->areaRepository->countAreas($filter, $status);
+    $rows   = $this->areaRepository->getAreas($offset, $limit, $filter, $status);
 
     $data = array_map(
       static fn(array $row) => AreaResponseDTO::fromArray($row)->toArray(),
@@ -100,10 +116,10 @@ class AreaService {
     return [
       'data' => $data,
       'meta' => [
-        'page'       => $page,
-        'limit'      => $limit,
-        'total'      => $total,
-        'totalPages' => (int) ceil($total / $limit),
+        'page'        => $page,
+        'limit'       => $limit,
+        'total'       => $total,
+        'total_pages' => (int) ceil($total / $limit),
       ],
     ];
   }
@@ -111,15 +127,19 @@ class AreaService {
   /**
    * Returns a single area by its ID.
    *
-   * @return array{id: string, name: string, description: string|null, created_at: string}
+   * @param string $status One of active|deleted|all (default active). With
+   *                       'active', a soft-deleted area returns 404.
+   * @return array{id: string, name: string, description: string|null, created_at: string, created_by: string, is_deleted: int, deleted_at: string|null}
    * @throws ApiException
    */
-  public function getById(string $areaId): array {
+  public function getById(string $areaId, string $status = 'active'): array {
     if (empty($areaId)) {
       throw new ApiException(ErrorType::missingField('area_id'));
     }
 
-    $row = $this->areaRepository->findById($areaId);
+    $status = $this->normalizeStatus($status);
+
+    $row = $this->areaRepository->findById($areaId, $status);
     if ($row === null) {
       throw new ApiException(ErrorType::notFound('Área'));
     }
@@ -128,15 +148,12 @@ class AreaService {
   }
 
   /**
-   * Removes an existing area.
-   *
-   * Business rules:
-   * - Area must exist before deletion.
-   * - Area must have no child departments or sections.
+   * Soft-deletes an existing (active) area and cascades to its children
+   * (departments, sections, units) and plazas. See docs/soft-delete-design.md §6.
    *
    * @throws ApiException
    */
-  public function deleteArea(string $areaId): void {
+  public function deleteArea(string $areaId, string $deletedBy): void {
     if (empty($areaId)) {
       throw new ApiException(ErrorType::missingField('area_id'));
     }
@@ -145,12 +162,41 @@ class AreaService {
       throw new ApiException(ErrorType::notFound('Área'));
     }
 
-    if ($this->areaRepository->hasChildEntities($areaId)) {
+    $this->areaRepository->deleteArea($areaId, $deletedBy);
+  }
+
+  /**
+   * Restores a soft-deleted area.
+   *
+   * Business rules:
+   * - Area must exist and currently be deleted.
+   * - No active area may already use the same name (would break the partial
+   *   unique index). Returns conflict if so.
+   *
+   * @throws ApiException
+   */
+  public function restoreArea(string $areaId): void {
+    if (empty($areaId)) {
+      throw new ApiException(ErrorType::missingField('area_id'));
+    }
+
+    $row = $this->areaRepository->findById($areaId, 'all');
+    if ($row === null) {
+      throw new ApiException(ErrorType::notFound('Área'));
+    }
+
+    $isDeleted = (int) ($row['is_deleted'] ?? $row['IS_DELETED'] ?? 0);
+    if ($isDeleted === 0) {
+      throw new ApiException(ErrorType::conflict('El área no está eliminada'));
+    }
+
+    $name = (string) ($row['name'] ?? $row['NAME'] ?? '');
+    if ($this->areaRepository->existsByName($name, $areaId)) {
       throw new ApiException(
-        ErrorType::conflict('No es posible eliminar el área porque tiene departamentos o secciones asociadas.')
+        ErrorType::conflict('Ya existe un área activa con ese nombre; no se puede reactivar')
       );
     }
 
-    $this->areaRepository->deleteArea($areaId);
+    $this->areaRepository->restoreArea($areaId);
   }
 }
