@@ -60,22 +60,37 @@ ALTER TABLE <tabla> ADD CONSTRAINT chk_<tabla>_is_deleted
 
 ## 4. Restricciones únicas parciales
 
-Hoy un nombre de área es único globalmente. Con soft delete, un nombre **eliminado** debe
-poder reutilizarse. La unicidad debe aplicar **solo entre filas activas**.
+Verificado contra Oracle: las **únicas** constraints `UNIQUE` reales (aparte de las PK) son:
 
-Técnica en Oracle (índice único basado en función — Oracle no indexa `NULL`, así que las
-filas eliminadas quedan fuera del índice):
+| Tabla | Constraint | Columna |
+|---|---|---|
+| `USERS` | `UK_USERS_EMAIL` | `email` |
+| `JOB_POSITIONS` | `UK_JOB_POSITION_NUMBER` | `job_position_number` |
+
+Las tablas de organización (`AREAS`, `DEPARTMENTS`, `SECTIONS`, `UNITS`) **no** tienen
+`UNIQUE` de nombre a nivel DB — la unicidad de nombre se valida **solo en código**
+(`existsByName`).
+
+Implicación: con soft delete, un valor único **eliminado** debe poder reutilizarse, así que
+la unicidad debe aplicar **solo entre filas activas**.
+
+- **`USERS.EMAIL` (obligatorio):** la constraint real bloquearía reutilizar el email de un
+  usuario borrado. Hay que **reemplazarla** por un índice único parcial.
+- **Organización (opcional):** no hay constraint que romper; basta con que `existsByName`
+  filtre `is_deleted = 0`. Si además se quiere integridad a nivel DB, se pueden agregar
+  índices únicos parciales (ver Section 3 de la migración, **con el alcance por confirmar**:
+  área global, depto/sección por área, unidad por padre).
+
+Técnica en Oracle (índice único basado en función — Oracle no indexa claves `NULL`, así que
+las filas eliminadas quedan fuera del índice):
 
 ```sql
--- Ejemplo para AREAS (repetir el patrón por entidad con su columna única)
-CREATE UNIQUE INDEX ux_areas_name_active
-  ON AREAS (CASE WHEN is_deleted = 0 THEN UPPER(name) END);
+-- USERS.EMAIL: solo cubre filas activas (deleted -> NULL -> fuera del índice)
+CREATE UNIQUE INDEX ux_users_email_active
+  ON USERS (CASE WHEN is_deleted = 0 THEN EMAIL END);
 ```
 
-Con esto:
-- Dos áreas **activas** no pueden compartir nombre.
-- Un área **eliminada** y una **activa** sí pueden compartir nombre.
-- Se libera el nombre al eliminar (soft) un área.
+> La migración concreta está en `SIGECAT-DB-SOFT-DELETE.sql` (raíz del repo).
 
 ## 5. Reactivación (caso a vigilar)
 
