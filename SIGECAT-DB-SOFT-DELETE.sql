@@ -106,24 +106,25 @@ CREATE UNIQUE INDEX ux_users_email_active
 
 
 -- ============================================================
--- Section 4 — JOB_POSITIONS (plazas)  (PENDING DECISION — see §7 of doc)
---   Out of the original soft-delete scope. Only enable if the team
---   decides plazas must also be soft-deletable (Option B: cascade an
---   area deletion to its plazas). If enabled, also convert the existing
---   UK_JOB_POSITION_NUMBER to a partial unique index like Section 2.
+-- Section 4 — JOB_POSITIONS (plazas)
+--   Decided: plazas enter the soft-delete scope so that deleting an
+--   AREA can cascade-soft-delete its plazas (AREA_ID is NOT NULL and
+--   cannot be de-referenced). Same column set as the rest, plus the
+--   partial unique index replacing UK_JOB_POSITION_NUMBER.
 -- ============================================================
 
--- ALTER TABLE JOB_POSITIONS ADD (
---     is_deleted  NUMBER(1)  DEFAULT 0 NOT NULL,
---     deleted_at  TIMESTAMP,
---     deleted_by  CHAR(26)
--- );
--- ALTER TABLE JOB_POSITIONS ADD CONSTRAINT chk_job_positions_is_deleted CHECK (is_deleted IN (0, 1));
--- ALTER TABLE JOB_POSITIONS ADD CONSTRAINT fk_job_positions_deleted_by  FOREIGN KEY (deleted_by) REFERENCES USERS(user_id);
---
--- ALTER TABLE JOB_POSITIONS DROP CONSTRAINT UK_JOB_POSITION_NUMBER;
--- CREATE UNIQUE INDEX ux_job_position_number_active
---     ON JOB_POSITIONS (CASE WHEN is_deleted = 0 THEN job_position_number END);
+ALTER TABLE JOB_POSITIONS ADD (
+    is_deleted  NUMBER(1)  DEFAULT 0 NOT NULL,
+    deleted_at  TIMESTAMP,
+    deleted_by  CHAR(26)
+);
+ALTER TABLE JOB_POSITIONS ADD CONSTRAINT chk_job_positions_is_deleted CHECK (is_deleted IN (0, 1));
+ALTER TABLE JOB_POSITIONS ADD CONSTRAINT fk_job_positions_deleted_by  FOREIGN KEY (deleted_by) REFERENCES USERS(user_id);
+
+ALTER TABLE JOB_POSITIONS DROP CONSTRAINT UK_JOB_POSITION_NUMBER;
+
+CREATE UNIQUE INDEX ux_job_position_number_active
+    ON JOB_POSITIONS (CASE WHEN is_deleted = 0 THEN job_position_number END);
 
 
 -- ============================================================
@@ -146,3 +147,8 @@ CREATE UNIQUE INDEX ux_users_email_active
 -- ALTER TABLE UNITS       DROP CONSTRAINT fk_units_deleted_by;
 -- ALTER TABLE UNITS       DROP CONSTRAINT chk_units_is_deleted;
 -- ALTER TABLE UNITS       DROP (is_deleted, deleted_at, deleted_by);
+-- DROP INDEX ux_job_position_number_active;
+-- ALTER TABLE JOB_POSITIONS ADD CONSTRAINT UK_JOB_POSITION_NUMBER UNIQUE (job_position_number);
+-- ALTER TABLE JOB_POSITIONS DROP CONSTRAINT fk_job_positions_deleted_by;
+-- ALTER TABLE JOB_POSITIONS DROP CONSTRAINT chk_job_positions_is_deleted;
+-- ALTER TABLE JOB_POSITIONS DROP (is_deleted, deleted_at, deleted_by);

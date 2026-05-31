@@ -16,12 +16,11 @@ Por lo tanto:
 2. **El borrado de un padre arrastra (cascada) a sus hijos** — borrar un área marca como
    eliminadas sus secciones/departamentos, y estos a sus unidades.
 3. **Las plazas no quedan flotantes:** al eliminar una entidad de organización, las plazas
-   (`JOB_POSITIONS`) que la referencian no deben quedar apuntando a algo eliminado (ver §7
-   para el modelo real, que difiere de lo que se asumió al inicio).
+   (`JOB_POSITIONS`) que la referencian re-anclan al nivel superior o se eliminan en cascada
+   (cuando se borra el área). Ver §7.
 
-Aplica a las tablas de **usuarios** y de **organización** (`AREAS`, `DEPARTMENTS`,
-`SECTIONS`, `UNITS`). El tratamiento de las **plazas** (`JOB_POSITIONS`) es una decisión
-pendiente — ver §7.
+Aplica a las tablas de **usuarios**, de **organización** (`AREAS`, `DEPARTMENTS`,
+`SECTIONS`, `UNITS`) y de **plazas** (`JOB_POSITIONS`, incorporada al alcance — ver §7).
 
 ## 2. Estado actual (a corregir)
 
@@ -111,14 +110,15 @@ Orden de marcado al eliminar (todo dentro de **una transacción**):
  │   └─ Unidades del depto    → is_deleted = 1  → des-referenciar plazas (§7)
  └─ Secciones del área        → is_deleted = 1
      └─ Unidades de la sección → is_deleted = 1 → des-referenciar plazas (§7)
- └─ Plazas del área           → ver decisión §7 (bloquear o cascada)
+ └─ Plazas del área           → is_deleted = 1  (cascada, §7)
 ```
 
 - Borrar **departamento** o **sección** → marca sus **unidades** hijas y des-referencia las
-  plazas que apuntaban a ellas (§7).
+  plazas que apuntaban a ellas (`DEPARTMENT_ID`/`SECTION_ID`/`UNIT_ID = NULL`).
 - Borrar **unidad** → des-referencia las plazas (`UNIT_ID = NULL`).
-- Borrar **área** → ver decisión pendiente de §7 (las plazas no pueden des-referenciar el
-  área porque `AREA_ID` es NOT NULL).
+- Borrar **área** → cascada completa: departamentos, secciones, unidades **y plazas** del
+  área se marcan `is_deleted = 1` (las plazas no pueden des-referenciar porque `AREA_ID` es
+  NOT NULL).
 - Reaprovechar `hasChildEntities()` para **encontrar** los hijos a marcar (ya no para
   bloquear).
 
@@ -153,21 +153,29 @@ una plaza viva re-anclada a un nivel superior. Tratamiento propuesto al borrar:
 | **Unidad** | `UNIT_ID = NULL` → la plaza re-ancla a su depto/sección/área. Limpio. |
 | **Sección** | `SECTION_ID = NULL` (y `UNIT_ID = NULL` en unidades hijas borradas en cascada). |
 | **Departamento** | `DEPARTMENT_ID = NULL` (idem unidades hijas). |
-| **Área** | ⚠️ `AREA_ID` es NOT NULL → **no se puede des-referenciar**. Hay que **decidir** (ver abajo). |
+| **Área** | `AREA_ID` es NOT NULL → no se puede des-referenciar → **cascada: soft-delete de la plaza** (decisión tomada abajo). |
 
-### Decisión pendiente: borrar un área con plazas
+### Decisión tomada: borrar un área con plazas → Opción B (cascada)
 
-Al ser `AREA_ID` obligatorio, borrar un área deja dos caminos. **A confirmar con profe/equipo:**
+Al ser `AREA_ID` obligatorio, una plaza no puede sobrevivir sin área. **Decisión del equipo:**
 
-- **Opción A — Bloquear:** no permitir borrar un área si tiene plazas activas; el admin
-  primero reasigna o elimina esas plazas. Más simple y seguro.
-- **Opción B — Cascada a plazas:** soft-delete también de las plazas del área. Requiere que
-  `JOB_POSITIONS` **entre al alcance del soft-delete** (agregarle `is_deleted`/`deleted_at`),
-  lo cual hoy **no estaba** en la lista del equipo (solo USERS + organización).
+- ✅ **Opción B — Cascada a plazas:** al borrar un área se hace **soft-delete también de sus
+  plazas**. Esto requiere que `JOB_POSITIONS` **entre al alcance del soft-delete**
+  (`is_deleted`/`deleted_at`/`deleted_by`) → ya incluido en la migración (Section 4).
+- ❌ Opción A (bloquear) descartada.
 
-> ⚠️ **Alcance:** `JOB_POSITIONS` no estaba contemplado en el alcance inicial. Si el profe
-> insiste en "soft delete de **todo**", las plazas deberían incluirse y conviene agregarlas a
-> la migración y a la cascada. **Decisión de equipo.**
+Resumen de la política final por nivel:
+
+| Se borra | Acción sobre las plazas (`JOB_POSITIONS`) |
+|---|---|
+| **Unidad** | `UNIT_ID = NULL` → la plaza re-ancla a su depto/sección/área. Sobrevive. |
+| **Sección** | `SECTION_ID = NULL` (+ `UNIT_ID = NULL` en unidades hijas). Sobrevive re-anclada al área. |
+| **Departamento** | `DEPARTMENT_ID = NULL` (+ `UNIT_ID = NULL` en unidades hijas). Sobrevive re-anclada al área. |
+| **Área** | **Soft-delete de la plaza** (`is_deleted = 1`), porque no puede re-anclar. |
+
+> Así ninguna plaza queda flotante: en los niveles inferiores re-ancla hacia arriba; en el
+> nivel de área, se elimina (soft) junto con todo. El **usuario** titular nunca se borra; solo
+> pierde la asignación cuando su plaza se elimina.
 
 > Nota: el `plaza_number` que el cliente envía a `PATCH /users/me` (`updatePlaza`) **no tiene
 > columna correspondiente en `USERS`** — el dato real vive en `JOB_POSITIONS.JOB_POSITION_NUMBER`
@@ -237,17 +245,16 @@ Cada responsable aplica el mismo patrón en su entidad:
 | DEPARTMENTS | _por asignar_ | pendiente |
 | SECTIONS | _por asignar_ | pendiente |
 | UNITS | _por asignar_ | pendiente |
+| JOB_POSITIONS | _por asignar_ | pendiente |
 
 ## 12. Decisiones a confirmar antes de implementar
 
 1. ✅ **RESUELTO — enlace usuario↔plaza**: es `JOB_POSITIONS.USER_ID`, no una columna de
    `USERS`. Ver §7.
-2. **Borrar área con plazas** (§7): Opción A (bloquear) vs Opción B (cascada a plazas).
-   **Decisión de negocio / profe.**
-3. **`JOB_POSITIONS` en el alcance del soft-delete**: ¿se le agrega `is_deleted` también?
-   Depende de qué tan literal sea el "soft delete de todo". **Decisión de equipo.**
-4. **`deleted_by`**: incluirlo (recomendado, simetría con `created_by`) vs solo el mínimo
-   (`is_deleted`, `deleted_at`).
+2. ✅ **RESUELTO — borrar área con plazas**: Opción B (cascada a plazas). Ver §7.
+3. ✅ **RESUELTO — `JOB_POSITIONS` en el alcance**: sí entra. Migración Section 4 activa.
+4. **`deleted_by`**: incluido (simetría con `created_by`). Si el profe pide solo el mínimo,
+   se quitan las columnas/FK de `deleted_by`.
 5. **Endpoint de reactivación**: ¿entra en esta entrega o queda documentado para después (§5)?
 6. **`status=deleted`/`all`**: ¿el admin necesita ver eliminados en esta entrega o solo
    filtramos a activos por ahora?
