@@ -52,12 +52,15 @@ class AreaController {
 
   /**
    * GET /areas/{id}
+   * Query params: status (active|deleted|all, default active)
    */
   public function show(string $areaId): void {
     try {
       $this->authService->requireAuth();
 
-      $area = $this->areaService->getById($areaId);
+      $status = trim((string) ($_GET['status'] ?? 'active'));
+
+      $area = $this->areaService->getById($areaId, $status);
 
       Response::success($area, null, 200);
     } catch (ApiException $e) {
@@ -67,7 +70,8 @@ class AreaController {
 
   /**
    * GET /areas
-   * Query params: page (int), limit (int), filter (string)
+   * Query params: page (int), limit (int), filter (string),
+   *               status (active|deleted|all, default active)
    */
   public function index(): void {
     try {
@@ -76,8 +80,9 @@ class AreaController {
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
+      $status = trim((string) ($_GET['status'] ?? 'active'));
 
-      $result = $this->areaService->getAreas($page, $limit, $filter);
+      $result = $this->areaService->getAreas($page, $limit, $filter, $status);
 
       Response::success($result['data'], $result['meta'], 200);
     } catch (ApiException $e) {
@@ -105,12 +110,29 @@ class AreaController {
 
   /**
    * DELETE /areas/{id}
+   * Soft-deletes the area and cascades to its children and plazas.
    */
   public function delete(string $areaId): void {
     try {
+      $auth = $this->authService->requireAuth();
+
+      $this->areaService->deleteArea($areaId, (string) $auth['user_id']);
+
+      Response::success(null, null, 200);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * POST /areas/{id}/restore
+   * Restores a soft-deleted area.
+   */
+  public function restore(string $areaId): void {
+    try {
       $this->authService->requireAuth();
 
-      $this->areaService->deleteArea($areaId);
+      $this->areaService->restoreArea($areaId);
 
       Response::success(null, null, 200);
     } catch (ApiException $e) {
