@@ -14,6 +14,10 @@ use PDOException;
  * Handles all database operations related to the AREAS table.
  * Encapsulates SQL, uses prepared statements, and enforces ACID
  * on write operations.
+ *
+ * Soft delete: rows are never physically removed. `is_deleted` marks the
+ * logical state; reads default to active rows only and accept a status
+ * filter ('active' | 'deleted' | 'all').
  */
 final class AreaRepository extends Repository {
 
@@ -21,11 +25,23 @@ final class AreaRepository extends Repository {
     parent::__construct($db);
   }
 
-  public function findById(string $areaId): ?array {
+  /**
+   * Builds the SQL fragment that filters by logical-deletion state.
+   * The value is an internal enum (never user input), so inlining is safe.
+   */
+  private function statusCondition(string $status): string {
+    return match ($status) {
+      'deleted' => ' AND is_deleted = 1',
+      'all'     => '',
+      default   => ' AND is_deleted = 0',
+    };
+  }
+
+  public function findById(string $areaId, string $status = 'active'): ?array {
     $stmt = $this->db->prepare(
-      'SELECT area_id, name, description, created_at, created_by
+      'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at
        FROM AREAS
-       WHERE area_id = :area_id
+       WHERE area_id = :area_id' . $this->statusCondition($status) . '
        AND ROWNUM = 1'
     );
     $stmt->execute([':area_id' => $areaId]);
@@ -34,6 +50,11 @@ final class AreaRepository extends Repository {
     return $row !== false ? $row : null;
   }
 
+  /**
+   * Checks whether an ACTIVE area already uses the given name
+   * (case-insensitive), optionally excluding one area id.
+   * Deleted areas are ignored so their names can be reused.
+   */
   public function existsByName(string $name, ?string $excludeAreaId = null): bool {
     if ($excludeAreaId !== null) {
       $stmt = $this->db->prepare(
@@ -41,7 +62,7 @@ final class AreaRepository extends Repository {
          FROM AREAS
          WHERE UPPER(name) = UPPER(:name)
          AND area_id <> :area_id
-         AND ROWNUM = 1'
+         AND is_deleted = 0'
       );
       $stmt->execute([':name' => $name, ':area_id' => $excludeAreaId]);
     } else {
@@ -49,7 +70,7 @@ final class AreaRepository extends Repository {
         'SELECT COUNT(*) AS cnt
          FROM AREAS
          WHERE UPPER(name) = UPPER(:name)
-         AND ROWNUM = 1'
+         AND is_deleted = 0'
       );
       $stmt->execute([':name' => $name]);
     }
@@ -59,22 +80,14 @@ final class AreaRepository extends Repository {
     return $count > 0;
   }
 
-  public function findByNameContaining(string $filter): array {
+  /**
+   * @return array<int, array<string, mixed>>
+   */
+  public function getAreas(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
     $stmt = $this->db->prepare(
-      'SELECT area_id, name, description, created_at, created_by
+      'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at
        FROM AREAS
-       WHERE UPPER(name) LIKE UPPER(:filter)
-       ORDER BY created_at DESC'
-    );
-    $stmt->execute([':filter' => '%' . $filter . '%']);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  public function getAreas(int $offset, int $limit, string $filter = ''): array {
-    $stmt = $this->db->prepare(
-      'SELECT area_id, name, description, created_at, created_by
-       FROM AREAS
-       WHERE UPPER(name) LIKE UPPER(:filter)
+       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
        ORDER BY created_at DESC
        OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
     );
@@ -85,11 +98,11 @@ final class AreaRepository extends Repository {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
-  public function countAreas(string $filter = ''): int {
+  public function countAreas(string $filter = '', string $status = 'active'): int {
     $stmt = $this->db->prepare(
       'SELECT COUNT(*) AS total
        FROM AREAS
-       WHERE UPPER(name) LIKE UPPER(:filter)'
+       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status)
     );
     $stmt->execute([':filter' => '%' . $filter . '%']);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -129,7 +142,8 @@ final class AreaRepository extends Repository {
       $params[':description'] = trim($dto->description);
     }
 
-    $sql = 'UPDATE AREAS SET ' . implode(', ', $fields) . ' WHERE area_id = :area_id';
+    $sql = 'UPDATE AREAS SET ' . implode(', ', $fields)
+         . ' WHERE area_id = :area_id AND is_deleted = 0';
 
     $this->beginTransaction();
     try {
@@ -144,7 +158,7 @@ final class AreaRepository extends Repository {
 
   public function hasChildEntities(string $areaId): bool {
     $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS cnt FROM DEPARTMENTS WHERE area_id = :area_id AND ROWNUM = 1'
+      'SELECT COUNT(*) AS cnt FROM DEPARTMENTS WHERE area_id = :area_id AND is_deleted = 0 AND ROWNUM = 1'
     );
     $stmt->execute([':area_id' => $areaId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -153,17 +167,89 @@ final class AreaRepository extends Repository {
     }
 
     $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS cnt FROM SECTIONS WHERE area_id = :area_id AND ROWNUM = 1'
+      'SELECT COUNT(*) AS cnt FROM SECTIONS WHERE area_id = :area_id AND is_deleted = 0 AND ROWNUM = 1'
     );
     $stmt->execute([':area_id' => $areaId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
   }
 
-  public function deleteArea(string $areaId): void {
+  /**
+   * Soft-deletes an area and cascades to its children, all in one transaction:
+   *   - child units (under the area's departments or sections)
+   *   - child departments and sections
+   *   - the area's plazas (JOB_POSITIONS) — AREA_ID is NOT NULL so they cannot
+   *     be de-referenced; they are soft-deleted instead
+   *   - the area itself
+   */
+  public function deleteArea(string $areaId, string $deletedBy): void {
     $this->beginTransaction();
     try {
-      $stmt = $this->db->prepare('DELETE FROM AREAS WHERE area_id = :area_id');
+      // 1. Units belonging to this area's departments or sections.
+      $stmt = $this->db->prepare(
+        'UPDATE UNITS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE is_deleted = 0
+            AND (department_id IN (SELECT department_id FROM DEPARTMENTS WHERE area_id = :area_id_a)
+              OR section_id    IN (SELECT section_id    FROM SECTIONS    WHERE area_id = :area_id_b))'
+      );
+      $stmt->execute([
+        ':deleted_by' => $deletedBy,
+        ':area_id_a'  => $areaId,
+        ':area_id_b'  => $areaId,
+      ]);
+
+      // 2. Departments of the area.
+      $stmt = $this->db->prepare(
+        'UPDATE DEPARTMENTS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE area_id = :area_id AND is_deleted = 0'
+      );
+      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
+
+      // 3. Sections of the area.
+      $stmt = $this->db->prepare(
+        'UPDATE SECTIONS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE area_id = :area_id AND is_deleted = 0'
+      );
+      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
+
+      // 4. Plazas of the area (cascade soft-delete; cannot re-anchor).
+      $stmt = $this->db->prepare(
+        'UPDATE JOB_POSITIONS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE area_id = :area_id AND is_deleted = 0'
+      );
+      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
+
+      // 5. The area itself.
+      $stmt = $this->db->prepare(
+        'UPDATE AREAS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE area_id = :area_id AND is_deleted = 0'
+      );
+      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
+
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
+  /**
+   * Restores a soft-deleted area (only the area itself; children stay deleted
+   * and are restored individually). Conflict validation is done in the service.
+   */
+  public function restoreArea(string $areaId): void {
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare(
+        'UPDATE AREAS
+            SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL
+          WHERE area_id = :area_id AND is_deleted = 1'
+      );
       $stmt->execute([':area_id' => $areaId]);
       $this->commit();
     } catch (PDOException $e) {

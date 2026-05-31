@@ -24,4 +24,5 @@ return [
     ['method' => 'GET',    'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'show'],
     ['method' => 'PUT',    'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'delete'],
+    ['method' => 'POST',   'path' => '/areas/{id}/restore', 'controller' => 'AreaController', 'action' => 'restore'],
 ];

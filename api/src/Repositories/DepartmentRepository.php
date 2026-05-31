@@ -8,12 +8,17 @@ use Core\UlidGenerator;
 use DTO\CreateDepartmentDTO;
 use DTO\UpdateDepartmentDTO;
 use PDO;
+use PDOException;
 
 /**
  * Repository handling persistence operations for the DEPARTMENTS table.
  *
  * This class encapsulates all CRUD operations for departments, ensuring
  * seamless data handling and DTO-driven validation.
+ *
+ * Soft delete: rows are never physically removed. `is_deleted` marks the
+ * logical state; reads default to active rows only and accept a status
+ * filter ('active' | 'deleted' | 'all').
  *
  * @package Repositories
  */
@@ -27,6 +32,19 @@ final class DepartmentRepository extends Repository
   public function __construct(PDO $db)
   {
     parent::__construct($db);
+  }
+
+  /**
+   * Builds the SQL fragment that filters by logical-deletion state.
+   * The value is an internal enum (never user input), so inlining is safe.
+   */
+  private function statusCondition(string $status): string
+  {
+    return match ($status) {
+      'deleted' => ' AND is_deleted = 1',
+      'all'     => '',
+      default   => ' AND is_deleted = 0',
+    };
   }
 
   /**
@@ -67,12 +85,12 @@ final class DepartmentRepository extends Repository
    * @param string $departmentId The ULID identifier.
    * * @return array<string, mixed>|null Associative array with UPPERCASE keys or null if not found.
    */
-  public function findById(string $departmentId): ?array
+  public function findById(string $departmentId, string $status = 'active'): ?array
   {
     $sql = '
-        SELECT department_id, area_id, name, description, created_at, created_by
+        SELECT department_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at
         FROM departments
-        WHERE department_id = :v_department_id
+        WHERE department_id = :v_department_id' . $this->statusCondition($status) . '
           AND ROWNUM = 1
     ';
 
@@ -91,23 +109,28 @@ final class DepartmentRepository extends Repository
       'description' => $row['description'],
       'created_at' => $row['created_at'],
       'created_by' => $row['created_by'],
+      'is_deleted' => $row['is_deleted'],
+      'deleted_at' => $row['deleted_at'],
     ];
   }
 
   /**
-   * Fetches all records from the departments table.
+   * Fetches records from the departments table.
    *
-   * @return array<int, array<string, mixed>> List of departments with UPPERCASE keys.
+   * @param string $status One of active|deleted|all (default active).
+   * @return array<int, array<string, mixed>> List of departments.
    */
-  public function findAll(): array
+  public function findAll(string $status = 'active'): array
   {
     $sql = '
-        SELECT department_id, area_id, name, description, created_at, created_by 
+        SELECT department_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at
         FROM departments
+        WHERE 1 = 1' . $this->statusCondition($status) . '
         ORDER BY name ASC
     ';
 
-    $stmt = $this->db->query($sql);
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
@@ -145,25 +168,92 @@ final class DepartmentRepository extends Repository
       return false;
     }
 
-    $sql = 'UPDATE departments SET ' . implode(', ', $fields) . ' WHERE department_id = :v_department_id';
+    $sql = 'UPDATE departments SET ' . implode(', ', $fields)
+         . ' WHERE department_id = :v_department_id AND is_deleted = 0';
 
     $stmt = $this->db->prepare($sql);
     return $stmt->execute($params);
   }
 
   /**
-   * Permanently deletes a department record by its unique identifier.
+   * Soft-deletes a department and cascades to its child units, all in one
+   * transaction. Plazas (JOB_POSITIONS) that pointed to the department or its
+   * units are de-referenced (set to NULL) so they re-anchor to the area and
+   * are not left floating. See docs/soft-delete-design.md §6/§7.
    *
    * @param string $departmentId The ULID identifier.
-   * * @return bool True if a row was affected/deleted, false otherwise.
+   * @param string $deletedBy    ULID of the user performing the deletion.
+   * @return bool True if the department row was soft-deleted.
    */
-  public function delete(string $departmentId): bool
+  public function delete(string $departmentId, string $deletedBy): bool
   {
-    $sql = 'DELETE FROM departments WHERE department_id = :v_department_id';
+    $this->beginTransaction();
+    try {
+      // De-reference plazas pointing to this department's units.
+      $stmt = $this->db->prepare(
+        'UPDATE job_positions
+            SET unit_id = NULL
+          WHERE unit_id IN (SELECT unit_id FROM units WHERE department_id = :v_department_id)'
+      );
+      $stmt->execute([':v_department_id' => $departmentId]);
 
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([':v_department_id' => $departmentId]);
+      // De-reference plazas pointing to the department itself.
+      $stmt = $this->db->prepare(
+        'UPDATE job_positions
+            SET department_id = NULL
+          WHERE department_id = :v_department_id'
+      );
+      $stmt->execute([':v_department_id' => $departmentId]);
 
-    return $stmt->rowCount() > 0;
+      // Soft-delete child units.
+      $stmt = $this->db->prepare(
+        'UPDATE units
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :v_deleted_by
+          WHERE department_id = :v_department_id AND is_deleted = 0'
+      );
+      $stmt->execute([':v_deleted_by' => $deletedBy, ':v_department_id' => $departmentId]);
+
+      // Soft-delete the department itself.
+      $stmt = $this->db->prepare(
+        'UPDATE departments
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :v_deleted_by
+          WHERE department_id = :v_department_id AND is_deleted = 0'
+      );
+      $stmt->execute([':v_deleted_by' => $deletedBy, ':v_department_id' => $departmentId]);
+      $affected = $stmt->rowCount() > 0;
+
+      $this->commit();
+      return $affected;
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
+  /**
+   * Restores a soft-deleted department (only the department itself; child
+   * units stay deleted and are restored individually).
+   *
+   * @param string $departmentId The ULID identifier.
+   * @return bool True if a deleted department row was restored.
+   */
+  public function restore(string $departmentId): bool
+  {
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare(
+        'UPDATE departments
+            SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL
+          WHERE department_id = :v_department_id AND is_deleted = 1'
+      );
+      $stmt->execute([':v_department_id' => $departmentId]);
+      $affected = $stmt->rowCount() > 0;
+
+      $this->commit();
+      return $affected;
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
   }
 }
