@@ -34,10 +34,11 @@ class AreaController {
 
   /**
    * POST /areas
+   * Admin only.
    */
   public function create(): void {
     try {
-      $auth = $this->authService->requireAuth();
+      $auth = $this->authService->requireAdmin();
 
       $data = Request::parseJsonRequest();
       $dto  = AreaRequestDTO::fromArray($data);
@@ -105,10 +106,11 @@ class AreaController {
 
   /**
    * PUT /areas/{id}
+   * Admin only.
    */
   public function update(string $areaId): void {
     try {
-      $this->authService->requireAuth();
+      $this->authService->requireAdmin();
 
       $data = Request::parseJsonRequest();
       $dto  = AreaRequestDTO::fromArray($data);

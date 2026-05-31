@@ -219,8 +219,8 @@ Proposed query parameter:
 - `show` of a deleted entity with `status=active` → `404`.
 - An invalid `status` value → `400` (`invalidField('status')`).
 - **Authorization:** any authenticated user may read active rows; seeing deleted rows
-  (`status=deleted|all`) requires **admin** (`403` otherwise). Soft-delete and restore are
-  **admin-only** as well.
+  (`status=deleted|all`) requires **admin** (`403` otherwise). All writes — create, update,
+  soft-delete and restore — are **admin-only**.
 
 **Reactivation** (decided to ship — see §12): `POST /<resource>/{id}/restore` flips
 `is_deleted` back to `0`, after validating the §5 conflict rule. Implemented for Area as
