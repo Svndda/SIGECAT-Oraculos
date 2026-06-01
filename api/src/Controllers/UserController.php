@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Controllers;
 
-use DTO\LoginUserDTO;
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
 use Exception;
@@ -18,17 +17,11 @@ use PDO;
 /**
  * UserController
  *
- * Handles HTTP layer for user-related operations.
- *
- * Responsibilities:
- * - Parses the JSON request body via Request::parseJsonRequest().
- * - Delegates business logic to UserService.
- * - Captures ApiException and returns formatted errors via Response::error().
- * - Obtains authenticated user context via AuthService::requireAuth().
+ * Handles HTTP layer for user-related operations (CRUD and profile).
+ * Login operations have been delegated to AuthController.
  */
 class UserController
 {
-
   private AuthService $authService;
   private UserService $userService;
 
@@ -39,41 +32,23 @@ class UserController
   }
 
   /**
-   * POST /users/login
-   */
-  public function login(): void
-  {
-    try {
-      $data = Request::parseJsonRequest();
-      $dto = LoginUserDTO::fromArray($data);
-
-      $result = $this->userService->login($dto);
-
-      Response::success($result['data'], $result['meta'], 200);
-    } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
-    }
-  }
-
-  /**
-   * POST /users
-   * Requires authentication — only an authenticated user can register another.
+   * POST /users/register
+   * Requires authentication — only an admin can register another.
    */
   public function register(): void
   {
     try {
       $auth = $this->authService->requireAdmin();
-
-      $createdBy = $auth['user_id'];
+      $createdBy = (string) $auth['user_id'];
 
       $data = Request::parseJsonRequest();
       $dto = RegisterUserDTO::fromArray($data);
 
       $this->userService->register($createdBy, $dto);
 
-      Response::success(null, null, 201);
+      Response::success(
+        null, ['message' => 'Usuario registrado exitosamente'], 201
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     } catch (Exception $e) {
@@ -83,7 +58,6 @@ class UserController
 
   /**
    * PATCH /users/me
-   * Applies a partial update to the authenticated user's own profile.
    */
   public function update(): void
   {
@@ -96,7 +70,9 @@ class UserController
 
       $this->userService->update($userId, $dto);
 
-      Response::success(null, null, 200);
+      Response::success(
+        null, ['message' => 'Perfil actualizado exitosamente']
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     } catch (Exception $e) {
@@ -106,22 +82,24 @@ class UserController
 
   /**
    * GET /users/me
-   * Returns public profile of the current user.
    */
   public function show(): void
   {
     try {
       $userInfo = $this->authService->requireAuth();
-
       $userId = $userInfo['user_id'] ?? null;
 
       if ($userId === null) {
-        throw new ApiException(ErrorType::missingField('user_id'), 400);
+        throw new ApiException(
+          ErrorType::missingField('user_id'), 400
+        );
       }
 
       $user = $this->userService->getById($userId);
 
-      Response::success($user, null, 200);
+      Response::success(
+        $user, ['message' => 'Información de perfil obtenida exitosamente']
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }
@@ -129,16 +107,78 @@ class UserController
 
   /**
    * GET /users/{id}
-   * Returns public profile of a user by ID.
    */
   public function getById(string $userId): void
   {
     try {
       $this->authService->requireAdmin();
+      $status = trim((string) ($_GET['status'] ?? 'active'));
 
-      $user = $this->userService->getById($userId);
+      $user = $this->userService->getById($userId, $status);
 
-      Response::success($user, null, 200);
+      Response::success($user, ['message' => 'Usuario obtenido exitosamente'], 200);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * GET /users
+   */
+  public function index(): void
+  {
+    try {
+      $this->authService->requireAdmin();
+      $status = trim((string) ($_GET['status'] ?? 'active'));
+
+      $page   = max(1, (int) ($_GET['page']   ?? 1));
+      $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
+      $filter = trim((string) ($_GET['filter'] ?? ''));
+
+      $result = $this->userService->getAllUsers($page, $limit, $filter, $status);
+      $metaWithMsg = array_merge(
+        $result['meta'], ['message' => 'Usuarios obtenidos exitosamente']
+      );
+
+      Response::success($result['data'], $metaWithMsg);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * DELETE /users/{id}
+   */
+  public function delete(string $userId): void
+  {
+    try {
+      $auth = $this->authService->requireAdmin();
+      $deletedBy = (string) $auth['user_id'];
+
+      $this->userService->deleteUser($userId, $deletedBy);
+
+      Response::success(
+        null, ['message' => 'Usuario eliminado exitosamente']
+      );
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * POST /users/{id}/restore
+   */
+  public function restore(string $userId): void
+  {
+    try {
+      $this->authService->requireAdmin();
+
+      $this->userService->restoreUser($userId);
+
+      Response::success(
+        null,
+        ['message' => 'Usuario restaurado exitosamente']
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }

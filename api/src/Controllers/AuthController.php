@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Controllers;
 
 use DTO\LoginUserDTO;
+use Exception;
 use Http\ApiException;
 use Http\ErrorType;
 use Http\Request;
 use Http\Response;
 use Services\AuthService;
+use PDO;
 
 /**
  * Handles authentication operations for the REST API.
@@ -31,26 +33,20 @@ final class AuthController
   /**
    * AuthController constructor.
    *
-   * @param \PDO $pdo Active database connection (injected by the router).
+   * @param PDO $pdo Active database connection (injected by the router).
    */
-  public function __construct(private \PDO $pdo)
+  public function __construct(private PDO $pdo)
   {
     $this->authService = new AuthService($this->pdo);
   }
 
   /**
-   * POST /login
+   * POST /auth/login
    *
    * Authenticates a user with email and password.
    *
-   * On success, returns the access token, refresh token, user details.
-   * It sets an HTTP‑only cookie (`sigecat_session_token`) containing
-   * the access token for web client convenience.
-   *
    * @return void
-   *
-   * @throws ApiException Any authentication failure exception propagated from
-   * the service layer.
+   * @throws Exception
    */
   public function login(): void
   {
@@ -59,11 +55,9 @@ final class AuthController
       $dto = LoginUserDTO::fromArray($data);
       $result = $this->authService->login($dto);
 
-      // Set HTTP‑only cookie for the access token for web client convenience.
       $accessToken = $result['data']['access_token'] ?? '';
       $expiresIn = $result['meta']['expires_in'] ?? 3600;
 
-      // Secure is set to false for development.
       setcookie(
         'sigecat_session_token',
         $accessToken,
@@ -77,9 +71,10 @@ final class AuthController
         ]
       );
 
-      Response::success($result['data'], $result['meta'], 200);
+      $metaWithMsg = array_merge($result['meta'], ['message' => 'Sesión iniciada exitosamente']);
+      Response::success($result['data'], $metaWithMsg, 200);
     } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getCode());
+      Response::error($e->getError(), $e->getHttpStatus());
     }
   }
 
@@ -88,12 +83,8 @@ final class AuthController
    *
    * Rotates an existing refresh token and issues a new access/refresh token pair.
    *
-   * The response contains the new tokens, and the caller should replace the
-   * stored tokens. It also updates the access token cookie for web clients convenience.
-   *
    * @return void
-   * 
-   * @throws ApiException Any token validation or rotation failure exception propagated from the service layer.
+   * @throws Exception
    */
   public function refresh(): void
   {
@@ -105,7 +96,6 @@ final class AuthController
 
       $result = $this->authService->refreshTokens($body['refresh_token']);
 
-      //  Updates the access token cookie for web clients.
       if (isset($result['data']['access_token'], $result['meta']['expires_in'])) {
         setcookie(
           'sigecat_session_token',
@@ -121,33 +111,25 @@ final class AuthController
         );
       }
 
-      Response::success($result['data'], $result['meta'], 200);
+      $metaWithMsg = array_merge($result['meta'], ['message' => 'Tokens refrescados exitosamente']);
+      Response::success($result['data'], $metaWithMsg, 200);
     } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getCode());
+      Response::error($e->getError(), $e->getHttpStatus());
     }
   }
 
   /**
-   * POST /logout
+   * POST /auth/logout
    *
    * Revokes all tokens belonging to the currently authenticated user.
    *
-   * The method first tries to resolve the user from the current request context
-   * If that fails, it attempts to extract the token from the Authorization
-   * header or the session cookie and deletes the corresponding tokens.
-   *
-   * The access token cookie is cleared unconditionally.
-   *
    * @return void
-   * 
-   * @throws ApiException Any failure during the logout process, propagated from the service layer.
    */
   public function logout(): void
   {
     try {
       $this->authService->logout();
 
-      // Clear the access token cookie
       setcookie(
         'sigecat_session_token',
         '',
@@ -161,9 +143,9 @@ final class AuthController
         ]
       );
 
-      Response::success(['logged_out' => true], null, 200);
+      Response::success(['logged_out' => true], ['message' => 'Sesión cerrada exitosamente'], 200);
     } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getCode());
+      Response::error($e->getError(), $e->getHttpStatus());
     }
   }
 }
