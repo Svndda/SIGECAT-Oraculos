@@ -112,8 +112,8 @@ final class UpdateSectionDTO {
 
     /**
    * @return array{
-   *   sectionId: string,
-   *   name: string,
+   *   section_id: string,
+   *   name: string|null,
    *   description: string|null,
    *   is_deleted: int,
    *   deleted_at: string|null
@@ -121,7 +121,7 @@ final class UpdateSectionDTO {
    */
   public function toArray(): array {
     return [
-      'id'          => $this->sectionId,
+      'section_id'  => $this->sectionId,
       'name'        => $this->name,
       'description' => $this->description,
       'is_deleted'  => $this->isDeleted,

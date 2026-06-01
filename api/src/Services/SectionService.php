@@ -78,7 +78,7 @@ class SectionService {
       throw new ApiException(ErrorType::notFound('Section'));
     }
 
-    if ($this->sectionRepository->existsByName($dto->name, $sectionId)) {
+    if ($dto->name !== null && $this->sectionRepository->existsByName($dto->name, $sectionId)) {
       throw new ApiException(
         ErrorType::conflict('Ya existe una sección registrada con ese nombre')
       );
@@ -130,8 +130,8 @@ class SectionService {
    *
    * @param string $status One of active|deleted|all (default active). With
    *                       'active', a soft-deleted section returns 404.
-   * @return array{id: string, name: string, description: string|null,
-   * created_at: string, created_by: string, is_deleted: int, deleted_at: string|null}
+   * @return array{section_id: string, name: string|null, description: string|null,
+ *   is_deleted: int, deleted_at: string|null}
    * @throws ApiException
    */
   public function getById(string $sectionId, string $status = 'active'): array {
