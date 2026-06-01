@@ -43,7 +43,9 @@ class EmailService {
       $mail->SMTPAuth   = true;
       $mail->Username   = \MailConfig::SMTP_USER;
       $mail->Password   = \MailConfig::SMTP_PASS;
-      $mail->SMTPSecure = \MailConfig::SMTP_ENCRYPTION === 'ssl'
+      // Allow a runtime override (SMTP_ENCRYPTION=ssl|tls), defaulting to config.
+      $encryption = getenv('SMTP_ENCRYPTION') ?: \MailConfig::SMTP_ENCRYPTION;
+      $mail->SMTPSecure = $encryption === 'ssl'
         ? PHPMailer::ENCRYPTION_SMTPS
         : PHPMailer::ENCRYPTION_STARTTLS;
       $mail->Port       = \MailConfig::SMTP_PORT;
