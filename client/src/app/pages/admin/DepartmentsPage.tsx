@@ -6,7 +6,7 @@ import type { ServiceError } from '../../../services/adminService';
 import { adminService } from '../../../services/adminService';
 import type { Area, PageMeta } from '../../../services/adminService';
 
-import DepartmentToolbar from '../../../features/admin/department/DeparmentToolBar';
+import DepartmentToolbar from '../../../features/admin/department/DepartmentToolbar';
 import DepartmentList from '../../../features/admin/department/DepartmentList';
 import DepartmentFormModal from '../../../features/admin/department/DepartmentFormModal';
 import ModalError from '../../../components/modals/ModalError';
