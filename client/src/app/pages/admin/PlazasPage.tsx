@@ -13,13 +13,35 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { adminService } from '../../../services/adminService';
-import type { Plaza, Area, JobPositionType, ServiceError } from '../../../services/adminService';
+import type {
+  Plaza,
+  Area,
+  Unit,
+  OrgOption,
+  JobPositionType,
+  PlazaParentType,
+  CreatePlazaPayload,
+  ServiceError,
+} from '../../../services/adminService';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
-const EMPTY_FORM = { name: '', description: '', job_position_type_id: '', area_id: '' };
+const EMPTY_FORM = {
+  name: '',
+  description: '',
+  job_position_type_id: '',
+  parentType: '' as PlazaParentType | '',
+  parentId: '',
+};
+
+const PARENT_TYPES: { value: PlazaParentType; label: string }[] = [
+  { value: 'area', label: 'Área' },
+  { value: 'department', label: 'Departamento' },
+  { value: 'section', label: 'Sección' },
+  { value: 'unit', label: 'Unidad' },
+];
 
 /** Oracle default timestamps look like "28-MAY-26 05.34.02.776554 PM"; show the date part. */
 function formatDate(dateStr: string): string {
@@ -30,12 +52,15 @@ function formatDate(dateStr: string): string {
 export default function PlazasPage() {
   const [plazas, setPlazas] = useState<Plaza[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [departments, setDepartments] = useState<OrgOption[]>([]);
+  const [sections, setSections] = useState<OrgOption[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [types, setTypes] = useState<JobPositionType[]>([]);
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Plaza | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [formErrors, setFormErrors] = useState<Partial<typeof EMPTY_FORM>>({});
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
   const [successOpen, setSuccessOpen] = useState(false);
@@ -53,23 +78,48 @@ export default function PlazasPage() {
 
   useEffect(() => {
     void refreshPlazas();
-    // Load the option sources for the create form (areas + plaza types).
-    adminService.getAreas({ limit: 100 }).then(({ data }) => setAreas(data)).catch(() => undefined);
+    // Option sources for the create form.
     adminService.getJobPositionTypes().then(setTypes).catch(() => undefined);
+    adminService.getAreas({ limit: 100 }).then(({ data }) => setAreas(data)).catch(() => undefined);
+    adminService.getUnits({ limit: 100 }).then(({ data }) => setUnits(data)).catch(() => undefined);
+    adminService.getDepartments({ limit: 100 }).then(setDepartments).catch(() => undefined);
+    adminService.getSections({ limit: 100 }).then(setSections).catch(() => undefined);
   }, [refreshPlazas]);
 
-  const areaName = useCallback(
-    (id: string | null) => areas.find((a) => a.id === id)?.name ?? '—',
-    [areas],
-  );
+  // Name lookups for each parent kind, to render a plaza's owning entity.
+  const lookups = useMemo(() => ({
+    area: new Map(areas.map((a) => [a.id, a.name])),
+    department: new Map(departments.map((d) => [d.id, d.name])),
+    section: new Map(sections.map((s) => [s.id, s.name])),
+    unit: new Map(units.map((u) => [u.id, u.name])),
+  }), [areas, departments, sections, units]);
+
+  const parentLabel = useCallback((plaza: Plaza): string => {
+    if (plaza.area_id) return `Área: ${lookups.area.get(plaza.area_id) ?? plaza.area_id}`;
+    if (plaza.department_id) return `Departamento: ${lookups.department.get(plaza.department_id) ?? plaza.department_id}`;
+    if (plaza.section_id) return `Sección: ${lookups.section.get(plaza.section_id) ?? plaza.section_id}`;
+    if (plaza.unit_id) return `Unidad: ${lookups.unit.get(plaza.unit_id) ?? plaza.unit_id}`;
+    return '—';
+  }, [lookups]);
+
+  // Options for the entity dropdown, depending on the selected parent type.
+  const parentOptions: OrgOption[] = useMemo(() => {
+    switch (form.parentType) {
+      case 'area': return areas.map((a) => ({ id: a.id, name: a.name }));
+      case 'department': return departments;
+      case 'section': return sections;
+      case 'unit': return units.map((u) => ({ id: u.id, name: u.name }));
+      default: return [];
+    }
+  }, [form.parentType, areas, departments, sections, units]);
 
   const filtered = useMemo(() =>
     plazas.filter((p) =>
-      [p.name, p.description ?? '', areaName(p.area_id)]
+      [p.name, p.description ?? '', parentLabel(p)]
         .join(' ')
         .toLowerCase()
         .includes(search.toLowerCase())
-    ), [plazas, search, areaName]);
+    ), [plazas, search, parentLabel]);
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -78,10 +128,11 @@ export default function PlazasPage() {
   };
 
   const validateForm = (): boolean => {
-    const errors: Partial<typeof EMPTY_FORM> = {};
+    const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
     if (!form.name.trim()) errors.name = 'El número de plaza es requerido.';
     if (!form.job_position_type_id) errors.job_position_type_id = 'El tipo de plaza es requerido.';
-    if (!form.area_id) errors.area_id = 'El área es requerida.';
+    if (!form.parentType) errors.parentType = 'El tipo de entidad es requerido.';
+    if (!form.parentId) errors.parentId = 'La entidad es requerida.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -90,12 +141,15 @@ export default function PlazasPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      await adminService.createPlaza({
+      const payload: CreatePlazaPayload = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         job_position_type_id: form.job_position_type_id,
-        area_id: form.area_id,
-      });
+      };
+      if (form.parentType) {
+        payload[`${form.parentType}_id`] = form.parentId;
+      }
+      await adminService.createPlaza(payload);
       await refreshPlazas();
       setFormOpen(false);
       setSuccessMsg('Plaza creada correctamente.');
@@ -126,10 +180,13 @@ export default function PlazasPage() {
     }
   };
 
-  const handleFormChange = (field: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const setField = (field: keyof typeof EMPTY_FORM, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
     if (formErrors[field]) setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
+
+  const handleText = (field: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setField(field, e.target.value);
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
@@ -205,8 +262,12 @@ export default function PlazasPage() {
                 <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333', fontWeight: 600 }}>
                   {plaza.name}
                 </Typography>
-                <Typography variant="body2" sx={{ flex: COLS[1].flex, color: '#555' }}>
-                  {areaName(plaza.area_id)}
+                <Typography
+                  variant="body2"
+                  noWrap
+                  sx={{ flex: COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
+                >
+                  {parentLabel(plaza)}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -246,7 +307,7 @@ export default function PlazasPage() {
           <TextField
             label="Número de plaza"
             value={form.name}
-            onChange={handleFormChange('name')}
+            onChange={handleText('name')}
             size="small"
             fullWidth
             error={!!formErrors.name}
@@ -257,7 +318,7 @@ export default function PlazasPage() {
             select
             label="Tipo de plaza"
             value={form.job_position_type_id}
-            onChange={handleFormChange('job_position_type_id')}
+            onChange={handleText('job_position_type_id')}
             size="small"
             fullWidth
             error={!!formErrors.job_position_type_id}
@@ -272,25 +333,50 @@ export default function PlazasPage() {
           </TextField>
           <TextField
             select
-            label="Área"
-            value={form.area_id}
-            onChange={handleFormChange('area_id')}
+            label="Tipo de entidad"
+            value={form.parentType}
+            onChange={(e) => {
+              // Reset the chosen entity when the parent kind changes.
+              setForm((prev) => ({ ...prev, parentType: e.target.value as PlazaParentType, parentId: '' }));
+              setFormErrors((prev) => ({ ...prev, parentType: undefined, parentId: undefined }));
+            }}
             size="small"
             fullWidth
-            error={!!formErrors.area_id}
-            helperText={formErrors.area_id ?? (areas.length === 0 ? 'No hay áreas registradas.' : '')}
+            error={!!formErrors.parentType}
+            helperText={formErrors.parentType}
             required
           >
-            {areas.map((a) => (
-              <MenuItem key={a.id} value={a.id}>
-                {a.name}
+            {PARENT_TYPES.map((p) => (
+              <MenuItem key={p.value} value={p.value}>
+                {p.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Entidad"
+            value={form.parentId}
+            onChange={handleText('parentId')}
+            size="small"
+            fullWidth
+            disabled={!form.parentType}
+            error={!!formErrors.parentId}
+            helperText={
+              formErrors.parentId ??
+              (form.parentType && parentOptions.length === 0 ? 'No hay entidades de este tipo registradas.' : '')
+            }
+            required
+          >
+            {parentOptions.map((o) => (
+              <MenuItem key={o.id} value={o.id}>
+                {o.name}
               </MenuItem>
             ))}
           </TextField>
           <TextField
             label="Descripción"
             value={form.description}
-            onChange={handleFormChange('description')}
+            onChange={handleText('description')}
             size="small"
             fullWidth
             multiline
@@ -326,8 +412,8 @@ export default function PlazasPage() {
 }
 
 const COLS = [
-  { label: 'Número', flex: '0 0 20%' },
-  { label: 'Área', flex: '0 0 24%' },
+  { label: 'Número', flex: '0 0 18%' },
+  { label: 'Entidad', flex: '0 0 30%' },
   { label: 'Descripción', flex: '1' },
   { label: 'Fecha de creación', flex: '0 0 18%' },
 ];

@@ -28,6 +28,9 @@ export interface Plaza {
   description: string | null;
   job_position_type_id: string;
   area_id: string | null;
+  department_id: string | null;
+  section_id: string | null;
+  unit_id: string | null;
   user_id: string | null;
   created_at: string;
   is_deleted: number;
@@ -39,11 +42,23 @@ export interface JobPositionType {
   name: string;
 }
 
+/** A selectable org entity (area/department/section/unit) for the plaza parent. */
+export interface OrgOption {
+  id: string;
+  name: string;
+}
+
+/** The four parent entity kinds a plaza can hang from (mutually exclusive). */
+export type PlazaParentType = 'area' | 'department' | 'section' | 'unit';
+
 export interface CreatePlazaPayload {
   name: string;
   description?: string;
   job_position_type_id: string;
-  area_id: string;
+  area_id?: string;
+  department_id?: string;
+  section_id?: string;
+  unit_id?: string;
 }
 
 export interface PageMeta {
@@ -152,6 +167,21 @@ export const adminService = {
   async getJobPositionTypes(): Promise<JobPositionType[]> {
     try {
       const res = await apiClient.get<{ data: JobPositionType[] }>('/job-position-types');
+      return res.data.data ?? [];
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  // Parent-entity option sources for the plaza form (normalized to {id, name}).
+  async getDepartments(params: ListParams = {}): Promise<OrgOption[]> {
+    try {
+      const res = await apiClient.get<{ data: Array<{ id?: string; department_id?: string; name: string }> }>('/departments', { params });
+      return (res.data.data ?? []).map((d) => ({ id: d.id ?? d.department_id ?? '', name: d.name }));
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async getSections(params: ListParams = {}): Promise<OrgOption[]> {
+    try {
+      const res = await apiClient.get<{ data: OrgOption[] }>('/sections', { params });
       return res.data.data ?? [];
     } catch (e) { throw extractApiError(e); }
   },

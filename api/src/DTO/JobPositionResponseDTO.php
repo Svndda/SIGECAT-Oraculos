@@ -7,7 +7,9 @@ namespace DTO;
  * JobPositionResponseDTO
  *
  * Shapes a plaza (JOB_POSITION) row for API responses: snake_case keys with an
- * `id` (not job_position_id). Tolerates Oracle uppercase or lowercase keys.
+ * `id` (not job_position_id). Exposes all four mutually-exclusive parent FKs so
+ * the client can tell (and navigate to) the entity the plaza belongs to.
+ * Tolerates Oracle uppercase or lowercase keys.
  *
  * @package DTO
  */
@@ -17,6 +19,9 @@ final class JobPositionResponseDTO {
   public readonly ?string $description;
   public readonly string $jobPositionTypeId;
   public readonly ?string $areaId;
+  public readonly ?string $departmentId;
+  public readonly ?string $sectionId;
+  public readonly ?string $unitId;
   public readonly ?string $userId;
   public readonly string $createdAt;
   public readonly int $isDeleted;
@@ -28,6 +33,9 @@ final class JobPositionResponseDTO {
     ?string $description,
     string $jobPositionTypeId,
     ?string $areaId,
+    ?string $departmentId,
+    ?string $sectionId,
+    ?string $unitId,
     ?string $userId,
     string $createdAt,
     int $isDeleted,
@@ -38,6 +46,9 @@ final class JobPositionResponseDTO {
     $this->description = $description;
     $this->jobPositionTypeId = $jobPositionTypeId;
     $this->areaId = $areaId;
+    $this->departmentId = $departmentId;
+    $this->sectionId = $sectionId;
+    $this->unitId = $unitId;
     $this->userId = $userId;
     $this->createdAt = $createdAt;
     $this->isDeleted = $isDeleted;
@@ -47,22 +58,21 @@ final class JobPositionResponseDTO {
   /** @param array<string, mixed> $data */
   public static function fromArray(array $data): self {
     $get = static fn(string $c): ?string => $data[strtolower($c)] ?? $data[strtoupper($c)] ?? null;
-
-    $description = $get('description');
-    $areaId      = $get('area_id');
-    $userId      = $get('user_id');
-    $deletedAt   = $get('deleted_at');
+    $str = static fn(?string $v): ?string => $v !== null ? (string) $v : null;
 
     return new self(
       (string) ($get('job_position_id') ?? ''),
       (string) ($get('name') ?? ''),
-      $description !== null ? (string) $description : null,
+      $str($get('description')),
       (string) ($get('job_position_type_id') ?? ''),
-      $areaId !== null ? (string) $areaId : null,
-      $userId !== null ? (string) $userId : null,
+      $str($get('area_id')),
+      $str($get('department_id')),
+      $str($get('section_id')),
+      $str($get('unit_id')),
+      $str($get('user_id')),
       (string) ($get('created_at') ?? ''),
-      (int)    ($get('is_deleted') ?? 0),
-      $deletedAt !== null ? (string) $deletedAt : null,
+      (int) ($get('is_deleted') ?? 0),
+      $str($get('deleted_at')),
     );
   }
 
@@ -73,6 +83,9 @@ final class JobPositionResponseDTO {
    *   description: string|null,
    *   job_position_type_id: string,
    *   area_id: string|null,
+   *   department_id: string|null,
+   *   section_id: string|null,
+   *   unit_id: string|null,
    *   user_id: string|null,
    *   created_at: string,
    *   is_deleted: int,
@@ -86,6 +99,9 @@ final class JobPositionResponseDTO {
       'description'          => $this->description,
       'job_position_type_id' => $this->jobPositionTypeId,
       'area_id'              => $this->areaId,
+      'department_id'        => $this->departmentId,
+      'section_id'           => $this->sectionId,
+      'unit_id'              => $this->unitId,
       'user_id'              => $this->userId,
       'created_at'           => $this->createdAt,
       'is_deleted'           => $this->isDeleted,

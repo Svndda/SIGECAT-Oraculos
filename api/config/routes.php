@@ -28,6 +28,9 @@ return [
     ['method' => 'DELETE', 'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/areas/{id}/restore', 'controller' => 'AreaController', 'action' => 'restore'],
 
+    // Section routes (read-only, for selection)
+    ['method' => 'GET',    'path' => '/sections',    'controller' => 'SectionController', 'action' => 'index'],
+
     // Plaza (job position) routes
     ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
     ['method' => 'POST',   'path' => '/plazas',      'controller' => 'JobPositionController', 'action' => 'create'],

@@ -37,23 +37,26 @@ final class JobPositionRepository extends Repository
   }
 
   /**
-   * Creates a plaza attached to an Area. Other parents (unit/department/
-   * section) stay NULL to satisfy the single-parent CHECK constraint.
+   * Creates a plaza attached to exactly one parent entity. The parent column
+   * comes from a fixed whitelist (DTO::parent), so inlining it is safe; the
+   * other three FK columns stay NULL to satisfy CHECK_JOB_POSITION_PARENT.
    */
   public function createPlaza(string $createdBy, CreateJobPositionDTO $dto): void
   {
     $newId = UlidGenerator::generate();
+    [$parentColumn, $parentId] = $dto->parent();
+
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare(
-        'INSERT INTO JOB_POSITIONS
-           (job_position_id, area_id, job_position_type_id, name, description, created_at, created_by)
+        "INSERT INTO JOB_POSITIONS
+           (job_position_id, {$parentColumn}, job_position_type_id, name, description, created_at, created_by)
          VALUES
-           (:id, :area_id, :type_id, :name, :description, CURRENT_TIMESTAMP, :created_by)'
+           (:id, :parent_id, :type_id, :name, :description, CURRENT_TIMESTAMP, :created_by)"
       );
       $stmt->execute([
         ':id'          => $newId,
-        ':area_id'     => $dto->areaId,
+        ':parent_id'   => $parentId,
         ':type_id'     => $dto->jobPositionTypeId,
         ':name'        => trim($dto->name),
         ':description' => $dto->description !== null ? trim($dto->description) : null,
@@ -70,7 +73,8 @@ final class JobPositionRepository extends Repository
   public function findById(string $jobPositionId, string $status = 'active'): ?array
   {
     $stmt = $this->db->prepare(
-      'SELECT job_position_id, area_id, job_position_type_id, name, description,
+      'SELECT job_position_id, area_id, department_id, section_id, unit_id,
+              job_position_type_id, name, description,
               user_id, created_at, created_by, is_deleted, deleted_at
          FROM JOB_POSITIONS
         WHERE job_position_id = :id' . $this->statusCondition($status) . '
@@ -103,7 +107,8 @@ final class JobPositionRepository extends Repository
   public function getPlazas(int $offset, int $limit, string $filter = '', string $status = 'active'): array
   {
     $stmt = $this->db->prepare(
-      'SELECT job_position_id, area_id, job_position_type_id, name, description,
+      'SELECT job_position_id, area_id, department_id, section_id, unit_id,
+              job_position_type_id, name, description,
               user_id, created_at, created_by, is_deleted, deleted_at
          FROM JOB_POSITIONS
         WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
