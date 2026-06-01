@@ -8,6 +8,7 @@ node_modules/
 
 # JetBrains IDEs
 .idea/
+api/.idea/
 
 # testing
 coverage/
