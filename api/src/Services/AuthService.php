@@ -98,19 +98,18 @@ final class AuthService
       $user['second_last_name'] ?? ''
     ]));
 
-    // Response keys are UPPERCASE to match the web client's auth contract.
     return [
       'data' => [
-        'ACCESS_TOKEN' => $rawAccessToken,
-        'REFRESH_TOKEN' => $rawRefreshToken,
-        'USER_ID' => $userId,
-        'EMAIL' => $user['email'],
-        'NAME' => implode(' ', $nameParts),
-        'ROLE' => $user['role'] ?? 'usr',
+        'access_token' => $rawAccessToken,
+        'refresh_token' => $rawRefreshToken,
+        'user_id' => $userId,
+        'email' => $user['email'],
+        'name' => implode(' ', $nameParts),
+        'role' => $user['role'] ?? 'usr',
       ],
       'meta' => [
-        'TOKEN_TYPE' => 'Bearer',
-        'EXPIRES_IN' => $accessTtl,
+        'token_type' => 'Bearer',
+        'expires_in' => $accessTtl,
       ],
     ];
   }
@@ -157,17 +156,16 @@ final class AuthService
     $accessExpiresAt = date('Y-m-d H:i:s', time() + $accessTtl);
     $refreshExpiresAt = date('Y-m-d H:i:s', time() + $refreshTtl);
 
-    // Response keys are UPPERCASE to match the web client's auth contract.
     return [
       'data' => [
-        'ACCESS_TOKEN' => $rawNewAccess,
-        'ACCESS_EXPIRES_AT' => $accessExpiresAt,
-        'REFRESH_TOKEN' => $rawNewRefresh,
-        'REFRESH_EXPIRES_AT' => $refreshExpiresAt,
+        'access_token' => $rawNewAccess,
+        'access_expires_at' => $accessExpiresAt,
+        'refresh_token' => $rawNewRefresh,
+        'refresh_expires_at' => $refreshExpiresAt,
       ],
       'meta' => [
-        'TOKEN_TYPE' => 'Bearer',
-        'EXPIRES_IN' => $accessTtl,
+        'token_type' => 'Bearer',
+        'expires_in' => $accessTtl,
       ],
     ];
   }

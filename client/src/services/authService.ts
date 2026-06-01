@@ -20,12 +20,12 @@ interface LoginResponseData {
 }
 
 interface BackendLoginData {
-  ACCESS_TOKEN: string;
-  REFRESH_TOKEN: string;
-  USER_ID: string;
-  EMAIL: string;
-  NAME: string;
-  ROLE: string;
+  access_token: string;
+  refresh_token: string;
+  user_id: string;
+  email: string;
+  name: string;
+  role: string;
 }
 
 interface BackendUserData {
@@ -97,18 +97,18 @@ export const authService = {
     try {
       const response = await apiClient.post<{ data: BackendLoginData }>('/auth/login', { email, password });
       const d = response.data.data;
-      localStorage.setItem('sigecat_user_id', d.USER_ID);
-      const [firstName, ...rest] = d.NAME.split(' ');
+      localStorage.setItem('sigecat_user_id', d.user_id);
+      const [firstName, ...rest] = (d.name ?? '').split(' ');
       return {
         user: {
-          id: d.USER_ID,
-          email: d.EMAIL,
+          id: d.user_id,
+          email: d.email,
           first_name: firstName ?? '',
           last_name: rest.join(' '),
-          role: mapRole(d.ROLE),
+          role: mapRole(d.role),
         },
-        access_token: d.ACCESS_TOKEN,
-        refresh_token: d.REFRESH_TOKEN,
+        access_token: d.access_token,
+        refresh_token: d.refresh_token,
       };
     } catch (error) {
       throw extractApiError(error);
