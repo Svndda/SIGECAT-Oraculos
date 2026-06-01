@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -8,33 +8,31 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  MenuItem,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { adminService } from '../../../services/adminService';
-import type { OrgEntity, ServiceError } from '../../../services/adminService';
+import type { Area, ServiceError } from '../../../services/adminService';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
-const CATEGORIAS = ['Área', 'Departamento', 'Unidad', 'División', 'Sección', 'Programa'];
+const EMPTY_FORM = { name: '', description: '' };
 
-const EMPTY_FORM = { categoria: '', nombre: '', descripcion: '', codigo: '' };
-
+/** Oracle default timestamps look like "28-MAY-26 05.34.02.776554 PM"; show the date part. */
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+  if (!dateStr) return '—';
+  return dateStr.split(' ')[0];
 }
 
 export default function OrganizationPage() {
-  const [entities, setEntities] = useState<OrgEntity[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<OrgEntity | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<OrgEntity | null>(null);
+  const [editTarget, setEditTarget] = useState<Area | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<typeof EMPTY_FORM>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,17 +40,27 @@ export default function OrganizationPage() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  useEffect(() => {
-    adminService.getEntities().then(setEntities).catch(() => {});
+  const refreshAreas = useCallback(async () => {
+    try {
+      const { data } = await adminService.getAreas({ limit: 100 });
+      setAreas(data);
+    } catch (error) {
+      const e = error as ServiceError;
+      setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+    }
   }, []);
 
+  useEffect(() => {
+    void refreshAreas();
+  }, [refreshAreas]);
+
   const filtered = useMemo(() =>
-    entities.filter((e) =>
-      [e.categoria, e.nombre, e.descripcion, e.codigo]
+    areas.filter((a) =>
+      [a.name, a.description ?? '']
         .join(' ')
         .toLowerCase()
         .includes(search.toLowerCase())
-    ), [entities, search]);
+    ), [areas, search]);
 
   const openCreate = () => {
     setEditTarget(null);
@@ -61,18 +69,16 @@ export default function OrganizationPage() {
     setFormOpen(true);
   };
 
-  const openEdit = (entity: OrgEntity) => {
-    setEditTarget(entity);
-    setForm({ categoria: entity.categoria, nombre: entity.nombre, descripcion: entity.descripcion, codigo: entity.codigo });
+  const openEdit = (area: Area) => {
+    setEditTarget(area);
+    setForm({ name: area.name, description: area.description ?? '' });
     setFormErrors({});
     setFormOpen(true);
   };
 
   const validateForm = (): boolean => {
     const errors: Partial<typeof EMPTY_FORM> = {};
-    if (!form.categoria) errors.categoria = 'La categoría es requerida.';
-    if (!form.nombre.trim()) errors.nombre = 'El nombre es requerido.';
-    if (!form.codigo.trim()) errors.codigo = 'El código es requerido.';
+    if (!form.name.trim()) errors.name = 'El nombre es requerido.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -81,15 +87,15 @@ export default function OrganizationPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
+      const payload = { name: form.name.trim(), description: form.description.trim() };
       if (editTarget) {
-        const updated = await adminService.updateEntity(editTarget.id, form);
-        setEntities((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-        setSuccessMsg('Entidad actualizada correctamente.');
+        await adminService.updateArea(editTarget.id, payload);
+        setSuccessMsg('Área actualizada correctamente.');
       } else {
-        const created = await adminService.createEntity(form);
-        setEntities((prev) => [created, ...prev]);
-        setSuccessMsg('Entidad creada correctamente.');
+        await adminService.createArea(payload);
+        setSuccessMsg('Área creada correctamente.');
       }
+      await refreshAreas();
       setFormOpen(false);
       setSuccessOpen(true);
     } catch (error) {
@@ -104,10 +110,10 @@ export default function OrganizationPage() {
     if (!deleteTarget) return;
     setIsSubmitting(true);
     try {
-      await adminService.deleteEntity(deleteTarget.id);
-      setEntities((prev) => prev.filter((e) => e.id !== deleteTarget.id));
+      await adminService.deleteArea(deleteTarget.id);
       setDeleteTarget(null);
-      setSuccessMsg('Entidad eliminada correctamente.');
+      await refreshAreas();
+      setSuccessMsg('Área eliminada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
@@ -127,7 +133,7 @@ export default function OrganizationPage() {
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
       {/* Header */}
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
-        Control Organizacional
+        Áreas
       </Typography>
 
       {/* Toolbar */}
@@ -162,22 +168,14 @@ export default function OrganizationPage() {
             width: { xs: '100%', sm: 'auto' },
           }}
         >
-          Añadir Entidad
+          Añadir Área
         </Button>
       </Box>
 
       <Box sx={{ overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 880 }}>
+        <Box sx={{ minWidth: 720 }}>
           {/* Table header */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              px: 2.5,
-              py: 1.25,
-              mb: 1,
-            }}
-          >
+          <Box sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.25, mb: 1 }}>
             {COLS.map((col) => (
               <Typography
                 key={col.label}
@@ -193,9 +191,9 @@ export default function OrganizationPage() {
 
           {/* Rows */}
           <Stack spacing={1.5}>
-            {filtered.map((entity) => (
+            {filtered.map((area) => (
               <Paper
-                key={entity.id}
+                key={area.id}
                 elevation={0}
                 sx={{
                   display: 'flex',
@@ -207,29 +205,23 @@ export default function OrganizationPage() {
                 }}
               >
                 <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333' }}>
-                  {entity.categoria}
-                </Typography>
-                <Typography variant="body2" sx={{ flex: COLS[1].flex, color: '#333' }}>
-                  {entity.nombre}
+                  {area.name}
                 </Typography>
                 <Typography
                   variant="body2"
                   noWrap
-                  sx={{ flex: COLS[2].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
+                  sx={{ flex: COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
                 >
-                  {entity.descripcion}
+                  {area.description ?? '—'}
                 </Typography>
-                <Typography variant="body2" sx={{ flex: COLS[3].flex, color: '#333' }}>
-                  {entity.codigo}
-                </Typography>
-                <Typography variant="body2" sx={{ flex: COLS[4].flex, color: '#555' }}>
-                  {formatDate(entity.fechaCreacion)}
+                <Typography variant="body2" sx={{ flex: COLS[2].flex, color: '#555' }}>
+                  {formatDate(area.created_at)}
                 </Typography>
                 <Box sx={{ width: 72, display: 'flex', gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => openEdit(entity)} sx={{ color: '#1a2b4a' }}>
+                  <IconButton size="small" onClick={() => openEdit(area)} sx={{ color: '#1a2b4a' }}>
                     <EditIcon fontSize="small" />
                   </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(entity)} sx={{ color: '#9e9e9e' }}>
+                  <IconButton size="small" onClick={() => setDeleteTarget(area)} sx={{ color: '#9e9e9e' }}>
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
                 </Box>
@@ -237,7 +229,7 @@ export default function OrganizationPage() {
             ))}
             {filtered.length === 0 && (
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-                No se encontraron entidades.
+                No se encontraron áreas.
               </Typography>
             )}
           </Stack>
@@ -247,7 +239,7 @@ export default function OrganizationPage() {
       {/* Create / Edit modal */}
       <ModalForm
         open={formOpen}
-        title={editTarget ? 'Editar Entidad' : 'Añadir Entidad'}
+        title={editTarget ? 'Editar Área' : 'Añadir Área'}
         onClose={() => setFormOpen(false)}
         onConfirm={handleConfirm}
         confirmLabel={editTarget ? 'Guardar cambios' : 'Confirmar'}
@@ -255,48 +247,23 @@ export default function OrganizationPage() {
       >
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           <TextField
-            select
-            label="Categoría"
-            value={form.categoria}
-            onChange={handleFormChange('categoria')}
-            size="small"
-            fullWidth
-            error={!!formErrors.categoria}
-            helperText={formErrors.categoria}
-            required
-          >
-            {CATEGORIAS.map((c) => (
-              <MenuItem key={c} value={c}>{c}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
             label="Nombre"
-            value={form.nombre}
-            onChange={handleFormChange('nombre')}
+            value={form.name}
+            onChange={handleFormChange('name')}
             size="small"
             fullWidth
-            error={!!formErrors.nombre}
-            helperText={formErrors.nombre}
+            error={!!formErrors.name}
+            helperText={formErrors.name}
             required
           />
           <TextField
             label="Descripción"
-            value={form.descripcion}
-            onChange={handleFormChange('descripcion')}
+            value={form.description}
+            onChange={handleFormChange('description')}
             size="small"
             fullWidth
             multiline
             rows={3}
-          />
-          <TextField
-            label="Código"
-            value={form.codigo}
-            onChange={handleFormChange('codigo')}
-            size="small"
-            fullWidth
-            error={!!formErrors.codigo}
-            helperText={formErrors.codigo}
-            required
           />
         </Stack>
       </ModalForm>
@@ -304,8 +271,8 @@ export default function OrganizationPage() {
       {/* Delete confirmation */}
       <ModalAlert
         open={!!deleteTarget}
-        title="Eliminar entidad"
-        message={`¿Está seguro que desea eliminar "${deleteTarget?.nombre}"? Esta acción no se puede deshacer.`}
+        title="Eliminar área"
+        message={`¿Está seguro que desea eliminar "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         onClose={() => setDeleteTarget(null)}
@@ -329,9 +296,7 @@ export default function OrganizationPage() {
 }
 
 const COLS = [
-  { label: 'Categoría', flex: '0 0 14%' },
-  { label: 'Nombre', flex: '0 0 20%' },
+  { label: 'Nombre', flex: '0 0 26%' },
   { label: 'Descripción', flex: '1' },
-  { label: 'Código', flex: '0 0 13%' },
-  { label: 'Fecha de creación', flex: '0 0 16%' },
+  { label: 'Fecha de creación', flex: '0 0 20%' },
 ];
