@@ -60,7 +60,7 @@ class SectionController {
   public function show(string $sectionId): void {
     try {
       $status = trim((string) ($_GET['status'] ?? 'active'));
-      $this->authorizeStatus($status);
+      $this->authService->requireAdmin();
 
       $section = $this->sectionService->getById($sectionId, $status);
 
@@ -83,7 +83,7 @@ class SectionController {
       $filter = trim((string) ($_GET['filter'] ?? ''));
       $status = trim((string) ($_GET['status'] ?? 'active'));
 
-      $this->authorizeStatus($status);
+      $this->authService->requireAdmin();
 
       $result = $this->sectionService->getSections($page, $limit, $filter, $status);
 
@@ -94,24 +94,12 @@ class SectionController {
   }
 
   /**
-   * Authorizes a read by status: any authenticated user may read active rows,
-   * but only admins may include deleted rows (status deleted|all).
-   */
-  private function authorizeStatus(string $status): void {
-    if ($status === '' || $status === 'active') {
-      $this->authService->requireAuth();
-    } else {
-      $this->authService->requireAdmin();
-    }
-  }
-
-  /**
    * PUT /sections/{id}
    * Admin only.
    */
   public function update(string $sectionId): void {
     try {
-      // $this->authService->requireAdmin();
+      $this->authService->requireAdmin();
 
       $data = Request::parseJsonRequest();
       $dto  = UpdateSectionDTO::fromArray($data);
@@ -146,8 +134,7 @@ class SectionController {
    */
   public function restore(string $sectionId): void {
     try {
-      // TODO: Remove comment bars for requireAdmin
-      // $this->authService->requireAdmin();
+      $this->authService->requireAdmin();
 
       $this->sectionService->restoreSection($sectionId);
 
