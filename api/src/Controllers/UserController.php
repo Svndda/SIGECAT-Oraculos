@@ -6,6 +6,7 @@ namespace Controllers;
 use DTO\LoginUserDTO;
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
+use Exception;
 use Http\ApiException;
 use Http\Request;
 use Http\Response;
@@ -51,6 +52,8 @@ class UserController
       Response::success($result['data'], $result['meta'], 200);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
+    } catch (Exception $e) {
+      Response::error($e->getMessage());
     }
   }
 
@@ -63,9 +66,6 @@ class UserController
     try {
       $auth = $this->authService->requireAdmin();
 
-      error_log('User Info: ' . json_encode($auth));
-
-
       $createdBy = $auth['user_id'];
 
       $data = Request::parseJsonRequest();
@@ -76,6 +76,8 @@ class UserController
       Response::success(null, null, 201);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
+    } catch (Exception $e) {
+      Response::error($e->getMessage());
     }
   }
 
@@ -97,12 +99,14 @@ class UserController
       Response::success(null, null, 200);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
+    } catch (Exception $e) {
+      Response::error($e->getMessage());
     }
   }
 
   /**
    * GET /users/me
-   * Returns public profile of a user by ID.
+   * Returns public profile of the current user.
    */
   public function show(): void
   {
@@ -130,7 +134,7 @@ class UserController
   public function getById(string $userId): void
   {
     try {
-      $this->authService->requireAuth();
+      $this->authService->requireAdmin();
 
       $user = $this->userService->getById($userId);
 

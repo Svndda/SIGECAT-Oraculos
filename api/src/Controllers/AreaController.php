@@ -77,6 +77,8 @@ class AreaController {
    */
   public function index(): void {
     try {
+      $this->authService->requireAuth();
+
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
@@ -105,8 +107,7 @@ class AreaController {
   }
 
   /**
-   * PUT /areas/{id}
-   * Admin only.
+   * PATCH /areas/{id}
    */
   public function update(string $areaId): void {
     try {
