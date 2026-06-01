@@ -34,7 +34,7 @@ final class CreateSectionDTO {
    * @param array{
    *     name?: string,
    *     description?: string,
-   *     area?: string
+   *     area_id?: string
    * } $data
    */
   public static function fromArray(array $data): self {

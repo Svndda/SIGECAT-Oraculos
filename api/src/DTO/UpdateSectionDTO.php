@@ -26,21 +26,28 @@ final class UpdateSectionDTO {
   public ?string $areaId;
   public ?string $name;
   public ?string $description;
+  public int $isDeleted;
+  public ?string $deleteAt;
 
   private function __construct(string $sectionId, ?string $areaId,
-      ?string $name, ?string $description) {
+      ?string $name, ?string $description, int $isDeleted, ?string $deleteAt) {
     $this->sectionId = $sectionId;
     $this->areaId = $areaId;
     $this->name = $name;
     $this->description = $description;
+    $this->isDeleted = $isDeleted;
+    $this->deleteAt = $deleteAt;
   }
 
   public static function fromArray(array $data): self {
+    $deletedAt = $data['deleted_at']  ?? $data['deleted_at']  ?? null;
     return new self(
       (string) ($data['section_id'] ?? ''),
       isset($data['area_id']) ? (string) $data['area_id'] : null,
       isset($data['name']) ? (string) $data['name'] : null,
-      isset($data['description']) ? (string) $data['description'] : null
+      isset($data['description']) ? (string) $data['description'] : null,
+      (int) ($data['is_deleted'] ?? $data['is_deleted'] ?? 0),
+      $deletedAt !== null ? (string) $deletedAt : null
     );
   }
 
