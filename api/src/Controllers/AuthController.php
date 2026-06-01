@@ -55,8 +55,8 @@ final class AuthController
       $dto = LoginUserDTO::fromArray($data);
       $result = $this->authService->login($dto);
 
-      $accessToken = $result['data']['access_token'] ?? '';
-      $expiresIn = $result['meta']['expires_in'] ?? 3600;
+      $accessToken = $result['data']['ACCESS_TOKEN'] ?? '';
+      $expiresIn = $result['meta']['EXPIRES_IN'] ?? 3600;
 
       setcookie(
         'sigecat_session_token',
@@ -96,12 +96,12 @@ final class AuthController
 
       $result = $this->authService->refreshTokens($body['refresh_token']);
 
-      if (isset($result['data']['access_token'], $result['meta']['expires_in'])) {
+      if (isset($result['data']['ACCESS_TOKEN'], $result['meta']['EXPIRES_IN'])) {
         setcookie(
           'sigecat_session_token',
-          $result['data']['access_token'],
+          $result['data']['ACCESS_TOKEN'],
           [
-            'expires' => time() + (int) $result['meta']['expires_in'],
+            'expires' => time() + (int) $result['meta']['EXPIRES_IN'],
             'path' => '/',
             'domain' => '',
             'secure' => false,
