@@ -42,15 +42,7 @@ class RegisterUserDTO {
   }
 
   /**
-   * @param array{
-   * email: string,
-   * first_name: string,
-   * second_name: ?string,
-   * first_last_name: string,
-   * second_last_name: string,
-   * password: string,
-   * role: string,
-   * } $data
+   * @param array<string, mixed> $data Raw request payload; keys may be absent.
    */
   public static function fromArray(array $data): self {
     return new self (

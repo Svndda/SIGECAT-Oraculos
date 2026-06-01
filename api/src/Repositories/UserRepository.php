@@ -34,6 +34,7 @@ final class UserRepository extends Repository {
     };
   }
 
+  /** @return array<string, mixed>|null */
   public function findById(string $userId, string $status = 'active'): ?array{
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
@@ -51,6 +52,7 @@ final class UserRepository extends Repository {
     return $row !== false ? $row : null;
   }
 
+  /** @return array<string, mixed>|null */
   public function findByEmail(string $email, string $status = 'active'): ?array {
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
@@ -159,6 +161,7 @@ final class UserRepository extends Repository {
     }
   }
 
+  /** @return array<int, array<string, mixed>> */
   public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
   {
     $sql = '

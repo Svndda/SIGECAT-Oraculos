@@ -5,6 +5,7 @@ namespace Services;
 
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
+use DTO\UserResponseDTO;
 use DTO\PasswordValidator;
 use Http\ApiException;
 use Http\ErrorType;
@@ -132,6 +133,7 @@ class UserService
   /**
    * Returns a user by ID, excluding sensitive fields.
    *
+   * @return array<string, mixed>
    * @throws ApiException
    */
   public function getById(string $userId, string $status = 'active'): array
@@ -149,12 +151,13 @@ class UserService
       );
     }
 
-    unset($user['password_hash']);
-    return $user;
+    return UserResponseDTO::fromArray($user)->toArray();
   }
 
   /**
    * Compiles filter sets to fetch pagination groups of users.
+   *
+   * @return array<string, mixed>
    */
   public function getAllUsers(
     int $page = 1,
@@ -173,12 +176,13 @@ class UserService
       $limit, $offset, $filter, $status
     );
 
-    foreach ($users as &$user) {
-      unset($user['password_hash']);
-    }
+    $data = array_map(
+      static fn(array $row) => UserResponseDTO::fromArray($row)->toArray(),
+      $users
+    );
 
     return [
-      'data' => $users,
+      'data' => $data,
       'meta' => [
         'page'        => $page,
         'limit'       => $limit,
