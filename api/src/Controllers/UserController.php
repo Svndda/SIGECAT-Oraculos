@@ -81,6 +81,30 @@ class UserController
   }
 
   /**
+   * PATCH /users/me/password
+   * Changes the authenticated user's own password (verifies the current one).
+   */
+  public function changePassword(): void
+  {
+    try {
+      $auth = $this->authService->requireAuth();
+      $userId = (string) $auth['user_id'];
+
+      $data = Request::parseJsonRequest();
+      $currentPassword = (string) ($data['current_password'] ?? '');
+      $newPassword     = (string) ($data['new_password'] ?? '');
+
+      $this->userService->changePassword($userId, $currentPassword, $newPassword);
+
+      Response::success(
+        null, ['message' => 'Contraseña actualizada exitosamente']
+      );
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
    * GET /users/me
    */
   public function show(): void

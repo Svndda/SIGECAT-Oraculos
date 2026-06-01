@@ -12,6 +12,7 @@ return [
     // User routes
     ['method' => 'POST',   'path' => '/users/register',      'controller' => 'UserController', 'action' => 'register'],
     ['method' => 'PATCH',  'path' => '/users/me',            'controller' => 'UserController', 'action' => 'update'],
+    ['method' => 'PATCH',  'path' => '/users/me/password',   'controller' => 'UserController', 'action' => 'changePassword'],
     ['method' => 'GET',    'path' => '/users/me',            'controller' => 'UserController', 'action' => 'show'],
     ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
     ['method' => 'GET',    'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'getById'],
