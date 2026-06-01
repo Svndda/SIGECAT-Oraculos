@@ -22,6 +22,30 @@ export interface Unit {
   deleted_at: string | null;
 }
 
+export interface Plaza {
+  id: string;
+  name: string;
+  description: string | null;
+  job_position_type_id: string;
+  area_id: string | null;
+  user_id: string | null;
+  created_at: string;
+  is_deleted: number;
+  deleted_at: string | null;
+}
+
+export interface JobPositionType {
+  job_position_type_id: string;
+  name: string;
+}
+
+export interface CreatePlazaPayload {
+  name: string;
+  description?: string;
+  job_position_type_id: string;
+  area_id: string;
+}
+
 export interface PageMeta {
   page: number;
   limit: number;
@@ -114,6 +138,33 @@ export const adminService = {
     try {
       const res = await apiClient.get<{ data: Unit[]; meta: PageMeta }>('/units', { params });
       return { data: res.data.data ?? [], meta: res.data.meta };
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  // ---- Plazas (job positions) ----
+  async getPlazas(params: ListParams = {}): Promise<Paginated<Plaza>> {
+    try {
+      const res = await apiClient.get<{ data: Plaza[]; meta: PageMeta }>('/plazas', { params });
+      return { data: res.data.data ?? [], meta: res.data.meta };
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async getJobPositionTypes(): Promise<JobPositionType[]> {
+    try {
+      const res = await apiClient.get<{ data: JobPositionType[] }>('/job-position-types');
+      return res.data.data ?? [];
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async createPlaza(payload: CreatePlazaPayload): Promise<void> {
+    try {
+      await apiClient.post('/plazas', payload);
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async deletePlaza(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/plazas/${id}`);
     } catch (e) { throw extractApiError(e); }
   },
 

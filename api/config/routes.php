@@ -28,6 +28,12 @@ return [
     ['method' => 'DELETE', 'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/areas/{id}/restore', 'controller' => 'AreaController', 'action' => 'restore'],
 
+    // Plaza (job position) routes
+    ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
+    ['method' => 'POST',   'path' => '/plazas',      'controller' => 'JobPositionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/plazas',      'controller' => 'JobPositionController', 'action' => 'index'],
+    ['method' => 'DELETE', 'path' => '/plazas/{id}', 'controller' => 'JobPositionController', 'action' => 'delete'],
+
     // Department routes
     ['method' => 'POST',   'path' => '/departments',      'controller' => 'DepartmentController', 'action' => 'create'],
     ['method' => 'GET',    'path' => '/departments',      'controller' => 'DepartmentController', 'action' => 'index'],
