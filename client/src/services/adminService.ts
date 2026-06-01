@@ -1,12 +1,44 @@
 import apiClient from './apiClient';
 
-export interface OrgEntity {
+export interface Area {
   id: string;
-  categoria: string;
-  nombre: string;
-  descripcion: string;
-  codigo: string;
-  fechaCreacion: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  created_by: string;
+  is_deleted: number;
+  deleted_at: string | null;
+}
+
+export interface Unit {
+  id: string;
+  section_id: string | null;
+  department_id: string | null;
+  name: string;
+  description: string | null;
+  created_at: string;
+  created_by: string;
+  is_deleted: number;
+  deleted_at: string | null;
+}
+
+export interface PageMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  meta: PageMeta;
+}
+
+export interface ListParams {
+  page?: number;
+  limit?: number;
+  filter?: string;
+  status?: 'active' | 'deleted' | 'all';
 }
 
 export interface AdminUser {
@@ -34,22 +66,11 @@ export interface ServiceError {
 
 const USE_MOCK = false;
 
-const INITIAL_ENTITIES: OrgEntity[] = [
-  { id: '1', categoria: 'Área', nombre: 'Área de Reserva', descripcion: 'Área encargada de la gestión de reservas institucionales', codigo: '12345673', fechaCreacion: '2021-12-08' },
-  { id: '2', categoria: 'Área', nombre: 'Área de Tecnología', descripcion: 'Área encargada de los recursos tecnológicos', codigo: '12345674', fechaCreacion: '2021-12-08' },
-  { id: '3', categoria: 'Departamento', nombre: 'Recursos Humanos', descripcion: 'Departamento de gestión del talento humano', codigo: '12345675', fechaCreacion: '2021-12-08' },
-  { id: '4', categoria: 'Unidad', nombre: 'Unidad Financiera', descripcion: 'Unidad encargada de la gestión financiera', codigo: '12345676', fechaCreacion: '2021-12-08' },
-  { id: '5', categoria: 'Área', nombre: 'Área de Reserva', descripcion: 'Área encargada de la gestión de reservas institucionales', codigo: '12345673', fechaCreacion: '2021-12-08' },
-  { id: '6', categoria: 'Departamento', nombre: 'Planificación', descripcion: 'Departamento de planificación estratégica institucional', codigo: '12345677', fechaCreacion: '2021-12-08' },
-  { id: '7', categoria: 'Área', nombre: 'Área de Reserva', descripcion: 'Área encargada de la gestión de reservas institucionales', codigo: '12345673', fechaCreacion: '2021-12-08' },
-];
-
 const INITIAL_USERS: AdminUser[] = [
   { id: '01MOCK001', email: 'admin@ucr.ac.cr', first_name: 'Admin', last_name: 'UCR', role: 'admin' },
   { id: '01MOCK002', email: 'empleado@ucr.ac.cr', first_name: 'María', last_name: 'González', role: 'employee', job_class_id: '5200' },
 ];
 
-let mockEntities: OrgEntity[] = [...INITIAL_ENTITIES];
 let mockUsers: AdminUser[] = [...INITIAL_USERS];
 
 function extractApiError(error: unknown): ServiceError {
@@ -62,57 +83,41 @@ function extractApiError(error: unknown): ServiceError {
 }
 
 export const adminService = {
-  async getEntities(): Promise<OrgEntity[]> {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 400));
-      return [...mockEntities];
-    }
+  // ---- Areas ----
+  async getAreas(params: ListParams = {}): Promise<Paginated<Area>> {
     try {
-      const res = await apiClient.get<{ data: OrgEntity[] }>('/entities');
-      return res.data.data;
+      const res = await apiClient.get<{ data: Area[]; meta: PageMeta }>('/areas', { params });
+      return { data: res.data.data ?? [], meta: res.data.meta };
     } catch (e) { throw extractApiError(e); }
   },
 
-  async createEntity(payload: Omit<OrgEntity, 'id' | 'fechaCreacion'>): Promise<OrgEntity> {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 500));
-      const entity: OrgEntity = {
-        ...payload,
-        id: Date.now().toString(),
-        fechaCreacion: new Date().toISOString().split('T')[0],
-      };
-      mockEntities = [entity, ...mockEntities];
-      return entity;
-    }
+  async createArea(payload: { name: string; description?: string }): Promise<void> {
     try {
-      const res = await apiClient.post<{ data: OrgEntity }>('/entities', payload);
-      return res.data.data;
+      await apiClient.post('/areas', payload);
     } catch (e) { throw extractApiError(e); }
   },
 
-  async updateEntity(id: string, payload: Omit<OrgEntity, 'id' | 'fechaCreacion'>): Promise<OrgEntity> {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 500));
-      mockEntities = mockEntities.map((e) => (e.id === id ? { ...e, ...payload } : e));
-      return mockEntities.find((e) => e.id === id)!;
-    }
+  async updateArea(id: string, payload: { name?: string; description?: string }): Promise<void> {
     try {
-      const res = await apiClient.put<{ data: OrgEntity }>(`/entities/${id}`, payload);
-      return res.data.data;
+      await apiClient.patch(`/areas/${id}`, payload);
     } catch (e) { throw extractApiError(e); }
   },
 
-  async deleteEntity(id: string): Promise<void> {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 400));
-      mockEntities = mockEntities.filter((e) => e.id !== id);
-      return;
-    }
+  async deleteArea(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/entities/${id}`);
+      await apiClient.delete(`/areas/${id}`);
     } catch (e) { throw extractApiError(e); }
   },
 
+  // ---- Units ----
+  async getUnits(params: ListParams = {}): Promise<Paginated<Unit>> {
+    try {
+      const res = await apiClient.get<{ data: Unit[]; meta: PageMeta }>('/units', { params });
+      return { data: res.data.data ?? [], meta: res.data.meta };
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  // ---- Users ----
   async getUsers(): Promise<AdminUser[]> {
     if (USE_MOCK) {
       await new Promise((r) => setTimeout(r, 400));
