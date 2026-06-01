@@ -29,11 +29,11 @@ interface BackendLoginData {
 }
 
 interface BackendUserData {
-  USER_ID: string;
-  EMAIL: string;
-  FIRST_NAME: string;
-  LAST_NAME: string;
-  ROLE: string;
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
 }
 
 const USE_MOCK = false;
@@ -140,11 +140,11 @@ export const authService = {
       const response = await apiClient.get<{ data: BackendUserData }>(`/users/${userId}`);
       const d = response.data.data;
       return {
-        id: d.USER_ID,
-        email: d.EMAIL,
-        first_name: d.FIRST_NAME,
-        last_name: d.LAST_NAME,
-        role: mapRole(d.ROLE),
+        id: d.id,
+        email: d.email,
+        first_name: d.first_name,
+        last_name: d.last_name,
+        role: mapRole(d.role),
       };
     } catch (error) {
       throw extractApiError(error);

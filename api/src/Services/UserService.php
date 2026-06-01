@@ -5,6 +5,7 @@ namespace Services;
 
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
+use DTO\UserResponseDTO;
 use DTO\PasswordValidator;
 use Http\ApiException;
 use Http\ErrorType;
@@ -149,8 +150,7 @@ class UserService
       );
     }
 
-    unset($user['password_hash']);
-    return $user;
+    return UserResponseDTO::fromArray($user)->toArray();
   }
 
   /**
@@ -173,12 +173,13 @@ class UserService
       $limit, $offset, $filter, $status
     );
 
-    foreach ($users as &$user) {
-      unset($user['password_hash']);
-    }
+    $data = array_map(
+      static fn(array $row) => UserResponseDTO::fromArray($row)->toArray(),
+      $users
+    );
 
     return [
-      'data' => $users,
+      'data' => $data,
       'meta' => [
         'page'        => $page,
         'limit'       => $limit,
