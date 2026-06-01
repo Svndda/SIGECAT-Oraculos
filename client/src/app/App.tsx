@@ -7,6 +7,7 @@ import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import OrganizationPage from './pages/admin/OrganizationPage';
+import UnitsPage from './pages/admin/UnitsPage';
 import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import { RecordsProvider } from '../context/RecordsContext';
@@ -33,6 +34,7 @@ function App() {
                 <Route path="work-hours" element={<WorkHoursPage />} />
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />
                 <Route path="organizacion" element={<OrganizationPage />} />
+                <Route path="unidades" element={<UnitsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
                 <Route path="ajustes" element={<SettingsPage />} />
               </Route>
