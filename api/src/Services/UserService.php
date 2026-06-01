@@ -10,6 +10,7 @@ use DTO\PasswordValidator;
 use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
+use Repositories\JobPositionRepository;
 use PDO;
 
 /**
@@ -21,10 +22,45 @@ use PDO;
 class UserService
 {
   private UserRepository $userRepository;
+  private JobPositionRepository $jobPositionRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->userRepository = new UserRepository($this->pdo);
+    $this->jobPositionRepository = new JobPositionRepository($this->pdo);
+  }
+
+  /**
+   * Assigns the plaza identified by its number ("número de plaza") to the user.
+   *
+   * The user is linked to the existing plaza (JOB_POSITIONS) whose name matches
+   * the given number; any plaza they previously held is released.
+   *
+   * @throws ApiException When the number is missing, the plaza does not exist,
+   *                      or it is already held by another user.
+   */
+  public function assignPlaza(string $userId, string $plazaNumber): void
+  {
+    $plazaNumber = trim($plazaNumber);
+    if ($plazaNumber === '') {
+      throw new ApiException(ErrorType::missingField('plaza_number'));
+    }
+
+    $plaza = $this->jobPositionRepository->findActiveByName($plazaNumber);
+    if ($plaza === null) {
+      throw new ApiException(
+        ErrorType::from('PLAZA_NOT_FOUND', 'El número de plaza no existe.'), 404
+      );
+    }
+
+    $currentHolder = $plaza['user_id'] ?? null;
+    if ($currentHolder !== null && (string) $currentHolder !== $userId) {
+      throw new ApiException(
+        ErrorType::conflict('La plaza ya está asignada a otro usuario.'), 409
+      );
+    }
+
+    $this->jobPositionRepository->assignToUser((string) $plaza['job_position_id'], $userId);
   }
 
   /**

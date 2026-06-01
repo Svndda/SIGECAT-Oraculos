@@ -81,6 +81,29 @@ class UserController
   }
 
   /**
+   * PATCH /users/me/plaza
+   * Assigns the plaza (by its "número de plaza") to the authenticated user.
+   */
+  public function assignPlaza(): void
+  {
+    try {
+      $auth = $this->authService->requireAuth();
+      $userId = (string) $auth['user_id'];
+
+      $data = Request::parseJsonRequest();
+      $plazaNumber = (string) ($data['plaza_number'] ?? '');
+
+      $this->userService->assignPlaza($userId, $plazaNumber);
+
+      Response::success(
+        null, ['message' => 'Número de plaza actualizado exitosamente']
+      );
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
    * PATCH /users/me/password
    * Changes the authenticated user's own password (verifies the current one).
    */
