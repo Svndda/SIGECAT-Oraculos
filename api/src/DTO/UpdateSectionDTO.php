@@ -27,16 +27,16 @@ final class UpdateSectionDTO {
   public ?string $name;
   public ?string $description;
   public int $isDeleted;
-  public ?string $deleteAt;
+  public ?string $deletedAt;
 
   private function __construct(string $sectionId, ?string $areaId,
-      ?string $name, ?string $description, int $isDeleted, ?string $deleteAt) {
+      ?string $name, ?string $description, int $isDeleted, ?string $deletedAt) {
     $this->sectionId = $sectionId;
     $this->areaId = $areaId;
     $this->name = $name;
     $this->description = $description;
     $this->isDeleted = $isDeleted;
-    $this->deleteAt = $deleteAt;
+    $this->deletedAt = $deletedAt;
   }
 
   /**
@@ -51,6 +51,7 @@ final class UpdateSectionDTO {
  */
   public static function fromArray(array $data): self {
     $deletedAt = $data['deleted_at']  ?? $data['deleted_at']  ?? null;
+    
     return new self(
       (string) ($data['section_id'] ?? ''),
       isset($data['area_id']) ? (string) $data['area_id'] : null,
@@ -107,5 +108,24 @@ final class UpdateSectionDTO {
         )
       );
     }
+  }
+
+    /**
+   * @return array{
+   *   sectionId: string,
+   *   name: string,
+   *   description: string|null,
+   *   is_deleted: int,
+   *   deleted_at: string|null
+   * }
+   */
+  public function toArray(): array {
+    return [
+      'id'          => $this->sectionId,
+      'name'        => $this->name,
+      'description' => $this->description,
+      'is_deleted'  => $this->isDeleted,
+      'deleted_at'  => $this->deletedAt,
+    ];
   }
 }

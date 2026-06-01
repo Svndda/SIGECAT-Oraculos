@@ -156,19 +156,57 @@ final class SectionRepository extends Repository
   }
 
   /**
-   * Permanently deletes a section record by its unique identifier.
-   *
-   * @param string $sectionId The ULID identifier.
-   * * @return bool True if a row was affected/deleted, false otherwise.
+   * Soft-deletes an sections and cascades to its children, all in one transaction:
+   *   - child units
+   *   - the section's plazas (JOB_POSITIONS) — SECTION_ID is NOT NULL so they cannot
+   *     be de-referenced; they are soft-deleted instead
+   *   - the section itself
    */
-  public function delete(string $sectionId): bool
-  {
-    $sql = 'DELETE FROM sections WHERE section_id = :v_section_id';
+  public function delete(string $sectionId, string $deletedBy): void {
+      $this->beginTransaction();
+    try {
+      // 1. Units belonging to this section.
+      $stmt = $this->db->prepare(
+        'UPDATE UNITS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE section_id = :section_id
+            AND is_deleted = 0'
+      );
+      $stmt->execute([
+        ':deleted_by' => $deletedBy,
+        ':section_id'  => $sectionId,
+      ]);
 
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([':v_section_id' => $sectionId]);
+      // 2. Plazas of the sections (cascade soft-delete; cannot re-anchor).
+      $stmt = $this->db->prepare(
+        'UPDATE JOB_POSITIONS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE (
+              section_id = :section_id
+              OR unit_id IN (
+                  SELECT unit_id
+                  FROM UNITS
+                  WHERE section_id = :section_id
+                    AND is_deleted = 0
+              )
+          )
+          AND is_deleted = 0'
+      );
+      $stmt->execute([':deleted_by' => $deletedBy, ':section_id' => $sectionId]);
 
-    return $stmt->rowCount() > 0;
+      // 3. The section itself.
+      $stmt = $this->db->prepare(
+        'UPDATE SECTIONS
+            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
+          WHERE section_id = :section_id AND is_deleted = 0'
+      );
+      $stmt->execute([':deleted_by' => $deletedBy, ':section_id' => $sectionId]);
+
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
   }
 
   /**
@@ -249,7 +287,7 @@ final class SectionRepository extends Repository
    */
   public function getSections(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
     $stmt = $this->db->prepare(
-      'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at
+      'SELECT section_id, name, description, created_at, created_by, is_deleted, deleted_at
        FROM SECTIONS
        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
        ORDER BY created_at DESC
