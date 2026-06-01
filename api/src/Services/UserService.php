@@ -5,6 +5,7 @@ namespace Services;
 
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
+use DTO\PasswordValidator;
 use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
@@ -89,6 +90,43 @@ class UserService
     }
 
     $this->userRepository->update($userId, $dto);
+  }
+
+  /**
+   * Changes the authenticated user's password.
+   *
+   * Business rules:
+   * - Current password is required and must match the stored hash.
+   * - New password must satisfy the strength policy.
+   *
+   * @throws ApiException
+   */
+  public function changePassword(string $userId, string $currentPassword, string $newPassword): void
+  {
+    if ($currentPassword === '') {
+      throw new ApiException(ErrorType::missingField('current_password'));
+    }
+    if ($newPassword === '') {
+      throw new ApiException(ErrorType::missingField('new_password'));
+    }
+
+    // Enforce the new password strength policy.
+    PasswordValidator::validate($newPassword);
+
+    $user = $this->userRepository->findById($userId);
+    if ($user === null) {
+      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'));
+    }
+
+    // Verify the current password against the stored hash.
+    if (password_verify($currentPassword, (string) $user['password_hash']) === false) {
+      throw new ApiException(
+        ErrorType::from('INVALID_CREDENTIALS', 'La contraseña actual es incorrecta')
+      );
+    }
+
+    $hashed = password_hash($newPassword, PASSWORD_BCRYPT);
+    $this->userRepository->updatePasswordById($userId, $hashed);
   }
 
   /**
