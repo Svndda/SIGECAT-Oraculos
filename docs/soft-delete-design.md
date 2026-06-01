@@ -218,9 +218,10 @@ Proposed query parameter:
 - **Default = `active`** to avoid breaking current clients.
 - `show` of a deleted entity with `status=active` → `404`.
 - An invalid `status` value → `400` (`invalidField('status')`).
-- **Authorization:** any authenticated user may read active rows; seeing deleted rows
-  (`status=deleted|all`) requires **admin** (`403` otherwise). All writes — create, update,
-  soft-delete and restore — are **admin-only**.
+- **Authorization:** **all** organization endpoints (reads and writes — index, show,
+  create, update, soft-delete, restore) require **admin** (`403` otherwise). Department and
+  Unit follow this. _Area currently still allows any authenticated user to read active rows
+  and should be aligned to admin-only for consistency._
 
 **Reactivation** (decided to ship — see §12): `POST /<resource>/{id}/restore` flips
 `is_deleted` back to `0`, after validating the §5 conflict rule. Implemented for Area as
@@ -267,5 +268,5 @@ Each owner applies the same pattern to their entity:
    minimum, drop the `deleted_by` columns/FKs.
 5. ✅ **Reactivation endpoint**: ships this delivery. `POST /<resource>/{id}/restore` with the
    §5 conflict validation. Implemented for Area.
-6. ✅ **`status=deleted`/`all`**: only **admins** can see deleted rows via `?status=`. Default
-   stays `active`. Soft-delete and restore are also admin-only.
+6. ✅ **`status=deleted`/`all`**: all organization endpoints are **admin-only** (reads
+   included). The `?status=` filter still defaults to `active`. (Area pending alignment.)
