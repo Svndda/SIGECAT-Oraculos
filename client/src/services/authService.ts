@@ -159,9 +159,11 @@ export const authService = {
       }
       return;
     }
-    void currentPassword;
     try {
-      await apiClient.patch('/users/me', { password: newPassword });
+      await apiClient.patch('/users/me/password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
     } catch (error) {
       throw extractApiError(error);
     }
