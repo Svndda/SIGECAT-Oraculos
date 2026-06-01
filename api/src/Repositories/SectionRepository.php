@@ -8,6 +8,7 @@ use Core\UlidGenerator;
 use DTO\CreateSectionDTO;
 use DTO\UpdateSectionDTO;
 use PDO;
+use PDOException;
 
 /**
  * Repository handling persistence operations for the SECTIONS table.
@@ -65,7 +66,7 @@ final class SectionRepository extends Repository
    * Retrieves a single section record by its unique identifier.
    *
    * @param string $sectionId The ULID identifier.
-   * * @return array<string, mixed>|null Associative array with UPPERCASE keys or null if not found.
+   * @return array<string, mixed>|null Associative array with UPPERCASE keys or null if not found.
    */
   public function findById(string $sectionId): ?array
   {
@@ -108,6 +109,9 @@ final class SectionRepository extends Repository
     ';
 
     $stmt = $this->db->query($sql);
+    if ($stmt === false) {
+      return [];
+    }
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
@@ -165,5 +169,96 @@ final class SectionRepository extends Repository
     $stmt->execute([':v_section_id' => $sectionId]);
 
     return $stmt->rowCount() > 0;
+  }
+
+  /**
+   * Checks whether an ACTIVE section already uses the given name
+   * (case-insensitive), optionally excluding one section id.
+   * Deleted section are ignored so their names can be reused.
+   */
+  public function existsByName(string $name, ?string $excludeSectionId = null): bool {
+    if ($excludeSectionId !== null) {
+      $stmt = $this->db->prepare(
+        'SELECT COUNT(*) AS cnt
+         FROM SECTIONS
+         WHERE UPPER(name) = UPPER(:name)
+         AND section_id <> :section_id
+         AND is_deleted = 0'
+      );
+      $stmt->execute([':name' => $name, ':section_id' => $excludeSectionId]);
+    } else {
+      $stmt = $this->db->prepare(
+        'SELECT COUNT(*) AS cnt
+         FROM SECTIONS
+         WHERE UPPER(name) = UPPER(:name)
+         AND is_deleted = 0'
+      );
+      $stmt->execute([':name' => $name]);
+    }
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $count = (int) ($row['cnt'] ?? $row['CNT'] ?? 0);
+    return $count > 0;
+  }
+
+    /**
+   * Restores a soft-deleted section (only the section itself; children stay deleted
+   * and are restored individually). Conflict validation is done in the service.
+   */
+  public function restoreSection(string $sectionId): void {
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare(
+        'UPDATE SECTIONS
+            SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL
+          WHERE section_id = :section_id AND is_deleted = 1'
+      );
+      $stmt->execute([':section_id' => $sectionId]);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
+  public function countSections(string $filter = '', string $status = 'active'): int {
+    $stmt = $this->db->prepare(
+      'SELECT COUNT(*) AS total
+       FROM AREAS
+       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status)
+    );
+    $stmt->execute([':filter' => '%' . $filter . '%']);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
+  }
+
+  /**
+   * Builds the SQL fragment that filters by logical-deletion state.
+   * The value is an internal enum (never user input), so inlining is safe.
+   */
+  private function statusCondition(string $status): string {
+    return match ($status) {
+      'deleted' => ' AND is_deleted = 1',
+      'all'     => '',
+      default   => ' AND is_deleted = 0',
+    };
+  }
+
+    /**
+   * @return array<int, array<string, mixed>>
+   */
+  public function getSections(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
+    $stmt = $this->db->prepare(
+      'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at
+       FROM SECTIONS
+       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
+       ORDER BY created_at DESC
+       OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
+    );
+    $stmt->bindValue(':filter', '%' . $filter . '%');
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 }

@@ -39,6 +39,16 @@ final class UpdateSectionDTO {
     $this->deleteAt = $deleteAt;
   }
 
+  /**
+ * @param array{
+ *     section_id?: string,
+ *     area_id?: string,
+ *     name?: string,
+ *     description?: string,
+ *     is_deleted?: int,
+ *     deleted_at?: string
+ * } $data
+ */
   public static function fromArray(array $data): self {
     $deletedAt = $data['deleted_at']  ?? $data['deleted_at']  ?? null;
     return new self(
