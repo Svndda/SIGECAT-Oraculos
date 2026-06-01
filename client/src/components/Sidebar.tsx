@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   { label: 'Usuarios', icon: <PersonIcon fontSize="small" />, route: '/usuarios' },
   { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/organizacion' },
   { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades' },
+  { label: 'Departamentos', icon: <AccountTreeIcon fontSize="small" />, route: '/departamentos' },
   // { label: 'Trabajo', icon: <WorkIcon fontSize="small" />, route: '/laboral' },
   // { label: 'Ajustes', icon: <SettingsIcon fontSize="small" />, route: '/ajustes' },
 ];

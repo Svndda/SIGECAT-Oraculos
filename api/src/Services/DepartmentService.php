@@ -96,7 +96,7 @@ class DepartmentService {
       );
     }
 
-    $this->departmentRepository->update($dto);
+    $this->departmentRepository->update($departmentId,$dto);
 
     return $this->getDepartmentById($departmentId);
   }

@@ -193,13 +193,14 @@ final class DepartmentRepository extends Repository
   /**
    * Performs a partial or full update on an existing department.
    *
+   * @param string $departmentId Department UID to update.
    * @param UpdateDepartmentDTO $dto Validated data container for updates.
    * @return bool True if the record was updated successfully, false otherwise.
    */
-  public function update(UpdateDepartmentDTO $dto): bool
+  public function update(string $departmentId, UpdateDepartmentDTO $dto): bool
   {
     $fields = [];
-    $params = [':v_department_id' => $dto->departmentId];
+    $params = [':v_department_id' => $departmentId];
 
     if ($dto->areaId !== null) {
       $fields[] = 'area_id = :v_area_id';
@@ -223,8 +224,7 @@ final class DepartmentRepository extends Repository
     $sql = 'UPDATE departments SET ' . implode(', ', $fields)
       . ' WHERE department_id = :v_department_id AND is_deleted = 0';
 
-    $stmt = $this->db->prepare($sql);
-    return $stmt->execute($params);
+    return $this->db->prepare($sql)->execute($params);
   }
 
   /**
