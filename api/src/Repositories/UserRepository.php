@@ -14,26 +14,35 @@ use DTO\UpdateUserDTO;
  *
  * Handles all database operations related to the USER table.
  * Encapsulates SQL, uses prepared statements, and enforces ACID
- * on write operations.
+ * on write operations. Includes soft delete mapping.
  */
 final class UserRepository extends Repository {
-  /**
-   * Constructs the AuthRepository with a database connection.
-   *
-   * @param PDO $db The active PDO database connection.
-   */
+
   public function __construct(PDO $db) {
     parent::__construct($db);
   }
 
-  public function findById(string $userId): ?array{
+  /**
+   * Evaluates query filter conditions for isolation of logical deletion records.
+   */
+  private function statusCondition(string $status): string
+  {
+    return match ($status) {
+      'deleted' => ' AND is_deleted = 1',
+      'all'     => '',
+      default   => ' AND is_deleted = 0',
+    };
+  }
+
+  public function findById(string $userId, string $status = 'active'): ?array{
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
               first_name, second_name, first_last_name, second_last_name,
               password_hash, is_active, is_password_temp,
-              failed_logging_attempts, created_at, created_by
+              failed_logging_attempts, created_at, created_by,
+              is_deleted, deleted_at, deleted_by
        FROM USERS
-       WHERE user_id = :user_id
+       WHERE user_id = :user_id' . $this->statusCondition($status) . '
        AND ROWNUM = 1'
     );
     $stmt->execute([':user_id' => $userId]);
@@ -42,14 +51,15 @@ final class UserRepository extends Repository {
     return $row !== false ? $row : null;
   }
 
-  public function findByEmail(string $email): ?array {
+  public function findByEmail(string $email, string $status = 'active'): ?array {
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
               first_name, second_name, first_last_name,second_last_name,
               password_hash, is_active, is_password_temp,
-              failed_logging_attempts, created_at, created_by
+              failed_logging_attempts, created_at, created_by,
+              is_deleted, deleted_at, deleted_by
        FROM USERS
-       WHERE email = :email
+       WHERE email = :email' . $this->statusCondition($status) . '
        AND ROWNUM = 1'
     );
     $stmt->execute([':email' => $email]);
@@ -112,7 +122,7 @@ final class UserRepository extends Repository {
       $params[':second_name'] = $dto->secondName;
     }
     if ($dto->firstLastName !== null) {
-      $fields[] = 'first_name_last = :first_last_name';
+      $fields[] = 'first_last_name = :first_last_name';
       $params[':first_last_name'] = $dto->firstLastName;
     }
     if ($dto->secondLastName !== null) {
@@ -129,19 +139,100 @@ final class UserRepository extends Repository {
     }
     if ($dto->isActive !== null) {
       $fields[] = 'is_active = :is_active';
-      $params[':is_active'] = $dto->isActive;
+      $params[':is_active'] = $dto->isActive ? 1 : 0;
     }
 
     if (empty($fields)) {
       throw new \RuntimeException('No fields provided for update.');
     }
 
-    $sql = 'UPDATE USERS SET ' . implode(', ', $fields) . ' WHERE user_id = :user_id';
+    $sql = 'UPDATE USERS SET ' . implode(', ', $fields) . ' WHERE user_id = :user_id AND is_deleted = 0';
 
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare($sql);
       $stmt->execute($params);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
+  public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
+  {
+    $sql = '
+        SELECT user_id, role, email, first_name, second_name, first_last_name, second_last_name,
+               is_active, is_password_temp, failed_logging_attempts, created_at, created_by,
+               is_deleted, deleted_at, deleted_by
+        FROM USERS
+        WHERE (UPPER(first_name) LIKE UPPER(:filter) 
+           OR UPPER(first_last_name) LIKE UPPER(:filter) 
+           OR UPPER(email) LIKE UPPER(:filter))' . $this->statusCondition($status) . '
+        ORDER BY created_at DESC
+        OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
+    ';
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindValue(':filter', '%' . $filter . '%');
+    $stmt->bindValue(':v_offset', $offset, PDO::PARAM_INT);
+    $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  public function countAll(string $filter = '', string $status = 'active'): int
+  {
+    $sql = '
+        SELECT COUNT(*) as total 
+        FROM USERS 
+        WHERE (UPPER(first_name) LIKE UPPER(:filter) 
+           OR UPPER(first_last_name) LIKE UPPER(:filter) 
+           OR UPPER(email) LIKE UPPER(:filter))' . $this->statusCondition($status);
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindValue(':filter', '%' . $filter . '%');
+    $stmt->execute();
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row !== false ? (int) ($row['total'] ?? $row['TOTAL'] ?? 0) : 0;
+  }
+
+  public function delete(string $userId, string $deletedBy): void
+  {
+    $this->beginTransaction();
+    try {
+      $sql = '
+          UPDATE USERS 
+          SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by, is_active = 0
+          WHERE user_id = :user_id AND is_deleted = 0
+      ';
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute([
+        ':deleted_by' => $deletedBy,
+        ':user_id'    => $userId
+      ]);
+
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
+  public function restore(string $userId): void
+  {
+    $this->beginTransaction();
+    try {
+      $sql = '
+          UPDATE USERS 
+          SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL, is_active = 1
+          WHERE user_id = :user_id AND is_deleted = 1
+      ';
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute([':user_id' => $userId]);
+
       $this->commit();
     } catch (PDOException $e) {
       $this->rollBack();

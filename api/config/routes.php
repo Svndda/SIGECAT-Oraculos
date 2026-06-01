@@ -10,11 +10,13 @@ return [
     ['method' => 'POST', 'path' => '/auth/password-recovery/reset',   'controller' => 'PasswordRecoveryController', 'action' => 'reset'],
     
     // User routes
-    ['method' => 'POST', 'path' => '/users/register', 'controller' => 'UserController', 'action' => 'register'],
-    ['method' => 'PATCH', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'update'],
-    ['method' => 'GET', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'show'],
-    ['method' => 'GET', 'path' => '/users/{id}', 'controller' => 'UserController', 'action' => 'getById'],
-    // ['method' => 'DELETE', 'path' => '/users/me', 'controller' => 'UserController', 'action' => 'delete']
+    ['method' => 'POST',   'path' => '/users/register',      'controller' => 'UserController', 'action' => 'register'],
+    ['method' => 'PATCH',  'path' => '/users/me',            'controller' => 'UserController', 'action' => 'update'],
+    ['method' => 'GET',    'path' => '/users/me',            'controller' => 'UserController', 'action' => 'show'],
+    ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'getById'],
+    ['method' => 'DELETE', 'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'delete'],
+    ['method' => 'POST',   'path' => '/users/{id}/restore',  'controller' => 'UserController', 'action' => 'restore'],
 
     // Area routes
     ['method' => 'POST',   'path' => '/areas',      'controller' => 'AreaController', 'action' => 'create'],

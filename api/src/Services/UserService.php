@@ -3,32 +3,21 @@ declare(strict_types=1);
 
 namespace Services;
 
-use DTO\LoginUserDTO;
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
 use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
-use Repositories\AuthRepository;
-use Services\AuthService;
 use PDO;
 
 /**
  * UserService
  *
- * Orchestrates all business logic related to users.
- *
- * Responsibilities:
- * - Delegates structural validation to DTOs.
- * - Delegates persistence to UserRepository.
- * - Enforces business rules (duplicate email, invalid credentials,
- *   locked accounts, etc.) by throwing ApiExceptions.
- * - Has no knowledge of HTTP transport (no $_POST, $_SESSION, headers).
+ * Orchestrates business logic related to user profile management.
+ * Relies on UserRepository for persistence.
  */
 class UserService
 {
-  private const MAX_FAILED_ATTEMPTS = 5;
-
   private UserRepository $userRepository;
 
   public function __construct(private PDO $pdo)
@@ -37,54 +26,21 @@ class UserService
   }
 
   /**
-   * Validates credentials and returns the authenticated user data.
+   * Normalizes the status filter.
    *
-   * Business rules:
-   * - User must exist.
-   * - Account must be active.
-   * - Account must not be locked (too many failed attempts).
-   * - Password must match the stored hash.
-   * - Resets failed-attempt counter on success.
-   *
-   * @return array<string, mixed>  Authenticated user row (no password_hash).
    * @throws ApiException
    */
-  public function login(LoginUserDTO $dto): array
+  private function normalizeStatus(string $status): string
   {
-    $dto->validate();
-
-    $user = $this->userRepository->findByEmail($dto->email);
-
-    if ($user === null) {
-      throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'));
+    $normalized = $status === '' ? 'active' : strtolower($status);
+    if (!in_array($normalized, ['active', 'deleted', 'all'], true)) {
+      throw new ApiException(ErrorType::invalidField('status'));
     }
-
-    if ((int) $user['is_active'] === 0) {
-      throw new ApiException(ErrorType::from('ACCOUNT_INACTIVE', 'La cuenta está desactivada'));
-    }
-
-    if ((int) $user['failed_logging_attempts'] >= self::MAX_FAILED_ATTEMPTS) {
-      throw new ApiException(ErrorType::from('ACCOUNT_LOCKED', 'La cuenta está bloqueada por demasiados intentos fallidos'));
-    }
-
-    if (password_verify($dto->password, $user['password_hash']) === false) {
-      $this->userRepository->incrementFailedAttempts($user['user_id']);
-      throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'));
-    }
-
-    $this->userRepository->resetFailedAttempts($user['user_id']);
-
-    unset($user['password_hash']);
-    return $user;
+    return $normalized;
   }
-
 
   /**
    * Registers a new user.
-   *
-   * Business rules:
-   * - Email must not already exist.
-   * - created_by must correspond to an existing user.
    *
    * @throws ApiException
    */
@@ -92,9 +48,13 @@ class UserService
   {
     $dto->validate();
 
-    $existing = $this->userRepository->findByEmail($dto->email);
+    $existing = $this->userRepository->findByEmail($dto->email, 'all');
     if ($existing !== null) {
-      throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está registrado'));
+      throw new ApiException(
+        ErrorType::from(
+          'EMAIL_TAKEN', 'El correo ya está registrado'
+        )
+      );
     }
 
     $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
@@ -104,10 +64,6 @@ class UserService
   /**
    * Applies a partial update to an existing user.
    *
-   * Business rules:
-   * - Target user must exist.
-   * - If email changes, the new one must not belong to another user.
-   *
    * @throws ApiException
    */
   public function update(string $userId, UpdateUserDTO $dto): void
@@ -115,9 +71,16 @@ class UserService
     $dto->validate();
 
     if ($dto->email !== null) {
-      $emailOwner = $this->userRepository->findByEmail($dto->email);
+      $emailOwner = $this->userRepository->findByEmail(
+        $dto->email, 'all'
+      );
       if ($emailOwner !== null && $emailOwner['user_id'] !== $userId) {
-        throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está en uso por otro usuario'));
+        throw new ApiException(
+          ErrorType::from(
+            'EMAIL_TAKEN',
+            'El correo ya está en uso por otro usuario'
+          )
+        );
       }
     }
 
@@ -131,21 +94,114 @@ class UserService
   /**
    * Returns a user by ID, excluding sensitive fields.
    *
-   * @return array<string, mixed>
    * @throws ApiException
    */
-  public function getById(string $userId): array
+  public function getById(string $userId, string $status = 'active'): array
   {
     if (empty($userId)) {
       throw new ApiException(ErrorType::missingField('user_id'));
     }
 
-    $user = $this->userRepository->findById($userId);
+    $status = $this->normalizeStatus($status);
+    $user = $this->userRepository->findById($userId, $status);
+
     if ($user === null) {
-      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'));
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
     }
 
     unset($user['password_hash']);
     return $user;
+  }
+
+  /**
+   * Compiles filter sets to fetch pagination groups of users.
+   */
+  public function getAllUsers(
+    int $page = 1,
+    int $limit = 10,
+    string $filter = '',
+    string $status = 'active'
+  ): array
+  {
+    $page = max(1, $page);
+    $limit = max(1, min(100, $limit));
+    $status = $this->normalizeStatus($status);
+    $offset = ($page - 1) * $limit;
+
+    $total = $this->userRepository->countAll($filter, $status);
+    $users = $this->userRepository->findAllPaginated(
+      $limit, $offset, $filter, $status
+    );
+
+    foreach ($users as &$user) {
+      unset($user['password_hash']);
+    }
+
+    return [
+      'data' => $users,
+      'meta' => [
+        'page'        => $page,
+        'limit'       => $limit,
+        'total'       => $total,
+        'total_pages' => (int) ceil($total / $limit)
+      ]
+    ];
+  }
+
+  /**
+   * Executes logical deletion mechanisms onto a specific user record.
+   *
+   * @throws ApiException
+   */
+  public function deleteUser(string $userId, string $deletedBy): void
+  {
+    if (empty($userId)) {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+
+    $existing = $this->userRepository->findById($userId, 'active');
+    if ($existing === null) {
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
+    }
+
+    if ($userId === $deletedBy) {
+      throw new ApiException(
+        ErrorType::conflict('No puedes eliminar tu propia cuenta de usuario')
+      );
+    }
+
+    $this->userRepository->delete($userId, $deletedBy);
+  }
+
+  /**
+   * Resurrects a logically deleted user profile.
+   *
+   * @throws ApiException
+   */
+  public function restoreUser(string $userId): void
+  {
+    if (empty($userId)) {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+
+    $existing = $this->userRepository->findById($userId, 'all');
+    if ($existing === null) {
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
+    }
+
+    $isDeleted = (int) ($existing['is_deleted'] ?? $existing['IS_DELETED'] ?? 0);
+    if ($isDeleted === 0) {
+      throw new ApiException(
+        ErrorType::conflict('El usuario no se encuentra eliminado')
+      );
+    }
+
+    $this->userRepository->restore($userId);
   }
 }

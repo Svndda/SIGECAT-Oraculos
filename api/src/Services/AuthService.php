@@ -7,7 +7,6 @@ namespace Services;
 use PDO;
 use DTO\AccessTokenDTO;
 use DTO\LoginUserDTO;
-use DTO\PasswordValidator;
 use DTO\RefreshTokenDTO;
 use DTO\TokensRotationDTO;
 use Http\ApiException;
@@ -15,19 +14,17 @@ use Http\ErrorType;
 use Http\Request;
 use Repositories\UserRepository;
 use Repositories\AuthRepository;
-use Services\PasswordService;
 
 /**
  * Service handling authentication logic including login, token refresh, logout,
- * and token validation.
- * 
- * It uses DTOs to transfer token data and ensures atomic
- * operations when rotating token pairs.
+ * and token validation. Centralizes login business rules (failed attempts, inactive).
  *
  * @package Services
  */
 final class AuthService
 {
+  private const MAX_FAILED_ATTEMPTS = 5;
+
   private UserRepository $userRepository;
   private AuthRepository $authRepository;
 
@@ -43,26 +40,41 @@ final class AuthService
   }
 
   /**
-   * Authenticates a user and issues a new access/refresh token pair.
-   *
-   * Validates credentials, then atomically replaces any existing
-   * tokens for the user with the newly generated ones.
+   * Authenticates a user, enforcing active status and lockout rules.
+   * Issues a new access/refresh token pair upon success.
    *
    * @param LoginUserDTO $dto Contains email and password.
-   *
-   * @return array<mixed> The new access and refresh tokens along with user info and expiry data.
-   *
-   * @throws ApiException When credentials are invalid or user not found.
+   * @return array<string, mixed> The new tokens and user info.
+   * @throws ApiException
    */
   public function login(LoginUserDTO $dto): array
   {
     $dto->validate();
 
-    $user = $this->userRepository->findByEmail($dto->email);
-    if (!$user || !password_verify($dto->password, $user['password_hash'])) {
-      throw new ApiException(ErrorType::invalidCredentials(), 401);
-    } 
-    $userId = $user['user_id'];
+    // Check against active users only. Soft-deleted users are considered non-existent for login.
+    $user = $this->userRepository->findByEmail($dto->email, 'active');
+
+    if ($user === null) {
+      throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'), 401);
+    }
+
+    $userId = (string) $user['user_id'];
+
+    if ((int) $user['is_active'] === 0) {
+      throw new ApiException(ErrorType::from('ACCOUNT_INACTIVE', 'La cuenta está desactivada'), 403);
+    }
+
+    if ((int) $user['failed_logging_attempts'] >= self::MAX_FAILED_ATTEMPTS) {
+      throw new ApiException(ErrorType::from('ACCOUNT_LOCKED', 'La cuenta está bloqueada por demasiados intentos fallidos'), 403);
+    }
+
+    if (!password_verify($dto->password, (string) $user['password_hash'])) {
+      $this->userRepository->incrementFailedAttempts($userId);
+      throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'), 401);
+    }
+
+    // Reset attempts on successful login
+    $this->userRepository->resetFailedAttempts($userId);
 
     $accessTtl = 3600 + 1800;  // 1.5 hours
     $refreshTtl = 3600 * 24 * 30; // 30 days
@@ -70,7 +82,6 @@ final class AuthService
     $rawAccessToken = bin2hex(random_bytes(32));
     $rawRefreshToken = bin2hex(random_bytes(64));
 
-    // Hash tokens.
     $accessHash = $this->hashToken($rawAccessToken);
     $refreshHash = $this->hashToken($rawRefreshToken);
 
@@ -78,17 +89,13 @@ final class AuthService
     $refreshDto = new RefreshTokenDTO($userId, $refreshHash, $refreshTtl);
     $rotationDto = new TokensRotationDTO($accessDto, $refreshDto);
 
-    // Perform atomic replace of all user tokens.
     $this->authRepository->rotateTokensAtomic($rotationDto);
 
-    // Fetch user info from database for response.
-    $userInfo = $this->userRepository->findById($userId);
-
     $nameParts = array_filter(array_map('trim', [
-      $userInfo['first_name'] ?? '',
-      $userInfo['second_name'] ?? '',
-      $userInfo['first_last_name'] ?? '',
-      $userInfo['second_last_name'] ?? ''
+      $user['first_name'] ?? '',
+      $user['second_name'] ?? '',
+      $user['first_last_name'] ?? '',
+      $user['second_last_name'] ?? ''
     ]));
 
     return [
@@ -96,9 +103,9 @@ final class AuthService
         'access_token' => $rawAccessToken,
         'refresh_token' => $rawRefreshToken,
         'user_id' => $userId,
-        'email' => $userInfo['email'],
+        'email' => $user['email'],
         'name' => implode(' ', $nameParts),
-        'role' => $userInfo['role'] ?? 'usr',
+        'role' => $user['role'] ?? 'usr',
       ],
       'meta' => [
         'token_type' => 'Bearer',
