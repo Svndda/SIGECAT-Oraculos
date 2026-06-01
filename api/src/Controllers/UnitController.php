@@ -22,9 +22,7 @@ use Services\UnitService;
  * - Delegates business logic to UnitService.
  * - Captures ApiException and returns formatted errors via Response::error().
  *
- * Authorization: any authenticated user may read active units; seeing deleted
- * units (status=deleted|all) and all writes (create/update/delete/restore)
- * require admin.
+ * Authorization: all unit endpoints require admin.
  */
 class UnitController {
 
@@ -34,18 +32,6 @@ class UnitController {
   public function __construct(private PDO $pdo) {
     $this->authService = new AuthService($this->pdo);
     $this->unitService = new UnitService($this->pdo);
-  }
-
-  /**
-   * Authorizes a read by status: any authenticated user may read active rows,
-   * but only admins may include deleted rows (status deleted|all).
-   */
-  private function authorizeStatus(string $status): void {
-    if ($status === '' || $status === 'active') {
-      $this->authService->requireAuth();
-    } else {
-      $this->authService->requireAdmin();
-    }
   }
 
   /**
@@ -71,15 +57,16 @@ class UnitController {
    * GET /units
    * Query params: page (int), limit (int), filter (string),
    *               status (active|deleted|all, default active)
+   * Admin only.
    */
   public function index(): void {
     try {
+      $this->authService->requireAdmin();
+
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
       $status = trim((string) ($_GET['status'] ?? 'active'));
-
-      $this->authorizeStatus($status);
 
       $result = $this->unitService->getUnits($page, $limit, $filter, $status);
 
@@ -92,12 +79,13 @@ class UnitController {
   /**
    * GET /units/{id}
    * Query params: status (active|deleted|all, default active)
-   * Seeing deleted units (status deleted|all) requires admin.
+   * Admin only.
    */
   public function show(string $unitId): void {
     try {
+      $this->authService->requireAdmin();
+
       $status = trim((string) ($_GET['status'] ?? 'active'));
-      $this->authorizeStatus($status);
 
       $unit = $this->unitService->getUnitById($unitId, $status);
 
