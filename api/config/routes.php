@@ -31,4 +31,12 @@ return [
     ['method' => 'PATCH',    'path' => '/departments/{id}', 'controller' => 'DepartmentController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/departments/{id}', 'controller' => 'DepartmentController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/departments/{id}/restore', 'controller' => 'DepartmentController', 'action' => 'restore'],
+
+    // Unit routes
+    ['method' => 'POST',   'path' => '/units',      'controller' => 'UnitController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/units',      'controller' => 'UnitController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/units/{id}', 'controller' => 'UnitController', 'action' => 'show'],
+    ['method' => 'PATCH',  'path' => '/units/{id}', 'controller' => 'UnitController', 'action' => 'update'],
+    ['method' => 'DELETE', 'path' => '/units/{id}', 'controller' => 'UnitController', 'action' => 'delete'],
+    ['method' => 'POST',   'path' => '/units/{id}/restore', 'controller' => 'UnitController', 'action' => 'restore'],
 ];
