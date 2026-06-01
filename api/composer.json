@@ -16,6 +16,7 @@
     ],
     "require": {
         "symfony/uid": "^8.0",
+        "ext-pdo": "*",
         "phpmailer/phpmailer": "^7.1"
     },
     "require-dev": {

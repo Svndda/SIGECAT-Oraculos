@@ -13,7 +13,7 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Validates required fields: unit_id, name and belonging_id.
+ * - Validates required fields: name, and at least one of section_id or department_id.
  * - Ensures name does not exceed 110 characters and description does not exceed 255.
  *
  * @package DTO
@@ -21,29 +21,31 @@ use Http\ErrorType;
 final class CreateUnitDTO {
   public string $name;
   public ?string $description;
-
-   // sectionId or departmentId
-  public string $belongingId;
+  public ?string $sectionId;
+  public ?string $departmentId;
 
   private function __construct(string $name,
-      ?string $description, string $belongingId) {
+      ?string $description, ?string $sectionId, ?string $departmentId) {
     $this->name = $name;
     $this->description = $description;
-    $this->belongingId = $belongingId;
+    $this->sectionId = $sectionId;
+    $this->departmentId = $departmentId;
   }
 
   /**
    * @param array{
    *     name?: string,
-   *     description?: string
-   *     belonging?: string
+   *     description?: string,
+   *     section_id?: string,
+   *     department_id?: string
    * } $data
    */
   public static function fromArray(array $data): self {
     return new self (
       (string) ($data['name'] ?? ''),
-      isset($data['description']) ? (string) $data['description'] : null,
-      (string) ($data['belonging_id'] ?? ''),
+      isset($data['description'])   ? (string) $data['description']   : null,
+      isset($data['section_id'])    ? (string) $data['section_id']    : null,
+      isset($data['department_id']) ? (string) $data['department_id'] : null
     );
   }
 
@@ -53,16 +55,31 @@ final class CreateUnitDTO {
     }
 
     if (strlen($this->name) > 110) {
-      throw new ApiException(ErrorType::from('INVALID_UNIT_NAME', 'El nombre de la unidad no puede exceder los 110 caracteres'));
+      throw new ApiException(
+        ErrorType::from(
+          'INVALID_UNIT_NAME',
+          'El nombre de la unidad no puede exceder los 110 caracteres'
+        )
+      );
     }
 
     if ($this->description !== null && strlen($this->description) > 255) {
-      throw new ApiException(ErrorType::from('INVALID_UNIT_DESC', 'La descripción de la unidad no puede exceder los 255 caracteres'));
+      throw new ApiException(
+        ErrorType::from(
+          'INVALID_UNIT_DESC',
+          'La descripción de la unidad no puede exceder los 255 caracteres'
+        )
+      );
     }
 
-    // A unit must be assigned to a department or a section.
-    if (empty($this->belongingId)) {
-      throw new ApiException(ErrorType::missingField('belongingId'));
+    // A unit must be assigned to at least one of: department or section.
+    if ($this->departmentId === null && $this->sectionId === null) {
+      throw new ApiException(
+        ErrorType::from(
+          'INVALID_UNIT_ASSIGNMENT',
+          'La unidad debe estar asignada a un departamento o una sección'
+        )
+      );
     }
   }
 }

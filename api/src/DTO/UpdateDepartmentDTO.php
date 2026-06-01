@@ -14,7 +14,6 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Ensures the department identifier (department_id) is provided.
  * - Supports partial updates (area_id, name, description are optional).
  * - Validates each field only if it is present in the request.
  * - At least one updatable field must be provided.
@@ -29,12 +28,10 @@ final class UpdateDepartmentDTO
   public ?string $description;
 
   private function __construct(
-    string $departmentId,
     ?string $areaId,
     ?string $name,
     ?string $description
   ) {
-    $this->departmentId = $departmentId;
     $this->areaId = $areaId;
     $this->name = $name;
     $this->description = $description;
@@ -42,7 +39,6 @@ final class UpdateDepartmentDTO
 
   /**
    * @param array{
-   *     department_id?: string,
    *     area_id?: string,
    *     name?: string,
    *     description?: string
@@ -51,7 +47,6 @@ final class UpdateDepartmentDTO
   public static function fromArray(array $data): self
   {
     return new self(
-      (string) ($data['department_id'] ?? ''),
       isset($data['area_id']) ? (string) $data['area_id'] : null,
       isset($data['name']) ? (string) $data['name'] : null,
       isset($data['description']) ? (string) $data['description'] : null
@@ -60,11 +55,6 @@ final class UpdateDepartmentDTO
 
   public function validate(): void
   {
-    // department_id is required for identifying which department to update.
-    if (empty($this->departmentId)) {
-      throw new ApiException(ErrorType::missingField('department_id'));
-    }
-
     // Validate area_id if it is provided (optional field)
     if ($this->areaId !== null && empty($this->areaId)) {
       throw new ApiException(ErrorType::invalidField('area_id'));

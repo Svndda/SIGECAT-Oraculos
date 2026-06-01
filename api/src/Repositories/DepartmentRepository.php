@@ -37,6 +37,8 @@ final class DepartmentRepository extends Repository
   /**
    * Builds the SQL fragment that filters by logical-deletion state.
    * The value is an internal enum (never user input), so inlining is safe.
+   * * @param string $status Logical state filter.
+   * @return string SQL condition string.
    */
   private function statusCondition(string $status): string
   {
@@ -52,7 +54,7 @@ final class DepartmentRepository extends Repository
    *
    * @param CreateDepartmentDTO $dto Validated data container for creation.
    * @param string $createdBy The ULID (CHAR(26)) of the user performing the action.
-   * * @return string The generated department_id (ULID) of the new record.
+   * @return string The generated department_id (ULID) of the new record.
    */
   public function create(CreateDepartmentDTO $dto, string $createdBy): string
   {
@@ -83,7 +85,8 @@ final class DepartmentRepository extends Repository
    * Retrieves a single department record by its unique identifier.
    *
    * @param string $departmentId The ULID identifier.
-   * * @return array<string, mixed>|null Associative array with UPPERCASE keys or null if not found.
+   * @param string $status Filter status (active, deleted, all).
+   * @return array<string, mixed>|null Associative array with UPPERCASE keys or null if not found.
    */
   public function findById(string $departmentId, string $status = 'active'): ?array
   {
@@ -135,13 +138,63 @@ final class DepartmentRepository extends Repository
   }
 
   /**
+   * Fetches a paginated list of records from the departments table.
+   *
+   * @param int $limit The maximum number of records to return.
+   * @param int $offset The number of records to skip.
+   * @param string $filter Optional string to filter by department name.
+   * @param string $status One of active|deleted|all (default active).
+   * @return array<int, array<string, mixed>> List of departments.
+   */
+  public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
+  {
+    $sql = '
+        SELECT department_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at 
+        FROM departments
+        WHERE UPPER(name) LIKE UPPER(:v_filter)' . $this->statusCondition($status) . '
+        ORDER BY created_at DESC
+        OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
+    ';
+
+    $stmt = $this->db->prepare($sql);
+
+    $stmt->bindValue(':v_filter', '%' . $filter . '%');
+    $stmt->bindValue(':v_offset', $offset, PDO::PARAM_INT);
+    $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  /**
+   * Counts the total number of departments matching the filter and status.
+   *
+   * @param string $filter Optional string to filter by department name.
+   * @param string $status One of active|deleted|all (default active).
+   * @return int The total count of department records.
+   */
+  public function countAll(string $filter = '', string $status = 'active'): int
+  {
+    $sql = '
+        SELECT COUNT(*) as total 
+        FROM departments 
+        WHERE UPPER(name) LIKE UPPER(:v_filter)' . $this->statusCondition($status);
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindValue(':v_filter', '%' . $filter . '%');
+    $stmt->execute();
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row !== false ? (int) ($row['total'] ?? $row['TOTAL'] ?? 0) : 0;
+  }
+
+  /**
    * Performs a partial or full update on an existing department.
    *
-   * Dynamically constructs the query depending on the fields present (non-null) 
-   * inside the UpdateDepartmentDTO wrapper.
-   *
    * @param UpdateDepartmentDTO $dto Validated data container for updates.
-   * * @return bool True if the record was updated successfully, false otherwise.
+   * @return bool True if the record was updated successfully, false otherwise.
    */
   public function update(UpdateDepartmentDTO $dto): bool
   {
@@ -163,23 +216,19 @@ final class DepartmentRepository extends Repository
       $params[':v_description'] = $dto->description;
     }
 
-    // If no updatable fields were specified, return false.
     if (empty($fields)) {
       return false;
     }
 
     $sql = 'UPDATE departments SET ' . implode(', ', $fields)
-         . ' WHERE department_id = :v_department_id AND is_deleted = 0';
+      . ' WHERE department_id = :v_department_id AND is_deleted = 0';
 
     $stmt = $this->db->prepare($sql);
     return $stmt->execute($params);
   }
 
   /**
-   * Soft-deletes a department and cascades to its child units, all in one
-   * transaction. Plazas (JOB_POSITIONS) that pointed to the department or its
-   * units are de-referenced (set to NULL) so they re-anchor to the area and
-   * are not left floating. See docs/soft-delete-design.md §6/§7.
+   * Soft-deletes a department and cascades to its child units.
    *
    * @param string $departmentId The ULID identifier.
    * @param string $deletedBy    ULID of the user performing the deletion.
@@ -189,7 +238,6 @@ final class DepartmentRepository extends Repository
   {
     $this->beginTransaction();
     try {
-      // De-reference plazas pointing to this department's units.
       $stmt = $this->db->prepare(
         'UPDATE job_positions
             SET unit_id = NULL
@@ -197,7 +245,6 @@ final class DepartmentRepository extends Repository
       );
       $stmt->execute([':v_department_id' => $departmentId]);
 
-      // De-reference plazas pointing to the department itself.
       $stmt = $this->db->prepare(
         'UPDATE job_positions
             SET department_id = NULL
@@ -205,7 +252,6 @@ final class DepartmentRepository extends Repository
       );
       $stmt->execute([':v_department_id' => $departmentId]);
 
-      // Soft-delete child units.
       $stmt = $this->db->prepare(
         'UPDATE units
             SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :v_deleted_by
@@ -213,7 +259,6 @@ final class DepartmentRepository extends Repository
       );
       $stmt->execute([':v_deleted_by' => $deletedBy, ':v_department_id' => $departmentId]);
 
-      // Soft-delete the department itself.
       $stmt = $this->db->prepare(
         'UPDATE departments
             SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :v_deleted_by
@@ -231,8 +276,7 @@ final class DepartmentRepository extends Repository
   }
 
   /**
-   * Restores a soft-deleted department (only the department itself; child
-   * units stay deleted and are restored individually).
+   * Restores a soft-deleted department.
    *
    * @param string $departmentId The ULID identifier.
    * @return bool True if a deleted department row was restored.
