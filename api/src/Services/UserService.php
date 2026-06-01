@@ -133,6 +133,7 @@ class UserService
   /**
    * Returns a user by ID, excluding sensitive fields.
    *
+   * @return array<string, mixed>
    * @throws ApiException
    */
   public function getById(string $userId, string $status = 'active'): array
@@ -155,6 +156,8 @@ class UserService
 
   /**
    * Compiles filter sets to fetch pagination groups of users.
+   *
+   * @return array<string, mixed>
    */
   public function getAllUsers(
     int $page = 1,

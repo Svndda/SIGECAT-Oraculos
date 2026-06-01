@@ -37,6 +37,7 @@ final class AreaRepository extends Repository {
     };
   }
 
+  /** @return array<string, mixed>|null */
   public function findById(string $areaId, string $status = 'active'): ?array {
     $stmt = $this->db->prepare(
       'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at

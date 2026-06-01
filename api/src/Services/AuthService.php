@@ -239,6 +239,7 @@ final class AuthService
     return $this->authenticate($rawToken);
   }
 
+  /** @return array<string, mixed> */
   public function requireAdmin(): array
   {
     $auth = $this->requireAuth();

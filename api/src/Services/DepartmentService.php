@@ -47,7 +47,7 @@ class DepartmentService {
    *
    * @param string $createdBy The ULID of the user creating the department.
    * @param CreateDepartmentDTO $dto The data transfer object containing department info.
-   * @return array|null The newly created department data.
+   * @return array<string, mixed>|null The newly created department data.
    */
   public function createDepartment(
     string $createdBy,
@@ -73,7 +73,7 @@ class DepartmentService {
    *
    * @param string $departmentId The ULID of the department to update.
    * @param UpdateDepartmentDTO $dto The data transfer object containing updated info.
-   * @return array|null
+   * @return array<string, mixed>|null
    */
   public function updateDepartment(
     string $departmentId, UpdateDepartmentDTO $dto
@@ -206,7 +206,7 @@ class DepartmentService {
    *
    * @param string $departmentId The ULID of the department.
    * @param string $status One of active|deleted|all.
-   * @return array|null Department data.
+   * @return array<string, mixed>|null Department data.
    */
   public function getDepartmentById(string $departmentId, string $status = 'active') : ?array
   {

@@ -32,7 +32,7 @@ function validateSessionToken(PDO $db): void
     $authService = new AuthService($db);
     $user = $authService->requireAuth();
     Request::setUser($user);
-  } catch (Exception $e) { // @phpstan-ignore-line
+  } catch (Exception $e) {
     /**
      * Authentication failures are logged but not fatal here, 
      * as some endpoints might allow public access. 
