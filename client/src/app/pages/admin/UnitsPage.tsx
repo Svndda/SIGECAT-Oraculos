@@ -9,8 +9,9 @@ import {
   Pagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { adminService } from '../../../services/adminService';
-import type { Unit, PageMeta, ServiceError } from '../../../services/adminService';
+import { unitService } from '../../../services/unitService';
+import type { Unit } from '../../../services/unitService';
+import type { PageMeta, ServiceError } from '../../../services/common';
 import ModalError from '../../../components/modals/ModalError';
 
 const LIMIT = 10;
@@ -48,7 +49,7 @@ export default function UnitsPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    adminService
+    unitService
       .getUnits({ page, limit: LIMIT, filter: appliedFilter })
       .then((res) => {
         if (!active) return;

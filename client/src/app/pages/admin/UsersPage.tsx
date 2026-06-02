@@ -11,9 +11,13 @@ import {
   IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { adminService } from '../../../services/adminService';
-import type { AdminUser, ServiceError } from '../../../services/adminService';
+import { userService } from '../../../services/userService';
+import { jobClassService } from '../../../services/jobClassService';
+import type { AdminUser } from '../../../services/userService';
+import type { JobClass } from '../../../services/jobClassService';
+import type { ServiceError } from '../../../services/common';
 import { useAuth } from '../../../context/AuthContext';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
@@ -44,10 +48,40 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
   const [successOpen, setSuccessOpen] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('Usuario creado correctamente.');
+  const [jobClasses, setJobClasses] = useState<JobClass[]>([]);
+  const [assignTarget, setAssignTarget] = useState<AdminUser | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState('');
 
   useEffect(() => {
-    adminService.getUsers().then(setUsers).catch(() => {});
+    userService.getUsers().then(setUsers).catch(() => {});
+    jobClassService.getJobClasses().then(setJobClasses).catch(() => {});
   }, []);
+
+  const className = (id?: string) => jobClasses.find((c) => c.id === id)?.name ?? '—';
+
+  const openAssign = (user: AdminUser) => {
+    setAssignTarget(user);
+    setSelectedClassId(user.job_class_id ?? '');
+  };
+
+  const handleAssign = async () => {
+    if (!assignTarget || !selectedClassId) return;
+    setIsSubmitting(true);
+    try {
+      await userService.assignJobClass(assignTarget.id, selectedClassId);
+      setUsers((prev) => prev.map((u) => (u.id === assignTarget.id ? { ...u, job_class_id: selectedClassId } : u)));
+      setAssignTarget(null);
+      setSuccessMsg('Clase ocupacional asignada correctamente.');
+      setSuccessOpen(true);
+    } catch (error) {
+      const e = error as ServiceError;
+      setAssignTarget(null);
+      setModalError({ open: true, title: 'Error al asignar', message: e.message ?? 'Error del servidor.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filtered = useMemo(() =>
     users.filter((u) =>
@@ -79,7 +113,7 @@ export default function UsersPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const created = await adminService.registerUser({
+      const created = await userService.registerUser({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -89,6 +123,7 @@ export default function UsersPage() {
       });
       setUsers((prev) => [created, ...prev]);
       setFormOpen(false);
+      setSuccessMsg('Usuario creado correctamente.');
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
@@ -145,7 +180,7 @@ export default function UsersPage() {
       </Box>
 
       <Box sx={{ overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 560 }}>
+        <Box sx={{ minWidth: 720 }}>
           {/* Table header */}
           <Box sx={{ display: 'flex', px: 2.5, py: 1.25, mb: 1 }}>
             {USER_COLS.map((col) => (
@@ -153,6 +188,7 @@ export default function UsersPage() {
                 {col.label}
               </Typography>
             ))}
+            <Box sx={{ width: 48 }} />
           </Box>
 
           <Stack spacing={1.5}>
@@ -161,7 +197,7 @@ export default function UsersPage() {
                 <Typography variant="body2" sx={{ flex: USER_COLS[0].flex, color: '#333' }}>
                   {u.first_name} {u.last_name}
                 </Typography>
-                <Typography variant="body2" sx={{ flex: USER_COLS[1].flex, color: '#555' }}>
+                <Typography variant="body2" noWrap sx={{ flex: USER_COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}>
                   {u.email}
                 </Typography>
                 <Box sx={{ flex: USER_COLS[2].flex }}>
@@ -178,6 +214,14 @@ export default function UsersPage() {
                   >
                     {u.role === 'admin' ? 'Administrador' : 'Empleado'}
                   </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ flex: USER_COLS[3].flex, color: '#555' }}>
+                  {className(u.job_class_id)}
+                </Typography>
+                <Box sx={{ width: 48, display: 'flex', justifyContent: 'flex-end' }}>
+                  <IconButton size="small" onClick={() => openAssign(u)} sx={{ color: '#1a2b4a' }} title="Asignar clase ocupacional">
+                    <AssignmentIndIcon fontSize="small" />
+                  </IconButton>
                 </Box>
               </Paper>
             ))}
@@ -272,6 +316,36 @@ export default function UsersPage() {
         </Stack>
       </ModalForm>
 
+      {/* Assign occupational class modal */}
+      <ModalForm
+        open={!!assignTarget}
+        title="Asignar clase ocupacional"
+        onClose={() => setAssignTarget(null)}
+        onConfirm={handleAssign}
+        confirmLabel="Asignar"
+        isSubmitting={isSubmitting}
+      >
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {assignTarget ? `${assignTarget.first_name} ${assignTarget.last_name}` : ''}
+          </Typography>
+          <TextField
+            select
+            label="Clase ocupacional"
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+            size="small"
+            fullWidth
+            helperText={jobClasses.length === 0 ? 'No hay clases ocupacionales registradas.' : ''}
+            required
+          >
+            {jobClasses.map((c) => (
+              <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </ModalForm>
+
       <ModalError
         open={modalError.open}
         title={modalError.title}
@@ -280,8 +354,8 @@ export default function UsersPage() {
       />
       <ModalSuccess
         open={successOpen}
-        title="Usuario registrado"
-        message="Usuario creado correctamente."
+        title="Operación exitosa"
+        message={successMsg}
         onClose={() => setSuccessOpen(false)}
       />
     </Box>
@@ -289,7 +363,8 @@ export default function UsersPage() {
 }
 
 const USER_COLS = [
-  { label: 'Nombre', flex: '0 0 30%' },
+  { label: 'Nombre', flex: '0 0 24%' },
   { label: 'Correo institucional', flex: '1' },
-  { label: 'Rol', flex: '0 0 18%' },
+  { label: 'Rol', flex: '0 0 15%' },
+  { label: 'Clase ocupacional', flex: '0 0 22%' },
 ];

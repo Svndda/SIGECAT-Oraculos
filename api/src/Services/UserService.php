@@ -10,6 +10,8 @@ use DTO\PasswordValidator;
 use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
+use Repositories\JobPositionRepository;
+use Repositories\JobClassRepository;
 use PDO;
 
 /**
@@ -21,10 +23,71 @@ use PDO;
 class UserService
 {
   private UserRepository $userRepository;
+  private JobPositionRepository $jobPositionRepository;
+  private JobClassRepository $jobClassRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->userRepository = new UserRepository($this->pdo);
+    $this->jobPositionRepository = new JobPositionRepository($this->pdo);
+    $this->jobClassRepository = new JobClassRepository($this->pdo);
+  }
+
+  /**
+   * Assigns an occupational class (JOB_CLASS) to a user.
+   *
+   * @throws ApiException When the class id is missing, the user does not
+   *                      exist, or the class does not exist.
+   */
+  public function assignJobClass(string $userId, string $jobClassId): void
+  {
+    $jobClassId = trim($jobClassId);
+    if ($jobClassId === '') {
+      throw new ApiException(ErrorType::missingField('job_class_id'));
+    }
+
+    if ($this->userRepository->findById($userId) === null) {
+      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'), 404);
+    }
+
+    if (!$this->jobClassRepository->existsById($jobClassId)) {
+      throw new ApiException(ErrorType::from('JOB_CLASS_NOT_FOUND', 'La clase ocupacional no existe'), 404);
+    }
+
+    $this->userRepository->updateJobClass($userId, $jobClassId);
+  }
+
+  /**
+   * Assigns the plaza identified by its number ("número de plaza") to the user.
+   *
+   * The user is linked to the existing plaza (JOB_POSITIONS) whose name matches
+   * the given number; any plaza they previously held is released.
+   *
+   * @throws ApiException When the number is missing, the plaza does not exist,
+   *                      or it is already held by another user.
+   */
+  public function assignJobPosition(string $userId, string $jobPositionNumber): void
+  {
+    $jobPositionNumber = trim($jobPositionNumber);
+    if ($jobPositionNumber === '') {
+      throw new ApiException(ErrorType::missingField('job_position_number'));
+    }
+
+    $jobPosition = $this->jobPositionRepository->findActiveByName($jobPositionNumber);
+    if ($jobPosition === null) {
+      throw new ApiException(
+        ErrorType::from('JOB_POSITION_NOT_FOUND', 'El número de plaza no existe.'), 404
+      );
+    }
+
+    $currentHolder = $jobPosition['user_id'] ?? null;
+    if ($currentHolder !== null && (string) $currentHolder !== $userId) {
+      throw new ApiException(
+        ErrorType::conflict('La plaza ya está asignada a otro usuario.'), 409
+      );
+    }
+
+    $this->jobPositionRepository->assignToUser((string) $jobPosition['job_position_id'], $userId);
   }
 
   /**
