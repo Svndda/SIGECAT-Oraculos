@@ -51,15 +51,15 @@ final class JobPositionRepository extends Repository
     try {
       $stmt = $this->db->prepare(
         "INSERT INTO JOB_POSITIONS
-           (job_position_id, {$parentColumn}, job_position_type_id, name, description, created_at, created_by)
+           (job_position_id, {$parentColumn}, job_position_type_id, job_position_number, description, created_at, created_by)
          VALUES
-           (:id, :parent_id, :type_id, :name, :description, CURRENT_TIMESTAMP, :created_by)"
+           (:id, :parent_id, :type_id, :job_position_number, :description, CURRENT_TIMESTAMP, :created_by)"
       );
       $stmt->execute([
-        ':id'          => $newId,
-        ':parent_id'   => $parentId,
-        ':type_id'     => $dto->jobPositionTypeId,
-        ':name'        => trim($dto->jobPositionNumber),
+        ':id'                  => $newId,
+        ':parent_id'           => $parentId,
+        ':type_id'             => $dto->jobPositionTypeId,
+        ':job_position_number' => trim($dto->jobPositionNumber),
         ':description' => $dto->description !== null ? trim($dto->description) : null,
         ':created_by'  => $createdBy,
       ]);
@@ -223,7 +223,7 @@ final class JobPositionRepository extends Repository
   public function findActiveByName(string $name): ?array
   {
     $stmt = $this->db->prepare(
-      'SELECT job_position_id, name, user_id
+      'SELECT job_position_id, job_position_number, user_id
          FROM JOB_POSITIONS
         WHERE job_position_number = :job_position_number AND is_deleted = 0 AND ROWNUM = 1'
     );
