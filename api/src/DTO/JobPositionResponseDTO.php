@@ -15,6 +15,7 @@ namespace DTO;
  */
 final class JobPositionResponseDTO {
   public readonly string $id;
+  public readonly string $jobPositionNumber;
   public readonly string $name;
   public readonly ?string $description;
   public readonly string $jobPositionTypeId;
@@ -29,6 +30,7 @@ final class JobPositionResponseDTO {
 
   private function __construct(
     string $id,
+    string $jobPositionNumber,
     string $name,
     ?string $description,
     string $jobPositionTypeId,
@@ -42,6 +44,7 @@ final class JobPositionResponseDTO {
     ?string $deletedAt
   ) {
     $this->id = $id;
+    $this->jobPositionNumber = $jobPositionNumber;
     $this->name = $name;
     $this->description = $description;
     $this->jobPositionTypeId = $jobPositionTypeId;
@@ -62,6 +65,7 @@ final class JobPositionResponseDTO {
 
     return new self(
       (string) ($get('job_position_id') ?? ''),
+      (string) ($get('job_position_number') ?? ''),
       (string) ($get('name') ?? ''),
       $str($get('description')),
       (string) ($get('job_position_type_id') ?? ''),
@@ -79,6 +83,7 @@ final class JobPositionResponseDTO {
   /**
    * @return array{
    *   id: string,
+   *   job_position_number: string,
    *   name: string,
    *   description: string|null,
    *   job_position_type_id: string,
@@ -95,6 +100,7 @@ final class JobPositionResponseDTO {
   public function toArray(): array {
     return [
       'id'                   => $this->id,
+      'job_position_number'  => $this->jobPositionNumber,
       'name'                 => $this->name,
       'description'          => $this->description,
       'job_position_type_id' => $this->jobPositionTypeId,

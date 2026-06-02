@@ -33,6 +33,7 @@ import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
 const EMPTY_FORM = {
+  job_position_number: '',
   name: '',
   description: '',
   job_position_type_id: '',
@@ -127,10 +128,11 @@ export default function JobPositionsPage() {
     ), [jobPositions, search, parentLabel]);
 
   const columns: DataColumn<JobPosition>[] = [
-    { label: 'Número', flex: '0 0 18%', primary: true, render: (p) => p.name },
-    { label: 'Entidad', flex: '0 0 30%', truncate: true, render: (p) => parentLabel(p) },
+    { label: 'Número', flex: '0 0 15%', primary: true, render: (p) => p.job_position_number },
+    { label: 'Nombre', flex: '0 0 22%', truncate: true, render: (p) => p.name },
+    { label: 'Entidad', flex: '0 0 25%', truncate: true, render: (p) => parentLabel(p) },
     { label: 'Descripción', flex: '1', truncate: true, render: (p) => p.description ?? '—' },
-    { label: 'Fecha de creación', flex: '0 0 18%', meta: true, render: (p) => formatDate(p.created_at) },
+    { label: 'Fecha de creación', flex: '0 0 15%', meta: true, render: (p) => formatDate(p.created_at) },
   ];
 
   const openCreate = () => {
@@ -152,6 +154,7 @@ export default function JobPositionsPage() {
       jobPosition.area_id ?? jobPosition.department_id ??
       jobPosition.section_id ?? jobPosition.unit_id ?? '';
     setForm({
+      job_position_number: jobPosition.job_position_number,
       name: jobPosition.name,
       description: jobPosition.description ?? '',
       job_position_type_id: jobPosition.job_position_type_id,
@@ -164,7 +167,8 @@ export default function JobPositionsPage() {
 
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
-    if (!form.name.trim()) errors.name = 'El número de plaza es requerido.';
+    if (!form.job_position_number.trim()) errors.job_position_number = 'El número de plaza es requerido.';
+    if (!form.name.trim()) errors.name = 'El nombre de la plaza es requerido.';
     if (!form.job_position_type_id) errors.job_position_type_id = 'El tipo de plaza es requerido.';
     if (!form.parentType) errors.parentType = 'El tipo de entidad es requerido.';
     if (!form.parentId) errors.parentId = 'La entidad es requerida.';
@@ -178,6 +182,7 @@ export default function JobPositionsPage() {
     try {
       if (editTarget) {
         const payload: UpdateJobPositionPayload = {
+          job_position_number: form.job_position_number.trim(),
           name: form.name.trim(),
           description: form.description.trim(),
           job_position_type_id: form.job_position_type_id,
@@ -189,6 +194,7 @@ export default function JobPositionsPage() {
         setSuccessMsg('Plaza actualizada correctamente.');
       } else {
         const payload: CreateJobPositionPayload = {
+          job_position_number: form.job_position_number.trim(),
           name: form.name.trim(),
           description: form.description.trim() || undefined,
           job_position_type_id: form.job_position_type_id,
@@ -299,6 +305,16 @@ export default function JobPositionsPage() {
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           <TextField
             label="Número de plaza"
+            value={form.job_position_number}
+            onChange={handleText('job_position_number')}
+            size="small"
+            fullWidth
+            error={!!formErrors.job_position_number}
+            helperText={formErrors.job_position_number}
+            required
+          />
+          <TextField
+            label="Nombre de la plaza"
             value={form.name}
             onChange={handleText('name')}
             size="small"

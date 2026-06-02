@@ -12,11 +12,16 @@ use Http\ErrorType;
  * Encapsulates and validates the data required to create a plaza
  * (JOB_POSITION). A plaza hangs from exactly one parent entity — area,
  * department, section or unit (mirrors the CHECK_JOB_POSITION_PARENT
- * constraint). Its `name` is the "número de plaza".
+ * constraint).
+ *
+ * Fields:
+ *   job_position_number — the plaza code / número de plaza (e.g. "01-2024")
+ *   name                — descriptive name of the post (e.g. "Analista de Sistemas")
  *
  * @package DTO
  */
 final class CreateJobPositionDTO {
+  public readonly string $jobPositionNumber;
   public readonly string $name;
   public readonly ?string $description;
   public readonly string $jobPositionTypeId;
@@ -26,6 +31,7 @@ final class CreateJobPositionDTO {
   public readonly ?string $unitId;
 
   private function __construct(
+    string $jobPositionNumber,
     string $name,
     ?string $description,
     string $jobPositionTypeId,
@@ -34,6 +40,7 @@ final class CreateJobPositionDTO {
     ?string $sectionId,
     ?string $unitId
   ) {
+    $this->jobPositionNumber = $jobPositionNumber;
     $this->name = $name;
     $this->description = $description;
     $this->jobPositionTypeId = $jobPositionTypeId;
@@ -54,6 +61,7 @@ final class CreateJobPositionDTO {
     };
 
     return new self(
+      (string) ($data['job_position_number'] ?? ''),
       (string) ($data['name'] ?? ''),
       isset($data['description']) ? (string) $data['description'] : null,
       (string) ($data['job_position_type_id'] ?? ''),
@@ -86,12 +94,20 @@ final class CreateJobPositionDTO {
   }
 
   public function validate(): void {
+    if (trim($this->jobPositionNumber) === '') {
+      throw new ApiException(ErrorType::missingField('job_position_number'));
+    }
+    if (strlen($this->jobPositionNumber) > 110) {
+      throw new ApiException(
+        ErrorType::from('INVALID_JOB_POSITION_NUMBER', 'El número de plaza no puede exceder los 110 caracteres'), 400
+      );
+    }
     if (trim($this->name) === '') {
       throw new ApiException(ErrorType::missingField('name'));
     }
     if (strlen($this->name) > 110) {
       throw new ApiException(
-        ErrorType::from('INVALID_JOB_POSITION_NAME', 'El número de plaza no puede exceder los 110 caracteres'), 400
+        ErrorType::from('INVALID_JOB_POSITION_NAME', 'El nombre de la plaza no puede exceder los 110 caracteres'), 400
       );
     }
     if ($this->description !== null && strlen($this->description) > 255) {
