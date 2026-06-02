@@ -124,10 +124,10 @@ final class SectionRepository extends Repository
    * @param UpdateSectionDTO $dto Validated data container for updates.
    * * @return bool True if the record was updated successfully, false otherwise.
    */
-  public function update(UpdateSectionDTO $dto): bool
+  public function update(string $sectionId, UpdateSectionDTO $dto): bool
   {
     $fields = [];
-    $params = [':v_section_id' => $dto->sectionId];
+    $params = [':v_section_id' => $sectionId];
 
     if ($dto->areaId !== null) {
       $fields[] = 'area_id = :v_area_id';
@@ -287,7 +287,7 @@ final class SectionRepository extends Repository
    */
   public function getSections(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
     $stmt = $this->db->prepare(
-      'SELECT section_id, name, description, created_at, created_by, is_deleted, deleted_at
+      'SELECT section_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at
        FROM SECTIONS
        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
        ORDER BY created_at DESC

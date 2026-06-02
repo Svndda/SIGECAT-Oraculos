@@ -2,7 +2,7 @@ import apiClient from './apiClient';
 import { extractApiError, type ListParams, type PageMeta, type Paginated } from './common';
 
 export interface Area {
-  id: string;
+  area_id: string;
   name: string;
   description: string | null;
   created_at: string;

@@ -22,16 +22,14 @@ use Http\ErrorType;
  * @package DTO
  */
 final class UpdateSectionDTO {
-  public string $sectionId;
   public ?string $areaId;
   public ?string $name;
   public ?string $description;
   public int $isDeleted;
   public ?string $deletedAt;
 
-  private function __construct(string $sectionId, ?string $areaId,
+  private function __construct(?string $areaId,
       ?string $name, ?string $description, int $isDeleted, ?string $deletedAt) {
-    $this->sectionId = $sectionId;
     $this->areaId = $areaId;
     $this->name = $name;
     $this->description = $description;
@@ -41,7 +39,6 @@ final class UpdateSectionDTO {
 
   /**
  * @param array{
- *     section_id?: string,
  *     area_id?: string,
  *     name?: string,
  *     description?: string,
@@ -53,7 +50,6 @@ final class UpdateSectionDTO {
     $deletedAt = $data['deleted_at']  ?? $data['deleted_at']  ?? null;
     
     return new self(
-      (string) ($data['section_id'] ?? ''),
       isset($data['area_id']) ? (string) $data['area_id'] : null,
       isset($data['name']) ? (string) $data['name'] : null,
       isset($data['description']) ? (string) $data['description'] : null,
@@ -63,10 +59,6 @@ final class UpdateSectionDTO {
   }
 
   public function validation(): void {
-    // section_id is required for identifying which department to update.
-    if (empty($this->sectionId)) {
-      throw new ApiException(ErrorType::missingField('section_id'));
-    }
 
     // Validate area_id if it is provided (optional field)
     if ($this->areaId !== null && empty($this->areaId)) {
@@ -112,7 +104,6 @@ final class UpdateSectionDTO {
 
     /**
    * @return array{
-   *   section_id: string,
    *   name: string|null,
    *   description: string|null,
    *   is_deleted: int,
@@ -121,7 +112,6 @@ final class UpdateSectionDTO {
    */
   public function toArray(): array {
     return [
-      'section_id'  => $this->sectionId,
       'name'        => $this->name,
       'description' => $this->description,
       'is_deleted'  => $this->isDeleted,

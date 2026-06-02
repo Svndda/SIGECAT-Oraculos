@@ -89,7 +89,7 @@ export default function OrganizationPage() {
     try {
       const payload = { name: form.name.trim(), description: form.description.trim() };
       if (editTarget) {
-        await areaService.updateArea(editTarget.id, payload);
+        await areaService.updateArea(editTarget.area_id, payload);
         setSuccessMsg('Área actualizada correctamente.');
       } else {
         await areaService.createArea(payload);
@@ -110,7 +110,7 @@ export default function OrganizationPage() {
     if (!deleteTarget) return;
     setIsSubmitting(true);
     try {
-      await areaService.deleteArea(deleteTarget.id);
+      await areaService.deleteArea(deleteTarget.area_id);
       setDeleteTarget(null);
       await refreshAreas();
       setSuccessMsg('Área eliminada correctamente.');
@@ -175,7 +175,7 @@ export default function OrganizationPage() {
       <DataTable
         columns={COLS}
         items={filtered}
-        getKey={(area) => area.id}
+        getKey={(area) => area.area_id}
         actions={[
           { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
           { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
