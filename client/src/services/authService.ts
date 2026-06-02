@@ -36,6 +36,13 @@ interface BackendUserData {
   role: string;
 }
 
+interface RefreshResponseData {
+  access_token: string;
+  access_expires_at: string;
+  refresh_token: string;
+  refresh_expires_at: string;
+}
+
 const USE_MOCK = false;
 
 const MOCK_USER: AuthUser = {
@@ -57,7 +64,6 @@ function extractApiError(error: unknown): ServiceError {
         if (errors?.length) return errors[0];
       }
 
-      // PHP echo pollution: body arrived as string, try to extract JSON errors
       if (typeof raw === 'string') {
         const match = raw.match(/\{[\s\S]*\}/);
         if (match) {
@@ -110,6 +116,30 @@ export const authService = {
         access_token: d.access_token,
         refresh_token: d.refresh_token,
       };
+    } catch (error) {
+      throw extractApiError(error);
+    }
+  },
+
+  /**
+   * Refreshes the token pair using the provided refresh token.
+   * Returns the new refresh token. The new access token is set as an HTTP‑only cookie.
+   */
+  async refreshTokens(refreshToken: string): Promise<RefreshResponseData> {
+    if (USE_MOCK) {
+      await new Promise((r) => setTimeout(r, 300));
+      return {
+        access_token: 'mock_refreshed_access_' + Date.now(),
+        access_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        refresh_token: 'mock_refreshed_refresh_' + Date.now(),
+        refresh_expires_at: new Date(Date.now() + 86400000).toISOString(),
+      };
+    }
+    try {
+      const response = await apiClient.post<{ data: RefreshResponseData }>('/auth/refresh', {
+        refresh_token: refreshToken,
+      });
+      return response.data.data;
     } catch (error) {
       throw extractApiError(error);
     }
@@ -170,7 +200,6 @@ export const authService = {
   },
 
   async recoverPassword(email: string, newPassword: string): Promise<void> {
-    // Mock only — no backend endpoint defined for password recovery
     await new Promise((r) => setTimeout(r, 800));
     void email;
     void newPassword;

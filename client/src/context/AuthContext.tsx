@@ -16,34 +16,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const cleanAuthStorage = () => {
+    localStorage.removeItem('sigecat_refresh_token');
+    localStorage.removeItem('sigecat_user_id');
+    setUser(null);
+  };
+
   useEffect(() => {
-    const token = localStorage.getItem('sigecat_access_token');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    authService
-      .getMe()
-      .then(setUser)
-      .catch(() => {
-        localStorage.removeItem('sigecat_access_token');
-        localStorage.removeItem('sigecat_refresh_token');
-      })
-      .finally(() => setIsLoading(false));
+    const initializeAuth = async () => {
+      const refreshToken = localStorage.getItem('sigecat_refresh_token');
+      const userId = localStorage.getItem('sigecat_user_id');
+
+      if (!refreshToken || !userId) {
+        cleanAuthStorage();
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const userData = await authService.getMe();
+        setUser(userData);
+      } catch (error) {
+        try {
+          const tokens = await authService.refreshTokens(refreshToken);
+          localStorage.setItem('sigecat_refresh_token', tokens.refresh_token);
+          const userData = await authService.getMe();
+          setUser(userData);
+        } catch (refreshError) {
+          cleanAuthStorage();
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
-    const { user: loggedUser, access_token, refresh_token } = await authService.login(email, password);
-    localStorage.setItem('sigecat_access_token', access_token);
+    const { user: loggedUser, refresh_token } = await authService.login(email, password);
     localStorage.setItem('sigecat_refresh_token', refresh_token);
+    localStorage.setItem('sigecat_user_id', loggedUser.id);
     setUser(loggedUser);
   };
 
   const logout = async (): Promise<void> => {
-    await authService.logout();
-    localStorage.removeItem('sigecat_access_token');
-    localStorage.removeItem('sigecat_refresh_token');
-    setUser(null);
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.error('Error revoking session on server', e);
+    } finally {
+      cleanAuthStorage();
+    }
   };
 
   const value: AuthContextType = {
