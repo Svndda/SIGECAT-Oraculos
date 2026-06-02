@@ -17,7 +17,7 @@ use Http\ErrorType;
  * @package DTO
  */
 final class CreateJobPositionDTO {
-  public readonly string $name;
+  public readonly string $jobPositionNumber;
   public readonly ?string $description;
   public readonly string $jobPositionTypeId;
   public readonly ?string $areaId;
@@ -26,7 +26,7 @@ final class CreateJobPositionDTO {
   public readonly ?string $unitId;
 
   private function __construct(
-    string $name,
+    string $jobPositionNumber,
     ?string $description,
     string $jobPositionTypeId,
     ?string $areaId,
@@ -34,7 +34,7 @@ final class CreateJobPositionDTO {
     ?string $sectionId,
     ?string $unitId
   ) {
-    $this->name = $name;
+    $this->jobPositionNumber = $jobPositionNumber;
     $this->description = $description;
     $this->jobPositionTypeId = $jobPositionTypeId;
     $this->areaId = $areaId;
@@ -54,7 +54,7 @@ final class CreateJobPositionDTO {
     };
 
     return new self(
-      (string) ($data['name'] ?? ''),
+      (string) ($data['job_position_number'] ?? ''),
       isset($data['description']) ? (string) $data['description'] : null,
       (string) ($data['job_position_type_id'] ?? ''),
       $opt('area_id'),
@@ -86,12 +86,12 @@ final class CreateJobPositionDTO {
   }
 
   public function validate(): void {
-    if (trim($this->name) === '') {
-      throw new ApiException(ErrorType::missingField('name'));
+    if (trim($this->jobPositionNumber) === '') {
+      throw new ApiException(ErrorType::missingField('job_position_number'));
     }
-    if (strlen($this->name) > 110) {
+    if (strlen($this->jobPositionNumber) > 110) {
       throw new ApiException(
-        ErrorType::from('INVALID_JOB_POSITION_NAME', 'El número de plaza no puede exceder los 110 caracteres'), 400
+        ErrorType::from('INVALID_JOB_POSITION_NUMBER', 'El número de plaza no puede exceder los 110 caracteres'), 400
       );
     }
     if ($this->description !== null && strlen($this->description) > 255) {
