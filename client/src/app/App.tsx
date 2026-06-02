@@ -13,6 +13,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import { RecordsProvider } from '../context/RecordsContext';
 import { AuthProvider } from '../context/AuthContext';
 import PrivateRoute from '../components/PrivateRoute';
+import DepartmentsPage from './pages/admin/DepartmentsPage';
 
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />
                 <Route path="organizacion" element={<OrganizationPage />} />
                 <Route path="unidades" element={<UnitsPage />} />
+                <Route path="departamentos" element={<DepartmentsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
                 <Route path="ajustes" element={<SettingsPage />} />
               </Route>
