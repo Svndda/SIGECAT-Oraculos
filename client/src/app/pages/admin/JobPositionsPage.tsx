@@ -52,7 +52,7 @@ function formatDate(dateStr: string): string {
   return dateStr.split(' ')[0];
 }
 
-export default function PlazasPage() {
+export default function JobPositionsPage() {
   const [jobPositions, setJobPositions] = useState<JobPosition[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [departments, setDepartments] = useState<OrgOption[]>([]);
