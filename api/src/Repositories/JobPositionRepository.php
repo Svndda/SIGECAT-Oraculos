@@ -51,18 +51,17 @@ final class JobPositionRepository extends Repository
     try {
       $stmt = $this->db->prepare(
         "INSERT INTO JOB_POSITIONS
-           (job_position_id, {$parentColumn}, job_position_type_id, job_position_number, name, description, created_at, created_by)
+           (job_position_id, {$parentColumn}, job_position_type_id, name, description, created_at, created_by)
          VALUES
-           (:id, :parent_id, :type_id, :job_position_number, :name, :description, CURRENT_TIMESTAMP, :created_by)"
+           (:id, :parent_id, :type_id, :name, :description, CURRENT_TIMESTAMP, :created_by)"
       );
       $stmt->execute([
-        ':id'                   => $newId,
-        ':parent_id'            => $parentId,
-        ':type_id'              => $dto->jobPositionTypeId,
-        ':job_position_number'  => trim($dto->jobPositionNumber),
-        ':name'                 => trim($dto->name),
-        ':description'          => $dto->description !== null ? trim($dto->description) : null,
-        ':created_by'           => $createdBy,
+        ':id'          => $newId,
+        ':parent_id'   => $parentId,
+        ':type_id'     => $dto->jobPositionTypeId,
+        ':name'        => trim($dto->name),
+        ':description' => $dto->description !== null ? trim($dto->description) : null,
+        ':created_by'  => $createdBy,
       ]);
       $this->commit();
     } catch (PDOException $e) {
@@ -82,10 +81,6 @@ final class JobPositionRepository extends Repository
     $fields = [];
     $params = [':id' => $jobPositionId];
 
-    if ($dto->jobPositionNumber !== null) {
-      $fields[] = 'job_position_number = :job_position_number';
-      $params[':job_position_number'] = trim($dto->jobPositionNumber);
-    }
     if ($dto->name !== null) {
       $fields[] = 'name = :name';
       $params[':name'] = trim($dto->name);
@@ -133,7 +128,7 @@ final class JobPositionRepository extends Repository
   {
     $stmt = $this->db->prepare(
       'SELECT job_position_id, area_id, department_id, section_id, unit_id,
-              job_position_type_id, job_position_number, name, description,
+              job_position_type_id, name, description,
               user_id, created_at, created_by, is_deleted, deleted_at
          FROM JOB_POSITIONS
         WHERE job_position_id = :id' . $this->statusCondition($status) . '
@@ -145,13 +140,13 @@ final class JobPositionRepository extends Repository
   }
 
   /**
-   * Whether an active plaza already uses the given job_position_number (case-insensitive).
+   * Whether an active plaza already uses the given name (case-insensitive).
    */
-  public function existsByNumber(string $number, ?string $excludeId = null): bool
+  public function existsByName(string $name, ?string $excludeId = null): bool
   {
     $sql = 'SELECT COUNT(*) AS cnt FROM JOB_POSITIONS
-            WHERE UPPER(job_position_number) = UPPER(:number) AND is_deleted = 0';
-    $params = [':number' => $number];
+            WHERE UPPER(name) = UPPER(:name) AND is_deleted = 0';
+    $params = [':name' => $name];
     if ($excludeId !== null) {
       $sql .= ' AND job_position_id <> :id';
       $params[':id'] = $excludeId;
@@ -167,16 +162,14 @@ final class JobPositionRepository extends Repository
   {
     $stmt = $this->db->prepare(
       'SELECT job_position_id, area_id, department_id, section_id, unit_id,
-              job_position_type_id, job_position_number, name, description,
+              job_position_type_id, name, description,
               user_id, created_at, created_by, is_deleted, deleted_at
          FROM JOB_POSITIONS
-        WHERE (UPPER(job_position_number) LIKE UPPER(:filter)
-            OR UPPER(name) LIKE UPPER(:filter2))' . $this->statusCondition($status) . '
+        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
         ORDER BY created_at DESC
         OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
     );
-    $stmt->bindValue(':filter',  '%' . $filter . '%');
-    $stmt->bindValue(':filter2', '%' . $filter . '%');
+    $stmt->bindValue(':filter', '%' . $filter . '%');
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
@@ -187,10 +180,9 @@ final class JobPositionRepository extends Repository
   {
     $stmt = $this->db->prepare(
       'SELECT COUNT(*) AS total FROM JOB_POSITIONS
-        WHERE (UPPER(job_position_number) LIKE UPPER(:filter)
-            OR UPPER(name) LIKE UPPER(:filter2))' . $this->statusCondition($status)
+        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status)
     );
-    $stmt->execute([':filter' => '%' . $filter . '%', ':filter2' => '%' . $filter . '%']);
+    $stmt->execute([':filter' => '%' . $filter . '%']);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
   }
@@ -224,16 +216,16 @@ final class JobPositionRepository extends Repository
   }
 
   /**
-   * Finds an active (non-deleted) plaza by its job_position_number.
+   * Finds an active (non-deleted) plaza by its number (its `name`).
    *
    * @return array<string, mixed>|null
    */
   public function findActiveByName(string $name): ?array
   {
     $stmt = $this->db->prepare(
-      'SELECT job_position_id, job_position_number, name, user_id
+      'SELECT job_position_id, name, user_id
          FROM JOB_POSITIONS
-        WHERE job_position_number = :name AND is_deleted = 0 AND ROWNUM = 1'
+        WHERE name = :name AND is_deleted = 0 AND ROWNUM = 1'
     );
     $stmt->execute([':name' => $name]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);

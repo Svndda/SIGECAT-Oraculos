@@ -3,7 +3,6 @@ import { extractApiError, type ListParams, type PageMeta, type Paginated } from 
 
 export interface JobPosition {
   id: string;
-  job_position_number: string;
   name: string;
   description: string | null;
   job_position_type_id: string;
@@ -26,7 +25,6 @@ export interface JobPositionType {
 export type JobPositionParentType = 'area' | 'department' | 'section' | 'unit';
 
 export interface CreateJobPositionPayload {
-  job_position_number: string;
   name: string;
   description?: string;
   job_position_type_id: string;
@@ -37,7 +35,6 @@ export interface CreateJobPositionPayload {
 }
 
 export interface UpdateJobPositionPayload {
-  job_position_number?: string;
   name?: string;
   description?: string;
   job_position_type_id?: string;

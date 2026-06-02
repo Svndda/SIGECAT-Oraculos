@@ -23,7 +23,6 @@ use Http\ErrorType;
  * @package DTO
  */
 final class UpdateJobPositionDTO {
-  public readonly ?string $jobPositionNumber;
   public readonly ?string $name;
   public readonly ?string $description;
   public readonly ?string $jobPositionTypeId;
@@ -33,7 +32,6 @@ final class UpdateJobPositionDTO {
   public readonly ?string $unitId;
 
   private function __construct(
-    ?string $jobPositionNumber,
     ?string $name,
     ?string $description,
     ?string $jobPositionTypeId,
@@ -42,7 +40,6 @@ final class UpdateJobPositionDTO {
     ?string $sectionId,
     ?string $unitId
   ) {
-    $this->jobPositionNumber = $jobPositionNumber;
     $this->name = $name;
     $this->description = $description;
     $this->jobPositionTypeId = $jobPositionTypeId;
@@ -63,7 +60,6 @@ final class UpdateJobPositionDTO {
     };
 
     return new self(
-      $opt('job_position_number'),
       isset($data['name'])        ? (string) $data['name']        : null,
       isset($data['description']) ? (string) $data['description'] : null,
       $opt('job_position_type_id'),
@@ -104,23 +100,13 @@ final class UpdateJobPositionDTO {
   }
 
   public function validate(): void {
-    if ($this->jobPositionNumber !== null) {
-      if (trim($this->jobPositionNumber) === '') {
-        throw new ApiException(ErrorType::invalidField('job_position_number'));
-      }
-      if (strlen($this->jobPositionNumber) > 110) {
-        throw new ApiException(
-          ErrorType::from('INVALID_JOB_POSITION_NUMBER', 'El número de plaza no puede exceder los 110 caracteres'), 400
-        );
-      }
-    }
     if ($this->name !== null) {
       if (trim($this->name) === '') {
         throw new ApiException(ErrorType::invalidField('name'));
       }
       if (strlen($this->name) > 110) {
         throw new ApiException(
-          ErrorType::from('INVALID_JOB_POSITION_NAME', 'El nombre de la plaza no puede exceder los 110 caracteres'), 400
+          ErrorType::from('INVALID_JOB_POSITION_NAME', 'El número de plaza no puede exceder los 110 caracteres'), 400
         );
       }
     }
@@ -144,8 +130,7 @@ final class UpdateJobPositionDTO {
       );
     }
 
-    $hasAny = $this->jobPositionNumber !== null
-      || $this->name !== null
+    $hasAny = $this->name !== null
       || $this->description !== null
       || $this->jobPositionTypeId !== null
       || $parentCount === 1;
