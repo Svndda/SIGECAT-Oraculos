@@ -51,7 +51,7 @@ final class JobPositionRepository extends Repository
     try {
       $stmt = $this->db->prepare(
         "INSERT INTO JOB_POSITIONS
-           (job_position_id, {$parentColumn}, job_position_type_id, job_position_number, description, created_at, created_by)
+           (job_position_id, {$parentColumn}, job_position_type_id, name, description, created_at, created_by)
          VALUES
            (:id, :parent_id, :type_id, :name, :description, CURRENT_TIMESTAMP, :created_by)"
       );
@@ -59,7 +59,7 @@ final class JobPositionRepository extends Repository
         ':id'          => $newId,
         ':parent_id'   => $parentId,
         ':type_id'     => $dto->jobPositionTypeId,
-        ':job_position_number' => trim($dto->jobPositionNumber),
+        ':name'        => trim($dto->jobPositionNumber),
         ':description' => $dto->description !== null ? trim($dto->description) : null,
         ':created_by'  => $createdBy,
       ]);
