@@ -67,7 +67,6 @@ class SectionService {
    *
    * Business rules:
    * - Section must exist and be active.
-   * - New name must be unique among active sections, excluding the current one.
    *
    * @throws ApiException
    */
@@ -84,7 +83,7 @@ class SectionService {
       );
     }
 
-    $this->sectionRepository->update($dto);
+    $this->sectionRepository->update($sectionId, $dto);
   }
 
   /**
@@ -109,13 +108,8 @@ class SectionService {
     $total  = $this->sectionRepository->countSections($filter, $status);
     $rows   = $this->sectionRepository->getSections($offset, $limit, $filter, $status);
 
-    $data = array_map(
-      static fn(array $row) => UpdateSectionDTO::fromArray($row)->toArray(),
-      $rows
-    );
-
     return [
-      'data' => $data,
+      'data' => $rows,
       'meta' => [
         'page'        => $page,
         'limit'       => $limit,

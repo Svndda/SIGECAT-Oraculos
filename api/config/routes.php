@@ -31,7 +31,12 @@ return [
     ['method' => 'POST',   'path' => '/areas/{id}/restore', 'controller' => 'AreaController', 'action' => 'restore'],
 
     // Section routes (read-only, for selection)
-    ['method' => 'GET',    'path' => '/sections',    'controller' => 'SectionController', 'action' => 'index'],
+    ['method' => 'POST',   'path' => '/sections',      'controller' => 'SectionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/sections',      'controller' => 'SectionController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/sections/{id}', 'controller' => 'SectionController', 'action' => 'show'],
+    ['method' => 'PATCH',  'path' => '/sections/{id}', 'controller' => 'SectionController', 'action' => 'update'],
+    ['method' => 'DELETE', 'path' => '/sections/{id}', 'controller' => 'SectionController', 'action' => 'delete'],
+    ['method' => 'POST',   'path' => '/sections/{id}/restore', 'controller' => 'SectionController', 'action' => 'restore'],
 
     // Occupational class routes (read-only, for selection)
     ['method' => 'GET',    'path' => '/job-classes', 'controller' => 'JobClassController', 'action' => 'index'],

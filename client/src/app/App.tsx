@@ -18,6 +18,7 @@ import PrivateRoute from '../components/PrivateRoute';
 import DepartmentsPage from './pages/admin/DepartmentsPage';
 import RoleRoute from "../components/RoleRoute.tsx";
 import AccessDeniedPage from "./pages/AccessDeniedPage.tsx";
+import SectionsPage from './pages/admin/SectionsPage.tsx';
 
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
                 <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
                   <Route path="organizacion" element={<OrganizationPage />} />
                   <Route path="unidades" element={<UnitsPage />} />
+                  <Route path="secciones" element={<SectionsPage />} />
                   <Route path="departamentos" element={<DepartmentsPage />} />
                   <Route path="plazas" element={<JobPositionsPage />} />
                   <Route path="usuarios" element={<UsersPage />} />
