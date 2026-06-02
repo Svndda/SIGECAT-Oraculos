@@ -279,7 +279,51 @@ class UserService
       );
     }
 
+    // A regular admin cannot delete another admin; the target must be demoted
+    // first. (A future "técnico admin" role is intended to lift this rule.)
+    if (($existing['role'] ?? null) === 'admin') {
+      throw new ApiException(
+        ErrorType::from(
+          'CANNOT_DELETE_ADMIN',
+          'No puede eliminar a un administrador. Cambie su rol a empleado antes de eliminarlo.'
+        )
+      );
+    }
+
     $this->userRepository->delete($userId, $deletedBy);
+  }
+
+  /**
+   * Changes a user's role. Admin-only operation; the actor cannot change their
+   * own role (avoids self-lockout).
+   *
+   * @throws ApiException
+   */
+  public function changeRole(string $userId, string $role, string $actorId): void
+  {
+    if (empty($userId)) {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+    if (trim($role) === '') {
+      throw new ApiException(ErrorType::missingField('role'));
+    }
+    if (!\DTO\AllowedUserRoles::isValid($role)) {
+      throw new ApiException(ErrorType::invalidField('role'));
+    }
+    if ($userId === $actorId) {
+      throw new ApiException(
+        ErrorType::conflict('No puede cambiar su propio rol.')
+      );
+    }
+
+    $existing = $this->userRepository->findById($userId, 'active');
+    if ($existing === null) {
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
+    }
+
+    $this->userRepository->updateRole($userId, $role);
   }
 
   /**

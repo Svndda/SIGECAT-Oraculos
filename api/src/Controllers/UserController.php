@@ -103,6 +103,28 @@ class UserController
   }
 
   /**
+   * PATCH /users/{id}/role
+   * Changes a user's role. Admin only.
+   */
+  public function changeRole(string $userId): void
+  {
+    try {
+      $auth = $this->authService->requireAdmin();
+
+      $data = Request::parseJsonRequest();
+      $role = (string) ($data['role'] ?? '');
+
+      $this->userService->changeRole($userId, $role, (string) $auth['user_id']);
+
+      Response::success(
+        null, ['message' => 'Rol actualizado exitosamente']
+      );
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
    * PATCH /users/me/job-position
    * Assigns the plaza (by its "número de plaza") to the authenticated user.
    */

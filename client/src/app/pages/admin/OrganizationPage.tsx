@@ -4,8 +4,6 @@ import {
   Typography,
   TextField,
   Button,
-  Paper,
-  IconButton,
   InputAdornment,
   Stack,
 } from '@mui/material';
@@ -15,6 +13,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { areaService } from '../../../services/areaService';
 import type { Area } from '../../../services/areaService';
 import type { ServiceError } from '../../../services/common';
+import DataTable, { type DataColumn } from '../../../components/DataTable';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
@@ -173,69 +172,16 @@ export default function OrganizationPage() {
         </Button>
       </Box>
 
-      <Box sx={{ overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 720 }}>
-          {/* Table header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.25, mb: 1 }}>
-            {COLS.map((col) => (
-              <Typography
-                key={col.label}
-                variant="caption"
-                fontWeight={700}
-                sx={{ flex: col.flex, color: '#555', textTransform: 'none', fontSize: '0.8rem' }}
-              >
-                {col.label}
-              </Typography>
-            ))}
-            <Box sx={{ width: 72 }} />
-          </Box>
-
-          {/* Rows */}
-          <Stack spacing={1.5}>
-            {filtered.map((area) => (
-              <Paper
-                key={area.id}
-                elevation={0}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  px: 2.5,
-                  py: 1.75,
-                  border: '1px solid #ebebeb',
-                  borderRadius: 2,
-                }}
-              >
-                <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333' }}>
-                  {area.name}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  noWrap
-                  sx={{ flex: COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
-                >
-                  {area.description ?? '—'}
-                </Typography>
-                <Typography variant="body2" sx={{ flex: COLS[2].flex, color: '#555' }}>
-                  {formatDate(area.created_at)}
-                </Typography>
-                <Box sx={{ width: 72, display: 'flex', gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => openEdit(area)} sx={{ color: '#1a2b4a' }}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(area)} sx={{ color: '#9e9e9e' }}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Paper>
-            ))}
-            {filtered.length === 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-                No se encontraron áreas.
-              </Typography>
-            )}
-          </Stack>
-        </Box>
-      </Box>
+      <DataTable
+        columns={COLS}
+        items={filtered}
+        getKey={(area) => area.id}
+        actions={[
+          { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
+          { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
+        ]}
+        emptyMessage="No se encontraron áreas."
+      />
 
       {/* Create / Edit modal */}
       <ModalForm
@@ -296,8 +242,8 @@ export default function OrganizationPage() {
   );
 }
 
-const COLS = [
-  { label: 'Nombre', flex: '0 0 26%' },
-  { label: 'Descripción', flex: '1' },
-  { label: 'Fecha de creación', flex: '0 0 20%' },
+const COLS: DataColumn<Area>[] = [
+  { label: 'Nombre', flex: '0 0 26%', primary: true, render: (a) => a.name },
+  { label: 'Descripción', flex: '1', truncate: true, render: (a) => a.description ?? '—' },
+  { label: 'Fecha de creación', flex: '0 0 20%', meta: true, render: (a) => formatDate(a.created_at) },
 ];

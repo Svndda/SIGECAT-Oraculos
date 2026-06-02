@@ -46,6 +46,18 @@ export const userService = {
     } catch (e) { throw extractApiError(e); }
   },
 
+  async changeRole(userId: string, role: 'admin' | 'employee'): Promise<void> {
+    try {
+      await apiClient.patch(`/users/${userId}/role`, { role });
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async deleteUser(userId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/users/${userId}`);
+    } catch (e) { throw extractApiError(e); }
+  },
+
   async registerUser(payload: RegisterUserPayload): Promise<AdminUser> {
     if (USE_MOCK) {
       await new Promise((r) => setTimeout(r, 600));
