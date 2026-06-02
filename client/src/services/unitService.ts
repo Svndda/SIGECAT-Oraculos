@@ -13,11 +13,46 @@ export interface Unit {
   deleted_at: string | null;
 }
 
+export interface CreateUnitPayload {
+  name: string;
+  description?: string;
+  /** A unit must be assigned to exactly one of these. */
+  section_id?: string;
+  department_id?: string;
+}
+
+export interface UpdateUnitPayload {
+  name?: string;
+  description?: string;
+  section_id?: string;
+  department_id?: string;
+}
+
 export const unitService = {
   async getUnits(params: ListParams = {}): Promise<Paginated<Unit>> {
     try {
       const res = await apiClient.get<{ data: Unit[]; meta: PageMeta }>('/units', { params });
       return { data: res.data.data ?? [], meta: res.data.meta };
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async createUnit(payload: CreateUnitPayload): Promise<Unit> {
+    try {
+      const res = await apiClient.post<{ data: Unit }>('/units', payload);
+      return res.data.data;
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async updateUnit(id: string, payload: UpdateUnitPayload): Promise<Unit> {
+    try {
+      const res = await apiClient.patch<{ data: Unit }>(`/units/${id}`, payload);
+      return res.data.data;
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async deleteUnit(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/units/${id}`);
     } catch (e) { throw extractApiError(e); }
   },
 };

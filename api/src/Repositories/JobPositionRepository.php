@@ -5,6 +5,7 @@ namespace Repositories;
 
 use Core\UlidGenerator;
 use DTO\CreateJobPositionDTO;
+use DTO\UpdateJobPositionDTO;
 use PDO;
 use PDOException;
 
@@ -62,6 +63,59 @@ final class JobPositionRepository extends Repository
         ':description' => $dto->description !== null ? trim($dto->description) : null,
         ':created_by'  => $createdBy,
       ]);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
+  /**
+   * Applies a partial update to a plaza. When the parent is being changed, the
+   * chosen FK column is set and the other three are forced to NULL so the row
+   * keeps satisfying CHECK_JOB_POSITION_PARENT. The parent column name comes
+   * from a fixed whitelist (DTO::parent), so inlining it is safe.
+   */
+  public function updateJobPosition(string $jobPositionId, UpdateJobPositionDTO $dto): void
+  {
+    $fields = [];
+    $params = [':id' => $jobPositionId];
+
+    if ($dto->name !== null) {
+      $fields[] = 'name = :name';
+      $params[':name'] = trim($dto->name);
+    }
+    if ($dto->description !== null) {
+      $fields[] = 'description = :description';
+      $params[':description'] = trim($dto->description);
+    }
+    if ($dto->jobPositionTypeId !== null) {
+      $fields[] = 'job_position_type_id = :type_id';
+      $params[':type_id'] = $dto->jobPositionTypeId;
+    }
+    if ($dto->hasParent()) {
+      [$parentColumn, $parentId] = $dto->parent();
+      foreach (['area_id', 'department_id', 'section_id', 'unit_id'] as $column) {
+        if ($column === $parentColumn) {
+          $fields[] = "{$column} = :parent_id";
+          $params[':parent_id'] = $parentId;
+        } else {
+          $fields[] = "{$column} = NULL";
+        }
+      }
+    }
+
+    if (empty($fields)) {
+      return;
+    }
+
+    $sql = 'UPDATE JOB_POSITIONS SET ' . implode(', ', $fields)
+         . ' WHERE job_position_id = :id AND is_deleted = 0';
+
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute($params);
       $this->commit();
     } catch (PDOException $e) {
       $this->rollBack();

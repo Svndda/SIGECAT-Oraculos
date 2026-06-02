@@ -18,6 +18,7 @@ return [
     ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
     ['method' => 'GET',    'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'getById'],
     ['method' => 'PATCH',  'path' => '/users/{id}/job-class','controller' => 'UserController', 'action' => 'assignJobClass'],
+    ['method' => 'PATCH',  'path' => '/users/{id}/role',     'controller' => 'UserController', 'action' => 'changeRole'],
     ['method' => 'DELETE', 'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/users/{id}/restore',  'controller' => 'UserController', 'action' => 'restore'],
 
@@ -39,6 +40,7 @@ return [
     ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
     ['method' => 'POST',   'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'create'],
     ['method' => 'GET',    'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'index'],
+    ['method' => 'PATCH',  'path' => '/job-positions/{id}', 'controller' => 'JobPositionController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/job-positions/{id}', 'controller' => 'JobPositionController', 'action' => 'delete'],
 
     // Department routes
