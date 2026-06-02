@@ -81,6 +81,28 @@ class UserController
   }
 
   /**
+   * PATCH /users/{id}/job-class
+   * Assigns an occupational class to a user. Admin only.
+   */
+  public function assignJobClass(string $userId): void
+  {
+    try {
+      $this->authService->requireAdmin();
+
+      $data = Request::parseJsonRequest();
+      $jobClassId = (string) ($data['job_class_id'] ?? '');
+
+      $this->userService->assignJobClass($userId, $jobClassId);
+
+      Response::success(
+        null, ['message' => 'Clase ocupacional asignada exitosamente']
+      );
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
    * PATCH /users/me/plaza
    * Assigns the plaza (by its "número de plaza") to the authenticated user.
    */

@@ -25,6 +25,7 @@ final class UserResponseDTO {
   public readonly string $firstName;
   public readonly string $lastName;
   public readonly string $role;
+  public readonly ?string $jobClassId;
   public readonly int $isActive;
   public readonly string $createdAt;
   public readonly string $createdBy;
@@ -37,6 +38,7 @@ final class UserResponseDTO {
     string $firstName,
     string $lastName,
     string $role,
+    ?string $jobClassId,
     int $isActive,
     string $createdAt,
     string $createdBy,
@@ -48,6 +50,7 @@ final class UserResponseDTO {
     $this->firstName = $firstName;
     $this->lastName  = $lastName;
     $this->role      = $role;
+    $this->jobClassId = $jobClassId;
     $this->isActive  = $isActive;
     $this->createdAt = $createdAt;
     $this->createdBy = $createdBy;
@@ -72,7 +75,8 @@ final class UserResponseDTO {
     $fullFirst = trim($firstName . ' ' . $secondName);
     $fullLast  = trim($firstLast . ' ' . $secondLast);
 
-    $deletedAt = $get('deleted_at');
+    $deletedAt  = $get('deleted_at');
+    $jobClassId = $get('job_class_id');
 
     return new self(
       (string) ($get('user_id') ?? ''),
@@ -80,6 +84,7 @@ final class UserResponseDTO {
       $fullFirst,
       $fullLast,
       (string) ($get('role') ?? ''),
+      $jobClassId !== null ? (string) $jobClassId : null,
       (int)    ($get('is_active') ?? 0),
       (string) ($get('created_at') ?? ''),
       (string) ($get('created_by') ?? ''),
@@ -95,6 +100,7 @@ final class UserResponseDTO {
    *   first_name: string,
    *   last_name: string,
    *   role: string,
+   *   job_class_id: string|null,
    *   is_active: int,
    *   created_at: string,
    *   created_by: string,
@@ -104,12 +110,13 @@ final class UserResponseDTO {
    */
   public function toArray(): array {
     return [
-      'id'         => $this->id,
-      'email'      => $this->email,
-      'first_name' => $this->firstName,
-      'last_name'  => $this->lastName,
-      'role'       => $this->role,
-      'is_active'  => $this->isActive,
+      'id'           => $this->id,
+      'email'        => $this->email,
+      'first_name'   => $this->firstName,
+      'last_name'    => $this->lastName,
+      'role'         => $this->role,
+      'job_class_id' => $this->jobClassId,
+      'is_active'    => $this->isActive,
       'created_at' => $this->createdAt,
       'created_by' => $this->createdBy,
       'is_deleted' => $this->isDeleted,

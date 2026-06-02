@@ -42,6 +42,12 @@ export interface JobPositionType {
   name: string;
 }
 
+/** An occupational class (JOB_CLASS) selectable for a user. */
+export interface JobClass {
+  id: string;
+  name: string;
+}
+
 /** A selectable org entity (area/department/section/unit) for the plaza parent. */
 export interface OrgOption {
   id: string;
@@ -207,6 +213,19 @@ export const adminService = {
     try {
       const res = await apiClient.get<{ data: AdminUser[] }>('/users');
       return res.data.data;
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async getJobClasses(): Promise<JobClass[]> {
+    try {
+      const res = await apiClient.get<{ data: JobClass[] }>('/job-classes', { params: { limit: 100 } });
+      return res.data.data ?? [];
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async assignJobClass(userId: string, jobClassId: string): Promise<void> {
+    try {
+      await apiClient.patch(`/users/${userId}/job-class`, { job_class_id: jobClassId });
     } catch (e) { throw extractApiError(e); }
   },
 

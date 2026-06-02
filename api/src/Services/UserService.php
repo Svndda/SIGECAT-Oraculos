@@ -11,6 +11,7 @@ use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
 use Repositories\JobPositionRepository;
+use Repositories\JobClassRepository;
 use PDO;
 
 /**
@@ -23,11 +24,37 @@ class UserService
 {
   private UserRepository $userRepository;
   private JobPositionRepository $jobPositionRepository;
+  private JobClassRepository $jobClassRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->userRepository = new UserRepository($this->pdo);
     $this->jobPositionRepository = new JobPositionRepository($this->pdo);
+    $this->jobClassRepository = new JobClassRepository($this->pdo);
+  }
+
+  /**
+   * Assigns an occupational class (JOB_CLASS) to a user.
+   *
+   * @throws ApiException When the class id is missing, the user does not
+   *                      exist, or the class does not exist.
+   */
+  public function assignJobClass(string $userId, string $jobClassId): void
+  {
+    $jobClassId = trim($jobClassId);
+    if ($jobClassId === '') {
+      throw new ApiException(ErrorType::missingField('job_class_id'));
+    }
+
+    if ($this->userRepository->findById($userId) === null) {
+      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'), 404);
+    }
+
+    if (!$this->jobClassRepository->existsById($jobClassId)) {
+      throw new ApiException(ErrorType::from('JOB_CLASS_NOT_FOUND', 'La clase ocupacional no existe'), 404);
+    }
+
+    $this->userRepository->updateJobClass($userId, $jobClassId);
   }
 
   /**

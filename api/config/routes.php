@@ -17,6 +17,7 @@ return [
     ['method' => 'GET',    'path' => '/users/me',            'controller' => 'UserController', 'action' => 'show'],
     ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
     ['method' => 'GET',    'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'getById'],
+    ['method' => 'PATCH',  'path' => '/users/{id}/job-class','controller' => 'UserController', 'action' => 'assignJobClass'],
     ['method' => 'DELETE', 'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/users/{id}/restore',  'controller' => 'UserController', 'action' => 'restore'],
 
@@ -30,6 +31,9 @@ return [
 
     // Section routes (read-only, for selection)
     ['method' => 'GET',    'path' => '/sections',    'controller' => 'SectionController', 'action' => 'index'],
+
+    // Occupational class routes (read-only, for selection)
+    ['method' => 'GET',    'path' => '/job-classes', 'controller' => 'JobClassController', 'action' => 'index'],
 
     // Plaza (job position) routes
     ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
