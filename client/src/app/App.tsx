@@ -5,6 +5,7 @@ import EmployeeFormPage from './pages/EmployeeFormPage';
 import WorkHoursPage from './pages/WorkHoursPage';
 import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import OrganizationPage from './pages/admin/OrganizationPage';
 import UnitsPage from './pages/admin/UnitsPage';
@@ -29,8 +30,8 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/recuperar-contrasena" element={<PasswordRecoveryPage />} />
+            <Route path="/recuperar-contrasena/nueva" element={<ResetPasswordPage />} />
             <Route path="/acceso_denegado" element={<AccessDeniedPage />} />
-
 
             {/* Protected routes */}
             <Route element={<PrivateRoute />}>
