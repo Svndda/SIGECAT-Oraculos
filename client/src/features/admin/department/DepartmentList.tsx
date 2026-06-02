@@ -1,7 +1,7 @@
 import { Box, Paper, Stack, Typography, IconButton, Tooltip, Skeleton } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { Department } from '../../../services/DepartmentService';
+import type { Department } from '../../../services/departmentService';
 
 interface DepartmentListProps {
   departments: Department[];

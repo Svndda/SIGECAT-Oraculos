@@ -12,10 +12,12 @@ return [
     // User routes
     ['method' => 'POST',   'path' => '/users/register',      'controller' => 'UserController', 'action' => 'register'],
     ['method' => 'PATCH',  'path' => '/users/me',            'controller' => 'UserController', 'action' => 'update'],
+    ['method' => 'PATCH',  'path' => '/users/me/job-position',      'controller' => 'UserController', 'action' => 'assignJobPosition'],
     ['method' => 'PATCH',  'path' => '/users/me/password',   'controller' => 'UserController', 'action' => 'changePassword'],
     ['method' => 'GET',    'path' => '/users/me',            'controller' => 'UserController', 'action' => 'show'],
     ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
     ['method' => 'GET',    'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'getById'],
+    ['method' => 'PATCH',  'path' => '/users/{id}/job-class','controller' => 'UserController', 'action' => 'assignJobClass'],
     ['method' => 'DELETE', 'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/users/{id}/restore',  'controller' => 'UserController', 'action' => 'restore'],
 
@@ -26,6 +28,18 @@ return [
     ['method' => 'PATCH',    'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/areas/{id}', 'controller' => 'AreaController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/areas/{id}/restore', 'controller' => 'AreaController', 'action' => 'restore'],
+
+    // Section routes (read-only, for selection)
+    ['method' => 'GET',    'path' => '/sections',    'controller' => 'SectionController', 'action' => 'index'],
+
+    // Occupational class routes (read-only, for selection)
+    ['method' => 'GET',    'path' => '/job-classes', 'controller' => 'JobClassController', 'action' => 'index'],
+
+    // Plaza (job position) routes
+    ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
+    ['method' => 'POST',   'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'index'],
+    ['method' => 'DELETE', 'path' => '/job-positions/{id}', 'controller' => 'JobPositionController', 'action' => 'delete'],
 
     // Department routes
     ['method' => 'POST',   'path' => '/departments',      'controller' => 'DepartmentController', 'action' => 'create'],

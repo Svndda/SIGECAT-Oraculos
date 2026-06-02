@@ -1,6 +1,6 @@
 import { TextField, MenuItem, Stack } from '@mui/material';
 import ModalForm from '../../../components/modals/ModalForm';
-import type { Area } from '../../../services/adminService';
+import type { Area } from '../../../services/areaService';
 
 interface FormState {
   name: string;

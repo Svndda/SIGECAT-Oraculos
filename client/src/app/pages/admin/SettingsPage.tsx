@@ -9,8 +9,8 @@ import {
   Stack,
   CircularProgress,
 } from '@mui/material';
-import { adminService } from '../../../services/adminService';
-import type { ServiceError } from '../../../services/adminService';
+import { jobPositionService } from '../../../services/jobPositionService';
+import type { ServiceError } from '../../../services/common';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 
@@ -35,7 +35,7 @@ export default function SettingsPage() {
     if (!validate()) return;
     setIsSubmitting(true);
     try {
-      await adminService.updatePlaza(plazaNumber);
+      await jobPositionService.updateJobPosition(plazaNumber);
       setSuccessOpen(true);
     } catch (err) {
       const serviceError = err as ServiceError;

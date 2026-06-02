@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Box, Pagination } from '@mui/material';
-import { DepartmentService } from '../../../services/DepartmentService';
-import type { Department } from '../../../services/DepartmentService';
-import type { ServiceError } from '../../../services/adminService';
-import { adminService } from '../../../services/adminService';
-import type { Area, PageMeta } from '../../../services/adminService';
+import { departmentService } from '../../../services/departmentService';
+import type { Department } from '../../../services/departmentService';
+import type { ServiceError } from '../../../services/common';
+import { areaService } from '../../../services/areaService';
+import type { Area } from '../../../services/areaService';
+import type { PageMeta } from '../../../services/common';
 
 import DepartmentToolbar from '../../../features/admin/department/DepartmentToolbar';
 import DepartmentList from '../../../features/admin/department/DepartmentList';
@@ -54,14 +55,14 @@ export default function DepartmentsPage() {
   }, [search, appliedFilter]);
 
   useEffect(() => {
-    adminService.getAreas({ limit: 100 })
+    areaService.getAreas({ limit: 100 })
         .then(res => setAreas(res.data))
         .catch(() => {});
   }, []);
 
   const loadDepartments = (isSubscribed: boolean) => {
     setLoading(true);
-    DepartmentService.getDepartments(
+    departmentService.getDepartmentsPage(
       { page, limit: LIMIT, filter: appliedFilter }
     )
         .then((res) => {
@@ -123,14 +124,14 @@ export default function DepartmentsPage() {
     setIsSubmitting(true);
     try {
       if (isEditing) {
-        await DepartmentService.updateDepartment(isEditing, form);
+        await departmentService.updateDepartment(isEditing, form);
         setSuccessOpen({
           open: true,
           title: 'Departamento actualizado',
           message: 'Los cambios se han guardado.'
         });
       } else {
-        await DepartmentService.createDepartment(form);
+        await departmentService.createDepartment(form);
         setSuccessOpen({
           open: true,
           title: 'Departamento registrado',
@@ -159,7 +160,7 @@ export default function DepartmentsPage() {
     if (!deleteAlert.id) return;
     
     try {
-      await DepartmentService.deleteDepartment(deleteAlert.id);
+      await departmentService.deleteDepartment(deleteAlert.id);
       setSuccessOpen({
         open: true,
         title: 'Departamento eliminado',
