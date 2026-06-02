@@ -16,6 +16,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
 import CorporateFareIcon from '@mui/icons-material/CorporateFare';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import BadgeIcon from '@mui/icons-material/Badge';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { label: 'Usuarios', icon: <PersonIcon fontSize="small" />, route: '/usuarios' },
   { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/organizacion' },
   { label: 'Departamentos', icon: <AccountTreeIcon fontSize="small" />, route: '/departamentos' },
+  { label: 'Secciones', icon: <GroupWorkIcon fontSize="small" />, route: '/secciones' },
   { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades' },
   { label: 'Plazas', icon: <BadgeIcon fontSize="small" />, route: '/plazas' },
   // { label: 'Trabajo', icon: <WorkIcon fontSize="small" />, route: '/laboral' },

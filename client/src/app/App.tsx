@@ -8,6 +8,7 @@ import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import OrganizationPage from './pages/admin/OrganizationPage';
 import UnitsPage from './pages/admin/UnitsPage';
+import SectionsPage from './pages/admin/SectionsPage';
 import JobPositionsPage from './pages/admin/JobPositionsPage';
 import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/admin/SettingsPage';
@@ -36,6 +37,7 @@ function App() {
                 <Route path="work-hours" element={<WorkHoursPage />} />
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />
                 <Route path="organizacion" element={<OrganizationPage />} />
+                <Route path="secciones" element={<SectionsPage />} />
                 <Route path="unidades" element={<UnitsPage />} />
                 <Route path="departamentos" element={<DepartmentsPage />} />
                 <Route path="plazas" element={<JobPositionsPage />} />
