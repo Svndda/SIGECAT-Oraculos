@@ -12,17 +12,20 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { adminService } from '../../../services/adminService';
+import { areaService } from '../../../services/areaService';
+import { unitService } from '../../../services/unitService';
+import { departmentService } from '../../../services/departmentService';
+import { sectionService } from '../../../services/sectionService';
+import { jobPositionService } from '../../../services/jobPositionService';
+import type { Area } from '../../../services/areaService';
+import type { Unit } from '../../../services/unitService';
 import type {
   JobPosition,
-  Area,
-  Unit,
-  OrgOption,
   JobPositionType,
   JobPositionParentType,
   CreateJobPositionPayload,
-  ServiceError,
-} from '../../../services/adminService';
+} from '../../../services/jobPositionService';
+import type { OrgOption, ServiceError } from '../../../services/common';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
@@ -68,7 +71,7 @@ export default function PlazasPage() {
 
   const refreshJobPositions = useCallback(async () => {
     try {
-      const { data } = await adminService.getJobPositions({ limit: 100 });
+      const { data } = await jobPositionService.getJobPositions({ limit: 100 });
       setJobPositions(data);
     } catch (error) {
       const e = error as ServiceError;
@@ -79,11 +82,11 @@ export default function PlazasPage() {
   useEffect(() => {
     void refreshJobPositions();
     // Option sources for the create form.
-    adminService.getJobPositionTypes().then(setTypes).catch(() => undefined);
-    adminService.getAreas({ limit: 100 }).then(({ data }) => setAreas(data)).catch(() => undefined);
-    adminService.getUnits({ limit: 100 }).then(({ data }) => setUnits(data)).catch(() => undefined);
-    adminService.getDepartments({ limit: 100 }).then(setDepartments).catch(() => undefined);
-    adminService.getSections({ limit: 100 }).then(setSections).catch(() => undefined);
+    jobPositionService.getJobPositionTypes().then(setTypes).catch(() => undefined);
+    areaService.getAreas({ limit: 100 }).then(({ data }) => setAreas(data)).catch(() => undefined);
+    unitService.getUnits({ limit: 100 }).then(({ data }) => setUnits(data)).catch(() => undefined);
+    departmentService.getDepartments({ limit: 100 }).then(setDepartments).catch(() => undefined);
+    sectionService.getSections({ limit: 100 }).then(setSections).catch(() => undefined);
   }, [refreshJobPositions]);
 
   // Name lookups for each parent kind, to render a job position's owning entity.
@@ -149,7 +152,7 @@ export default function PlazasPage() {
       if (form.parentType) {
         payload[`${form.parentType}_id`] = form.parentId;
       }
-      await adminService.createJobPosition(payload);
+      await jobPositionService.createJobPosition(payload);
       await refreshJobPositions();
       setFormOpen(false);
       setSuccessMsg('Plaza creada correctamente.');
@@ -166,7 +169,7 @@ export default function PlazasPage() {
     if (!deleteTarget) return;
     setIsSubmitting(true);
     try {
-      await adminService.deleteJobPosition(deleteTarget.id);
+      await jobPositionService.deleteJobPosition(deleteTarget.id);
       setDeleteTarget(null);
       await refreshJobPositions();
       setSuccessMsg('Plaza eliminada correctamente.');

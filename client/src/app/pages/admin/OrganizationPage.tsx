@@ -12,8 +12,9 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { adminService } from '../../../services/adminService';
-import type { Area, ServiceError } from '../../../services/adminService';
+import { areaService } from '../../../services/areaService';
+import type { Area } from '../../../services/areaService';
+import type { ServiceError } from '../../../services/common';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
@@ -42,7 +43,7 @@ export default function OrganizationPage() {
 
   const refreshAreas = useCallback(async () => {
     try {
-      const { data } = await adminService.getAreas({ limit: 100 });
+      const { data } = await areaService.getAreas({ limit: 100 });
       setAreas(data);
     } catch (error) {
       const e = error as ServiceError;
@@ -89,10 +90,10 @@ export default function OrganizationPage() {
     try {
       const payload = { name: form.name.trim(), description: form.description.trim() };
       if (editTarget) {
-        await adminService.updateArea(editTarget.id, payload);
+        await areaService.updateArea(editTarget.id, payload);
         setSuccessMsg('Área actualizada correctamente.');
       } else {
-        await adminService.createArea(payload);
+        await areaService.createArea(payload);
         setSuccessMsg('Área creada correctamente.');
       }
       await refreshAreas();
@@ -110,7 +111,7 @@ export default function OrganizationPage() {
     if (!deleteTarget) return;
     setIsSubmitting(true);
     try {
-      await adminService.deleteArea(deleteTarget.id);
+      await areaService.deleteArea(deleteTarget.id);
       setDeleteTarget(null);
       await refreshAreas();
       setSuccessMsg('Área eliminada correctamente.');

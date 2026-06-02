@@ -13,8 +13,11 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { adminService } from '../../../services/adminService';
-import type { AdminUser, JobClass, ServiceError } from '../../../services/adminService';
+import { userService } from '../../../services/userService';
+import { jobClassService } from '../../../services/jobClassService';
+import type { AdminUser } from '../../../services/userService';
+import type { JobClass } from '../../../services/jobClassService';
+import type { ServiceError } from '../../../services/common';
 import { useAuth } from '../../../context/AuthContext';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
@@ -51,8 +54,8 @@ export default function UsersPage() {
   const [selectedClassId, setSelectedClassId] = useState('');
 
   useEffect(() => {
-    adminService.getUsers().then(setUsers).catch(() => {});
-    adminService.getJobClasses().then(setJobClasses).catch(() => {});
+    userService.getUsers().then(setUsers).catch(() => {});
+    jobClassService.getJobClasses().then(setJobClasses).catch(() => {});
   }, []);
 
   const className = (id?: string) => jobClasses.find((c) => c.id === id)?.name ?? '—';
@@ -66,7 +69,7 @@ export default function UsersPage() {
     if (!assignTarget || !selectedClassId) return;
     setIsSubmitting(true);
     try {
-      await adminService.assignJobClass(assignTarget.id, selectedClassId);
+      await userService.assignJobClass(assignTarget.id, selectedClassId);
       setUsers((prev) => prev.map((u) => (u.id === assignTarget.id ? { ...u, job_class_id: selectedClassId } : u)));
       setAssignTarget(null);
       setSuccessMsg('Clase ocupacional asignada correctamente.');
@@ -110,7 +113,7 @@ export default function UsersPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const created = await adminService.registerUser({
+      const created = await userService.registerUser({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
