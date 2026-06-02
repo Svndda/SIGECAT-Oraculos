@@ -45,6 +45,7 @@ export default function SectionsPage() {
   const [appliedFilter, setAppliedFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [areas, setAreas] = useState<OrgOption[]>([]);
+  const [loadingAreas, setLoadingAreas] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Section | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Section | null>(null);
@@ -83,7 +84,8 @@ export default function SectionsPage() {
   useEffect(() => {
     areaService.getAreas({ limit: 100 })
       .then((res) => setAreas(res.data.map((a) => ({ id: a.id, name: a.name }))))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setLoadingAreas(false));
   }, []);
 
   const totalPages = meta?.total_pages ?? 1;
@@ -320,7 +322,7 @@ export default function SectionsPage() {
             error={!!formErrors.areaId}
             helperText={
               formErrors.areaId ??
-              (areas.length === 0 ? 'No hay áreas registradas.' : '')
+              (loadingAreas ? 'Cargando áreas...' : areas.length === 0 ? 'No hay áreas registradas.' : '')
             }
             required
           >
