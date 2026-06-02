@@ -8,6 +8,7 @@ import {
   Stack,
   MenuItem,
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -307,23 +308,25 @@ export default function JobPositionsPage() {
             helperText={formErrors.job_position_number}
             required
           />
-          <TextField
-            select
-            label="Tipo de plaza"
-            value={form.job_position_type_id}
-            onChange={handleText('job_position_type_id')}
+          <Autocomplete
+            options={types}
+            getOptionLabel={(t) => t.name}
+            value={types.find((t) => t.job_position_type_id === form.job_position_type_id) ?? null}
+            onChange={(_, selected) => {
+              setField('job_position_type_id', selected?.job_position_type_id ?? '');
+            }}
             size="small"
             fullWidth
-            error={!!formErrors.job_position_type_id}
-            helperText={formErrors.job_position_type_id ?? (types.length === 0 ? 'No hay tipos de plaza registrados.' : '')}
-            required
-          >
-            {types.map((t) => (
-              <MenuItem key={t.job_position_type_id} value={t.job_position_type_id}>
-                {t.name}
-              </MenuItem>
-            ))}
-          </TextField>
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Tipo de plaza"
+                required
+                error={!!formErrors.job_position_type_id}
+                helperText={formErrors.job_position_type_id ?? (types.length === 0 ? 'No hay tipos de plaza registrados.' : '')}
+              />
+            )}
+          />
           <TextField
             select
             label="Tipo de entidad"
