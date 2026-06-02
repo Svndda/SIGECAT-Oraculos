@@ -3,6 +3,7 @@ import {
   Box,
   Typography,
   TextField,
+  Button,
   Paper,
   IconButton,
   InputAdornment,
@@ -60,6 +61,7 @@ export default function UnitsPage() {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<OrgOption[]>([]);
   const [sections, setSections] = useState<OrgOption[]>([]);
+  const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Unit | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -102,6 +104,13 @@ export default function UnitsPage() {
   const totalPages = meta?.total_pages ?? 1;
   const parentOptions = form.parentType === 'section' ? sections : departments;
 
+  const openCreate = () => {
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
   const openEdit = (unit: Unit) => {
     setEditTarget(unit);
     setForm({
@@ -111,6 +120,7 @@ export default function UnitsPage() {
       parentId: unit.section_id ?? unit.department_id ?? '',
     });
     setFormErrors({});
+    setFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -121,24 +131,28 @@ export default function UnitsPage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleUpdate = async () => {
-    if (!editTarget || !validateForm()) return;
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
     setIsSubmitting(true);
+    // Send only the chosen parent so the unit has exactly one.
+    const parent = {
+      section_id: form.parentType === 'section' ? form.parentId : undefined,
+      department_id: form.parentType === 'department' ? form.parentId : undefined,
+    };
     try {
-      await unitService.updateUnit(editTarget.id, {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        // Send only the chosen parent so the unit keeps exactly one.
-        section_id: form.parentType === 'section' ? form.parentId : undefined,
-        department_id: form.parentType === 'department' ? form.parentId : undefined,
-      });
-      setEditTarget(null);
+      if (editTarget) {
+        await unitService.updateUnit(editTarget.id, { name: form.name.trim(), description: form.description.trim(), ...parent });
+        setSuccessMsg('Unidad actualizada correctamente.');
+      } else {
+        await unitService.createUnit({ name: form.name.trim(), description: form.description.trim() || undefined, ...parent });
+        setSuccessMsg('Unidad creada correctamente.');
+      }
+      setFormOpen(false);
       await refreshUnits();
-      setSuccessMsg('Unidad actualizada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al actualizar', message: e.message ?? 'Error del servidor.' });
+      setModalError({ open: true, title: editTarget ? 'Error al actualizar' : 'Error al crear', message: e.message ?? 'Error del servidor.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +205,22 @@ export default function UnitsPage() {
             },
           }}
         />
+        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
+        <Button
+          variant="contained"
+          onClick={openCreate}
+          sx={{
+            backgroundColor: '#1a2b4a',
+            '&:hover': { backgroundColor: '#111d33' },
+            px: 3,
+            fontWeight: 600,
+            textTransform: 'none',
+            fontSize: '0.9rem',
+            width: { xs: '100%', sm: 'auto' },
+          }}
+        >
+          Añadir Unidad
+        </Button>
       </Box>
 
       <Box sx={{ overflowX: 'auto' }}>
@@ -273,13 +303,13 @@ export default function UnitsPage() {
         </Box>
       )}
 
-      {/* Edit modal */}
+      {/* Create / Edit modal */}
       <ModalForm
-        open={!!editTarget}
-        title="Editar Unidad"
-        onClose={() => setEditTarget(null)}
-        onConfirm={handleUpdate}
-        confirmLabel="Guardar cambios"
+        open={formOpen}
+        title={editTarget ? 'Editar Unidad' : 'Añadir Unidad'}
+        onClose={() => setFormOpen(false)}
+        onConfirm={handleSubmit}
+        confirmLabel={editTarget ? 'Guardar cambios' : 'Confirmar'}
         isSubmitting={isSubmitting}
       >
         <Stack spacing={2.5} sx={{ pt: 1 }}>

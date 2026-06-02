@@ -13,6 +13,13 @@ export interface Unit {
   deleted_at: string | null;
 }
 
+export interface CreateUnitPayload {
+  name: string;
+  description?: string;
+  section_id?: string;
+  department_id?: string;
+}
+
 export interface UpdateUnitPayload {
   name?: string;
   description?: string;
@@ -25,6 +32,12 @@ export const unitService = {
     try {
       const res = await apiClient.get<{ data: Unit[]; meta: PageMeta }>('/units', { params });
       return { data: res.data.data ?? [], meta: res.data.meta };
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  async createUnit(payload: CreateUnitPayload): Promise<void> {
+    try {
+      await apiClient.post('/units', payload);
     } catch (e) { throw extractApiError(e); }
   },
 
