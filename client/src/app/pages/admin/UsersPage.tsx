@@ -4,7 +4,6 @@ import {
   Typography,
   TextField,
   Button,
-  Paper,
   Stack,
   MenuItem,
   InputAdornment,
@@ -12,7 +11,10 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import DataTable, { type DataColumn } from '../../../components/DataTable';
 import { userService } from '../../../services/userService';
 import { jobClassService } from '../../../services/jobClassService';
 import type { AdminUser } from '../../../services/userService';
@@ -22,6 +24,7 @@ import { useAuth } from '../../../context/AuthContext';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
+import ModalAlert from '../../../components/modals/ModalAlert';
 import { validateInstitutionalEmail } from '../../../utils/validation';
 
 const ROLES = [
@@ -52,6 +55,9 @@ export default function UsersPage() {
   const [jobClasses, setJobClasses] = useState<JobClass[]>([]);
   const [assignTarget, setAssignTarget] = useState<AdminUser | null>(null);
   const [selectedClassId, setSelectedClassId] = useState('');
+  const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('employee');
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     userService.getUsers().then(setUsers).catch(() => {});
@@ -78,6 +84,47 @@ export default function UsersPage() {
       const e = error as ServiceError;
       setAssignTarget(null);
       setModalError({ open: true, title: 'Error al asignar', message: e.message ?? 'Error del servidor.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openRole = (user: AdminUser) => {
+    setRoleTarget(user);
+    setSelectedRole(user.role);
+  };
+
+  const handleChangeRole = async () => {
+    if (!roleTarget) return;
+    setIsSubmitting(true);
+    try {
+      await userService.changeRole(roleTarget.id, selectedRole);
+      setUsers((prev) => prev.map((u) => (u.id === roleTarget.id ? { ...u, role: selectedRole } : u)));
+      setRoleTarget(null);
+      setSuccessMsg('Rol actualizado correctamente.');
+      setSuccessOpen(true);
+    } catch (error) {
+      const e = error as ServiceError;
+      setRoleTarget(null);
+      setModalError({ open: true, title: 'Error al cambiar rol', message: e.message ?? 'Error del servidor.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsSubmitting(true);
+    try {
+      await userService.deleteUser(deleteTarget.id);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setSuccessMsg('Usuario eliminado correctamente.');
+      setSuccessOpen(true);
+    } catch (error) {
+      const e = error as ServiceError;
+      setDeleteTarget(null);
+      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -138,6 +185,32 @@ export default function UsersPage() {
     if (formErrors[field]) setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const columns: DataColumn<AdminUser>[] = [
+    { label: 'Nombre', flex: '0 0 24%', primary: true, render: (u) => `${u.first_name} ${u.last_name}` },
+    { label: 'Correo institucional', flex: '1', truncate: true, render: (u) => u.email },
+    {
+      label: 'Rol',
+      flex: '0 0 15%',
+      badge: true,
+      render: (u) => (
+        <Typography
+          variant="caption"
+          sx={{
+            px: 1.5,
+            py: 0.4,
+            borderRadius: 4,
+            fontWeight: 600,
+            backgroundColor: u.role === 'admin' ? '#e8edf7' : '#f0f0f0',
+            color: u.role === 'admin' ? '#1a2b4a' : '#555',
+          }}
+        >
+          {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+        </Typography>
+      ),
+    },
+    { label: 'Clase ocupacional', flex: '0 0 22%', render: (u) => className(u.job_class_id) },
+  ];
+
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
@@ -179,60 +252,17 @@ export default function UsersPage() {
         </Button>
       </Box>
 
-      <Box sx={{ overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 720 }}>
-          {/* Table header */}
-          <Box sx={{ display: 'flex', px: 2.5, py: 1.25, mb: 1 }}>
-            {USER_COLS.map((col) => (
-              <Typography key={col.label} variant="caption" fontWeight={700} sx={{ flex: col.flex, color: '#555', fontSize: '0.8rem' }}>
-                {col.label}
-              </Typography>
-            ))}
-            <Box sx={{ width: 48 }} />
-          </Box>
-
-          <Stack spacing={1.5}>
-            {filtered.map((u) => (
-              <Paper key={u.id} elevation={0} sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.75, border: '1px solid #ebebeb', borderRadius: 2 }}>
-                <Typography variant="body2" sx={{ flex: USER_COLS[0].flex, color: '#333' }}>
-                  {u.first_name} {u.last_name}
-                </Typography>
-                <Typography variant="body2" noWrap sx={{ flex: USER_COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}>
-                  {u.email}
-                </Typography>
-                <Box sx={{ flex: USER_COLS[2].flex }}>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      px: 1.5,
-                      py: 0.4,
-                      borderRadius: 4,
-                      fontWeight: 600,
-                      backgroundColor: u.role === 'admin' ? '#e8edf7' : '#f0f0f0',
-                      color: u.role === 'admin' ? '#1a2b4a' : '#555',
-                    }}
-                  >
-                    {u.role === 'admin' ? 'Administrador' : 'Empleado'}
-                  </Typography>
-                </Box>
-                <Typography variant="body2" sx={{ flex: USER_COLS[3].flex, color: '#555' }}>
-                  {className(u.job_class_id)}
-                </Typography>
-                <Box sx={{ width: 48, display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton size="small" onClick={() => openAssign(u)} sx={{ color: '#1a2b4a' }} title="Asignar clase ocupacional">
-                    <AssignmentIndIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Paper>
-            ))}
-            {filtered.length === 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-                No se encontraron usuarios.
-              </Typography>
-            )}
-          </Stack>
-        </Box>
-      </Box>
+      <DataTable
+        columns={columns}
+        items={filtered}
+        getKey={(u) => u.id}
+        actions={[
+          { icon: <AssignmentIndIcon fontSize="small" />, label: 'Asignar clase', color: '#1a2b4a', onClick: openAssign },
+          { icon: <AdminPanelSettingsIcon fontSize="small" />, label: 'Cambiar rol', color: '#1a2b4a', onClick: openRole },
+          { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
+        ]}
+        emptyMessage="No se encontraron usuarios."
+      />
 
       {/* Register user modal */}
       <ModalForm
@@ -346,6 +376,46 @@ export default function UsersPage() {
         </Stack>
       </ModalForm>
 
+      {/* Change role modal */}
+      <ModalForm
+        open={!!roleTarget}
+        title="Cambiar rol"
+        onClose={() => setRoleTarget(null)}
+        onConfirm={handleChangeRole}
+        confirmLabel="Guardar"
+        isSubmitting={isSubmitting}
+      >
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {roleTarget ? `${roleTarget.first_name} ${roleTarget.last_name}` : ''}
+          </Typography>
+          <TextField
+            select
+            label="Rol"
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value as 'admin' | 'employee')}
+            size="small"
+            fullWidth
+            required
+          >
+            {ROLES.map((r) => (
+              <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </ModalForm>
+
+      {/* Delete confirmation */}
+      <ModalAlert
+        open={!!deleteTarget}
+        title="Eliminar usuario"
+        message={`¿Está seguro que desea eliminar a "${deleteTarget?.first_name} ${deleteTarget?.last_name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
+
       <ModalError
         open={modalError.open}
         title={modalError.title}
@@ -361,10 +431,3 @@ export default function UsersPage() {
     </Box>
   );
 }
-
-const USER_COLS = [
-  { label: 'Nombre', flex: '0 0 24%' },
-  { label: 'Correo institucional', flex: '1' },
-  { label: 'Rol', flex: '0 0 15%' },
-  { label: 'Clase ocupacional', flex: '0 0 22%' },
-];

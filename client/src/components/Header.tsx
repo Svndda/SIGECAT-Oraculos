@@ -1,6 +1,12 @@
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 
-export default function Header() {
+interface HeaderProps {
+  /** When provided, shows a hamburger button (mobile only) to open the nav drawer. */
+  onMenuClick?: () => void;
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
   return (
     <Box
       component="header"
@@ -10,11 +16,22 @@ export default function Header() {
         py: { xs: 1.25, sm: 2 },
         display: 'flex',
         alignItems: 'center',
-        gap: { xs: 2, sm: 5 },
+        gap: { xs: 1.5, sm: 5 },
         flexShrink: 0,
         flexWrap: 'wrap',
       }}
     >
+      {/* Mobile nav toggle (only inside the authenticated layout) */}
+      {onMenuClick && (
+        <IconButton
+          onClick={onMenuClick}
+          aria-label="Abrir menú"
+          sx={{ color: 'white', display: { md: 'none' }, mr: -0.5 }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
+
       {/* UCR */}
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
         <Typography

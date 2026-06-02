@@ -177,6 +177,21 @@ final class UserRepository extends Repository {
     }
   }
 
+  public function updateRole(string $userId, string $role): void {
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare(
+        'UPDATE USERS SET role = :role
+         WHERE user_id = :user_id AND is_deleted = 0'
+      );
+      $stmt->execute([':role' => $role, ':user_id' => $userId]);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
+
   /** @return array<int, array<string, mixed>> */
   public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
   {

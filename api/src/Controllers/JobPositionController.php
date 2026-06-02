@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Controllers;
 
 use DTO\CreateJobPositionDTO;
+use DTO\UpdateJobPositionDTO;
 use Http\ApiException;
 use Http\Request;
 use Http\Response;
@@ -66,6 +67,26 @@ class JobPositionController
       $result = $this->jobPositionService->getJobPositions($page, $limit, $filter, $status);
 
       Response::success($result['data'], $result['meta'], 200);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * PATCH /job-positions/{id}
+   * Admin only.
+   */
+  public function update(string $jobPositionId): void
+  {
+    try {
+      $this->authService->requireAdmin();
+
+      $data = Request::parseJsonRequest();
+      $dto  = UpdateJobPositionDTO::fromArray($data);
+
+      $this->jobPositionService->updateJobPosition($jobPositionId, $dto);
+
+      Response::success(null, ['message' => 'Plaza actualizada exitosamente'], 200);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }

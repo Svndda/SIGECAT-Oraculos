@@ -34,6 +34,16 @@ export interface CreateJobPositionPayload {
   unit_id?: string;
 }
 
+export interface UpdateJobPositionPayload {
+  name?: string;
+  description?: string;
+  job_position_type_id?: string;
+  area_id?: string;
+  department_id?: string;
+  section_id?: string;
+  unit_id?: string;
+}
+
 export const jobPositionService = {
   async getJobPositions(params: ListParams = {}): Promise<Paginated<JobPosition>> {
     try {
@@ -58,6 +68,13 @@ export const jobPositionService = {
   async deleteJobPosition(id: string): Promise<void> {
     try {
       await apiClient.delete(`/job-positions/${id}`);
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  /** Admin edit of a plaza's own fields (number, description, type, parent). */
+  async editJobPosition(id: string, payload: UpdateJobPositionPayload): Promise<void> {
+    try {
+      await apiClient.patch(`/job-positions/${id}`, payload);
     } catch (e) { throw extractApiError(e); }
   },
 

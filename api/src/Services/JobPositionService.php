@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Services;
 
 use DTO\CreateJobPositionDTO;
+use DTO\UpdateJobPositionDTO;
 use DTO\JobPositionResponseDTO;
 use Http\ApiException;
 use Http\ErrorType;
@@ -54,6 +55,33 @@ class JobPositionService
     }
 
     $this->repository->createJobPosition($createdBy, $dto);
+  }
+
+  /**
+   * Applies a partial update to an existing (active) plaza. The plaza number
+   * (name), when provided, must stay unique among active plazas.
+   *
+   * @throws ApiException
+   */
+  public function updateJobPosition(string $jobPositionId, UpdateJobPositionDTO $dto): void
+  {
+    if (trim($jobPositionId) === '') {
+      throw new ApiException(ErrorType::missingField('job_position_id'));
+    }
+
+    $dto->validate();
+
+    if ($this->repository->findById($jobPositionId) === null) {
+      throw new ApiException(ErrorType::notFound('Plaza'));
+    }
+
+    if ($dto->name !== null && $this->repository->existsByName($dto->name, $jobPositionId)) {
+      throw new ApiException(
+        ErrorType::conflict('Ya existe una plaza registrada con ese número')
+      );
+    }
+
+    $this->repository->updateJobPosition($jobPositionId, $dto);
   }
 
   /**

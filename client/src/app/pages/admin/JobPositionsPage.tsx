@@ -4,14 +4,14 @@ import {
   Typography,
   TextField,
   Button,
-  Paper,
-  IconButton,
   InputAdornment,
   Stack,
   MenuItem,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DataTable, { type DataColumn } from '../../../components/DataTable';
 import { areaService } from '../../../services/areaService';
 import { unitService } from '../../../services/unitService';
 import { departmentService } from '../../../services/departmentService';
@@ -24,6 +24,7 @@ import type {
   JobPositionType,
   JobPositionParentType,
   CreateJobPositionPayload,
+  UpdateJobPositionPayload,
 } from '../../../services/jobPositionService';
 import type { OrgOption, ServiceError } from '../../../services/common';
 import ModalForm from '../../../components/modals/ModalForm';
@@ -61,6 +62,7 @@ export default function JobPositionsPage() {
   const [types, setTypes] = useState<JobPositionType[]>([]);
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<JobPosition | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JobPosition | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
@@ -124,8 +126,38 @@ export default function JobPositionsPage() {
         .includes(search.toLowerCase())
     ), [jobPositions, search, parentLabel]);
 
+  const columns: DataColumn<JobPosition>[] = [
+    { label: 'Número', flex: '0 0 18%', primary: true, render: (p) => p.name },
+    { label: 'Entidad', flex: '0 0 30%', truncate: true, render: (p) => parentLabel(p) },
+    { label: 'Descripción', flex: '1', truncate: true, render: (p) => p.description ?? '—' },
+    { label: 'Fecha de creación', flex: '0 0 18%', meta: true, render: (p) => formatDate(p.created_at) },
+  ];
+
   const openCreate = () => {
+    setEditTarget(null);
     setForm(EMPTY_FORM);
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const openEdit = (jobPosition: JobPosition) => {
+    setEditTarget(jobPosition);
+    const parentType: JobPositionParentType | '' =
+      jobPosition.area_id ? 'area'
+      : jobPosition.department_id ? 'department'
+      : jobPosition.section_id ? 'section'
+      : jobPosition.unit_id ? 'unit'
+      : '';
+    const parentId =
+      jobPosition.area_id ?? jobPosition.department_id ??
+      jobPosition.section_id ?? jobPosition.unit_id ?? '';
+    setForm({
+      name: jobPosition.name,
+      description: jobPosition.description ?? '',
+      job_position_type_id: jobPosition.job_position_type_id,
+      parentType,
+      parentId,
+    });
     setFormErrors({});
     setFormOpen(true);
   };
@@ -144,18 +176,31 @@ export default function JobPositionsPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const payload: CreateJobPositionPayload = {
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        job_position_type_id: form.job_position_type_id,
-      };
-      if (form.parentType) {
-        payload[`${form.parentType}_id`] = form.parentId;
+      if (editTarget) {
+        const payload: UpdateJobPositionPayload = {
+          name: form.name.trim(),
+          description: form.description.trim(),
+          job_position_type_id: form.job_position_type_id,
+        };
+        if (form.parentType) {
+          payload[`${form.parentType}_id`] = form.parentId;
+        }
+        await jobPositionService.editJobPosition(editTarget.id, payload);
+        setSuccessMsg('Plaza actualizada correctamente.');
+      } else {
+        const payload: CreateJobPositionPayload = {
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          job_position_type_id: form.job_position_type_id,
+        };
+        if (form.parentType) {
+          payload[`${form.parentType}_id`] = form.parentId;
+        }
+        await jobPositionService.createJobPosition(payload);
+        setSuccessMsg('Plaza creada correctamente.');
       }
-      await jobPositionService.createJobPosition(payload);
       await refreshJobPositions();
       setFormOpen(false);
-      setSuccessMsg('Plaza creada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
@@ -232,78 +277,23 @@ export default function JobPositionsPage() {
         </Button>
       </Box>
 
-      <Box sx={{ overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 720 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.25, mb: 1 }}>
-            {COLS.map((col) => (
-              <Typography
-                key={col.label}
-                variant="caption"
-                fontWeight={700}
-                sx={{ flex: col.flex, color: '#555', textTransform: 'none', fontSize: '0.8rem' }}
-              >
-                {col.label}
-              </Typography>
-            ))}
-            <Box sx={{ width: 48 }} />
-          </Box>
-
-          <Stack spacing={1.5}>
-            {filtered.map((jobPosition) => (
-              <Paper
-                key={jobPosition.id}
-                elevation={0}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  px: 2.5,
-                  py: 1.75,
-                  border: '1px solid #ebebeb',
-                  borderRadius: 2,
-                }}
-              >
-                <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333', fontWeight: 600 }}>
-                  {jobPosition.name}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  noWrap
-                  sx={{ flex: COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
-                >
-                  {parentLabel(jobPosition)}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  noWrap
-                  sx={{ flex: COLS[2].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
-                >
-                  {jobPosition.description ?? '—'}
-                </Typography>
-                <Typography variant="body2" sx={{ flex: COLS[3].flex, color: '#555' }}>
-                  {formatDate(jobPosition.created_at)}
-                </Typography>
-                <Box sx={{ width: 48, display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton size="small" onClick={() => setDeleteTarget(jobPosition)} sx={{ color: '#9e9e9e' }}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Paper>
-            ))}
-            {filtered.length === 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
-                No se encontraron plazas.
-              </Typography>
-            )}
-          </Stack>
-        </Box>
-      </Box>
+      <DataTable
+        columns={columns}
+        items={filtered}
+        getKey={(p) => p.id}
+        actions={[
+          { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
+          { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
+        ]}
+        emptyMessage="No se encontraron plazas."
+      />
 
       <ModalForm
         open={formOpen}
-        title="Añadir Plaza"
+        title={editTarget ? 'Editar Plaza' : 'Añadir Plaza'}
         onClose={() => setFormOpen(false)}
         onConfirm={handleConfirm}
-        confirmLabel="Confirmar"
+        confirmLabel={editTarget ? 'Guardar cambios' : 'Confirmar'}
         isSubmitting={isSubmitting}
       >
         <Stack spacing={2.5} sx={{ pt: 1 }}>
@@ -413,10 +403,3 @@ export default function JobPositionsPage() {
     </Box>
   );
 }
-
-const COLS = [
-  { label: 'Número', flex: '0 0 18%' },
-  { label: 'Entidad', flex: '0 0 30%' },
-  { label: 'Descripción', flex: '1' },
-  { label: 'Fecha de creación', flex: '0 0 18%' },
-];
