@@ -121,10 +121,13 @@ ALTER TABLE JOB_POSITIONS ADD (
 ALTER TABLE JOB_POSITIONS ADD CONSTRAINT chk_job_positions_is_deleted CHECK (is_deleted IN (0, 1));
 ALTER TABLE JOB_POSITIONS ADD CONSTRAINT fk_job_positions_deleted_by  FOREIGN KEY (deleted_by) REFERENCES USERS(user_id);
 
+-- Note: the column was renamed from job_position_number to name in
+-- SIGECAT-DB-MIGRATION-job-position-rename-number-to-name.sql.
+-- Run that migration before this block if UK_JOB_POSITION_NUMBER exists.
 ALTER TABLE JOB_POSITIONS DROP CONSTRAINT UK_JOB_POSITION_NUMBER;
 
 CREATE UNIQUE INDEX ux_job_position_number_active
-    ON JOB_POSITIONS (CASE WHEN is_deleted = 0 THEN job_position_number END);
+    ON JOB_POSITIONS (CASE WHEN is_deleted = 0 THEN name END);
 
 
 -- ============================================================
@@ -148,7 +151,7 @@ CREATE UNIQUE INDEX ux_job_position_number_active
 -- ALTER TABLE UNITS       DROP CONSTRAINT chk_units_is_deleted;
 -- ALTER TABLE UNITS       DROP (is_deleted, deleted_at, deleted_by);
 -- DROP INDEX ux_job_position_number_active;
--- ALTER TABLE JOB_POSITIONS ADD CONSTRAINT UK_JOB_POSITION_NUMBER UNIQUE (job_position_number);
+-- ALTER TABLE JOB_POSITIONS ADD CONSTRAINT UK_JOB_POSITION_NUMBER UNIQUE (name);
 -- ALTER TABLE JOB_POSITIONS DROP CONSTRAINT fk_job_positions_deleted_by;
 -- ALTER TABLE JOB_POSITIONS DROP CONSTRAINT chk_job_positions_is_deleted;
 -- ALTER TABLE JOB_POSITIONS DROP (is_deleted, deleted_at, deleted_by);
