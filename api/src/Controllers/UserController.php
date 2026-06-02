@@ -103,19 +103,19 @@ class UserController
   }
 
   /**
-   * PATCH /users/me/plaza
+   * PATCH /users/me/job-position
    * Assigns the plaza (by its "número de plaza") to the authenticated user.
    */
-  public function assignPlaza(): void
+  public function assignJobPosition(): void
   {
     try {
       $auth = $this->authService->requireAuth();
       $userId = (string) $auth['user_id'];
 
       $data = Request::parseJsonRequest();
-      $plazaNumber = (string) ($data['plaza_number'] ?? '');
+      $jobPositionNumber = (string) ($data['job_position_number'] ?? '');
 
-      $this->userService->assignPlaza($userId, $plazaNumber);
+      $this->userService->assignJobPosition($userId, $jobPositionNumber);
 
       Response::success(
         null, ['message' => 'Número de plaza actualizado exitosamente']

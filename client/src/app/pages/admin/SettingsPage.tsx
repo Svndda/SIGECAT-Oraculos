@@ -35,7 +35,7 @@ export default function SettingsPage() {
     if (!validate()) return;
     setIsSubmitting(true);
     try {
-      await adminService.updatePlaza(plazaNumber);
+      await adminService.updateJobPosition(plazaNumber);
       setSuccessOpen(true);
     } catch (err) {
       const serviceError = err as ServiceError;

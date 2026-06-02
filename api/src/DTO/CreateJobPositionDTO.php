@@ -91,12 +91,12 @@ final class CreateJobPositionDTO {
     }
     if (strlen($this->name) > 110) {
       throw new ApiException(
-        ErrorType::from('INVALID_PLAZA_NAME', 'El número de plaza no puede exceder los 110 caracteres'), 400
+        ErrorType::from('INVALID_JOB_POSITION_NAME', 'El número de plaza no puede exceder los 110 caracteres'), 400
       );
     }
     if ($this->description !== null && strlen($this->description) > 255) {
       throw new ApiException(
-        ErrorType::from('INVALID_PLAZA_DESC', 'La descripción no puede exceder los 255 caracteres'), 400
+        ErrorType::from('INVALID_JOB_POSITION_DESC', 'La descripción no puede exceder los 255 caracteres'), 400
       );
     }
     if (trim($this->jobPositionTypeId) === '') {
@@ -110,7 +110,7 @@ final class CreateJobPositionDTO {
     if ($parentCount !== 1) {
       throw new ApiException(
         ErrorType::from(
-          'INVALID_PLAZA_PARENT',
+          'INVALID_JOB_POSITION_PARENT',
           'La plaza debe pertenecer exactamente a una entidad (área, departamento, sección o unidad).'
         ), 400
       );

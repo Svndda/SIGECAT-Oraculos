@@ -12,7 +12,7 @@ return [
     // User routes
     ['method' => 'POST',   'path' => '/users/register',      'controller' => 'UserController', 'action' => 'register'],
     ['method' => 'PATCH',  'path' => '/users/me',            'controller' => 'UserController', 'action' => 'update'],
-    ['method' => 'PATCH',  'path' => '/users/me/plaza',      'controller' => 'UserController', 'action' => 'assignPlaza'],
+    ['method' => 'PATCH',  'path' => '/users/me/job-position',      'controller' => 'UserController', 'action' => 'assignJobPosition'],
     ['method' => 'PATCH',  'path' => '/users/me/password',   'controller' => 'UserController', 'action' => 'changePassword'],
     ['method' => 'GET',    'path' => '/users/me',            'controller' => 'UserController', 'action' => 'show'],
     ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
@@ -37,9 +37,9 @@ return [
 
     // Plaza (job position) routes
     ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
-    ['method' => 'POST',   'path' => '/plazas',      'controller' => 'JobPositionController', 'action' => 'create'],
-    ['method' => 'GET',    'path' => '/plazas',      'controller' => 'JobPositionController', 'action' => 'index'],
-    ['method' => 'DELETE', 'path' => '/plazas/{id}', 'controller' => 'JobPositionController', 'action' => 'delete'],
+    ['method' => 'POST',   'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'index'],
+    ['method' => 'DELETE', 'path' => '/job-positions/{id}', 'controller' => 'JobPositionController', 'action' => 'delete'],
 
     // Department routes
     ['method' => 'POST',   'path' => '/departments',      'controller' => 'DepartmentController', 'action' => 'create'],

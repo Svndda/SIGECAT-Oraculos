@@ -43,7 +43,7 @@ class JobPositionService
    *
    * @throws ApiException
    */
-  public function createPlaza(string $createdBy, CreateJobPositionDTO $dto): void
+  public function createJobPosition(string $createdBy, CreateJobPositionDTO $dto): void
   {
     $dto->validate();
 
@@ -53,7 +53,7 @@ class JobPositionService
       );
     }
 
-    $this->repository->createPlaza($createdBy, $dto);
+    $this->repository->createJobPosition($createdBy, $dto);
   }
 
   /**
@@ -62,7 +62,7 @@ class JobPositionService
    * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
    * @throws ApiException
    */
-  public function getPlazas(int $page, int $limit, string $filter = '', string $status = 'active'): array
+  public function getJobPositions(int $page, int $limit, string $filter = '', string $status = 'active'): array
   {
     if ($page < 1) {
       throw new ApiException(ErrorType::invalidField('page'));
@@ -74,8 +74,8 @@ class JobPositionService
     $status = $this->normalizeStatus($status);
     $offset = ($page - 1) * $limit;
 
-    $total = $this->repository->countPlazas($filter, $status);
-    $rows  = $this->repository->getPlazas($offset, $limit, $filter, $status);
+    $total = $this->repository->countJobPositions($filter, $status);
+    $rows  = $this->repository->getJobPositions($offset, $limit, $filter, $status);
 
     $data = array_map(
       static fn(array $row) => JobPositionResponseDTO::fromArray($row)->toArray(),
@@ -98,7 +98,7 @@ class JobPositionService
    *
    * @throws ApiException
    */
-  public function deletePlaza(string $jobPositionId, string $deletedBy): void
+  public function deleteJobPosition(string $jobPositionId, string $deletedBy): void
   {
     if (trim($jobPositionId) === '') {
       throw new ApiException(ErrorType::missingField('job_position_id'));
@@ -108,7 +108,7 @@ class JobPositionService
       throw new ApiException(ErrorType::notFound('Plaza'));
     }
 
-    $this->repository->deletePlaza($jobPositionId, $deletedBy);
+    $this->repository->deleteJobPosition($jobPositionId, $deletedBy);
   }
 
   /**

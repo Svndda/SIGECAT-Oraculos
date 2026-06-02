@@ -41,7 +41,7 @@ final class JobPositionRepository extends Repository
    * comes from a fixed whitelist (DTO::parent), so inlining it is safe; the
    * other three FK columns stay NULL to satisfy CHECK_JOB_POSITION_PARENT.
    */
-  public function createPlaza(string $createdBy, CreateJobPositionDTO $dto): void
+  public function createJobPosition(string $createdBy, CreateJobPositionDTO $dto): void
   {
     $newId = UlidGenerator::generate();
     [$parentColumn, $parentId] = $dto->parent();
@@ -104,7 +104,7 @@ final class JobPositionRepository extends Repository
   }
 
   /** @return array<int, array<string, mixed>> */
-  public function getPlazas(int $offset, int $limit, string $filter = '', string $status = 'active'): array
+  public function getJobPositions(int $offset, int $limit, string $filter = '', string $status = 'active'): array
   {
     $stmt = $this->db->prepare(
       'SELECT job_position_id, area_id, department_id, section_id, unit_id,
@@ -122,7 +122,7 @@ final class JobPositionRepository extends Repository
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
-  public function countPlazas(string $filter = '', string $status = 'active'): int
+  public function countJobPositions(string $filter = '', string $status = 'active'): int
   {
     $stmt = $this->db->prepare(
       'SELECT COUNT(*) AS total FROM JOB_POSITIONS
@@ -134,7 +134,7 @@ final class JobPositionRepository extends Repository
   }
 
   /** Soft-deletes a plaza. */
-  public function deletePlaza(string $jobPositionId, string $deletedBy): void
+  public function deleteJobPosition(string $jobPositionId, string $deletedBy): void
   {
     $this->beginTransaction();
     try {

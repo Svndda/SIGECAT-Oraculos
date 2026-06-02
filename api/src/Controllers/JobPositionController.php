@@ -30,7 +30,7 @@ class JobPositionController
   }
 
   /**
-   * POST /plazas
+   * POST /job-positions
    * Admin only.
    */
   public function create(): void
@@ -41,7 +41,7 @@ class JobPositionController
       $data = Request::parseJsonRequest();
       $dto  = CreateJobPositionDTO::fromArray($data);
 
-      $this->jobPositionService->createPlaza((string) $auth['user_id'], $dto);
+      $this->jobPositionService->createJobPosition((string) $auth['user_id'], $dto);
 
       Response::success(null, ['message' => 'Plaza creada exitosamente'], 201);
     } catch (ApiException $e) {
@@ -50,7 +50,7 @@ class JobPositionController
   }
 
   /**
-   * GET /plazas
+   * GET /job-positions
    * Query params: page, limit, filter, status. Admin only.
    */
   public function index(): void
@@ -63,7 +63,7 @@ class JobPositionController
       $filter = trim((string) ($_GET['filter'] ?? ''));
       $status = trim((string) ($_GET['status'] ?? 'active'));
 
-      $result = $this->jobPositionService->getPlazas($page, $limit, $filter, $status);
+      $result = $this->jobPositionService->getJobPositions($page, $limit, $filter, $status);
 
       Response::success($result['data'], $result['meta'], 200);
     } catch (ApiException $e) {
@@ -72,7 +72,7 @@ class JobPositionController
   }
 
   /**
-   * DELETE /plazas/{id}
+   * DELETE /job-positions/{id}
    * Admin only.
    */
   public function delete(string $jobPositionId): void
@@ -80,7 +80,7 @@ class JobPositionController
     try {
       $auth = $this->authService->requireAdmin();
 
-      $this->jobPositionService->deletePlaza($jobPositionId, (string) $auth['user_id']);
+      $this->jobPositionService->deleteJobPosition($jobPositionId, (string) $auth['user_id']);
 
       Response::success(null, ['message' => 'Plaza eliminada exitosamente'], 200);
     } catch (ApiException $e) {

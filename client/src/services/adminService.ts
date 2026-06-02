@@ -22,7 +22,7 @@ export interface Unit {
   deleted_at: string | null;
 }
 
-export interface Plaza {
+export interface JobPosition {
   id: string;
   name: string;
   description: string | null;
@@ -48,16 +48,16 @@ export interface JobClass {
   name: string;
 }
 
-/** A selectable org entity (area/department/section/unit) for the plaza parent. */
+/** A selectable org entity (area/department/section/unit) for the job-position parent. */
 export interface OrgOption {
   id: string;
   name: string;
 }
 
-/** The four parent entity kinds a plaza can hang from (mutually exclusive). */
-export type PlazaParentType = 'area' | 'department' | 'section' | 'unit';
+/** The four parent entity kinds a job position can hang from (mutually exclusive). */
+export type JobPositionParentType = 'area' | 'department' | 'section' | 'unit';
 
-export interface CreatePlazaPayload {
+export interface CreateJobPositionPayload {
   name: string;
   description?: string;
   job_position_type_id: string;
@@ -162,10 +162,10 @@ export const adminService = {
     } catch (e) { throw extractApiError(e); }
   },
 
-  // ---- Plazas (job positions) ----
-  async getPlazas(params: ListParams = {}): Promise<Paginated<Plaza>> {
+  // ---- Job positions (plazas) ----
+  async getJobPositions(params: ListParams = {}): Promise<Paginated<JobPosition>> {
     try {
-      const res = await apiClient.get<{ data: Plaza[]; meta: PageMeta }>('/plazas', { params });
+      const res = await apiClient.get<{ data: JobPosition[]; meta: PageMeta }>('/job-positions', { params });
       return { data: res.data.data ?? [], meta: res.data.meta };
     } catch (e) { throw extractApiError(e); }
   },
@@ -177,7 +177,7 @@ export const adminService = {
     } catch (e) { throw extractApiError(e); }
   },
 
-  // Parent-entity option sources for the plaza form (normalized to {id, name}).
+  // Parent-entity option sources for the job-position form (normalized to {id, name}).
   async getDepartments(params: ListParams = {}): Promise<OrgOption[]> {
     try {
       const res = await apiClient.get<{ data: Array<{ id?: string; department_id?: string; name: string }> }>('/departments', { params });
@@ -192,15 +192,15 @@ export const adminService = {
     } catch (e) { throw extractApiError(e); }
   },
 
-  async createPlaza(payload: CreatePlazaPayload): Promise<void> {
+  async createJobPosition(payload: CreateJobPositionPayload): Promise<void> {
     try {
-      await apiClient.post('/plazas', payload);
+      await apiClient.post('/job-positions', payload);
     } catch (e) { throw extractApiError(e); }
   },
 
-  async deletePlaza(id: string): Promise<void> {
+  async deleteJobPosition(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/plazas/${id}`);
+      await apiClient.delete(`/job-positions/${id}`);
     } catch (e) { throw extractApiError(e); }
   },
 
@@ -254,13 +254,13 @@ export const adminService = {
     } catch (e) { throw extractApiError(e); }
   },
 
-  async updatePlaza(plazaNumber: string): Promise<void> {
+  async updateJobPosition(jobPositionNumber: string): Promise<void> {
     if (USE_MOCK) {
       await new Promise((r) => setTimeout(r, 500));
       return;
     }
     try {
-      await apiClient.patch('/users/me/plaza', { plaza_number: plazaNumber });
+      await apiClient.patch('/users/me/job-position', { job_position_number: jobPositionNumber });
     } catch (e) { throw extractApiError(e); }
   },
 };

@@ -14,13 +14,13 @@ import SearchIcon from '@mui/icons-material/Search';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { adminService } from '../../../services/adminService';
 import type {
-  Plaza,
+  JobPosition,
   Area,
   Unit,
   OrgOption,
   JobPositionType,
-  PlazaParentType,
-  CreatePlazaPayload,
+  JobPositionParentType,
+  CreateJobPositionPayload,
   ServiceError,
 } from '../../../services/adminService';
 import ModalForm from '../../../components/modals/ModalForm';
@@ -32,11 +32,11 @@ const EMPTY_FORM = {
   name: '',
   description: '',
   job_position_type_id: '',
-  parentType: '' as PlazaParentType | '',
+  parentType: '' as JobPositionParentType | '',
   parentId: '',
 };
 
-const PARENT_TYPES: { value: PlazaParentType; label: string }[] = [
+const PARENT_TYPES: { value: JobPositionParentType; label: string }[] = [
   { value: 'area', label: 'Área' },
   { value: 'department', label: 'Departamento' },
   { value: 'section', label: 'Sección' },
@@ -50,7 +50,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function PlazasPage() {
-  const [plazas, setPlazas] = useState<Plaza[]>([]);
+  const [jobPositions, setJobPositions] = useState<JobPosition[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [departments, setDepartments] = useState<OrgOption[]>([]);
   const [sections, setSections] = useState<OrgOption[]>([]);
@@ -58,7 +58,7 @@ export default function PlazasPage() {
   const [types, setTypes] = useState<JobPositionType[]>([]);
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Plaza | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<JobPosition | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,10 +66,10 @@ export default function PlazasPage() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  const refreshPlazas = useCallback(async () => {
+  const refreshJobPositions = useCallback(async () => {
     try {
-      const { data } = await adminService.getPlazas({ limit: 100 });
-      setPlazas(data);
+      const { data } = await adminService.getJobPositions({ limit: 100 });
+      setJobPositions(data);
     } catch (error) {
       const e = error as ServiceError;
       setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
@@ -77,16 +77,16 @@ export default function PlazasPage() {
   }, []);
 
   useEffect(() => {
-    void refreshPlazas();
+    void refreshJobPositions();
     // Option sources for the create form.
     adminService.getJobPositionTypes().then(setTypes).catch(() => undefined);
     adminService.getAreas({ limit: 100 }).then(({ data }) => setAreas(data)).catch(() => undefined);
     adminService.getUnits({ limit: 100 }).then(({ data }) => setUnits(data)).catch(() => undefined);
     adminService.getDepartments({ limit: 100 }).then(setDepartments).catch(() => undefined);
     adminService.getSections({ limit: 100 }).then(setSections).catch(() => undefined);
-  }, [refreshPlazas]);
+  }, [refreshJobPositions]);
 
-  // Name lookups for each parent kind, to render a plaza's owning entity.
+  // Name lookups for each parent kind, to render a job position's owning entity.
   const lookups = useMemo(() => ({
     area: new Map(areas.map((a) => [a.id, a.name])),
     department: new Map(departments.map((d) => [d.id, d.name])),
@@ -94,11 +94,11 @@ export default function PlazasPage() {
     unit: new Map(units.map((u) => [u.id, u.name])),
   }), [areas, departments, sections, units]);
 
-  const parentLabel = useCallback((plaza: Plaza): string => {
-    if (plaza.area_id) return `Área: ${lookups.area.get(plaza.area_id) ?? plaza.area_id}`;
-    if (plaza.department_id) return `Departamento: ${lookups.department.get(plaza.department_id) ?? plaza.department_id}`;
-    if (plaza.section_id) return `Sección: ${lookups.section.get(plaza.section_id) ?? plaza.section_id}`;
-    if (plaza.unit_id) return `Unidad: ${lookups.unit.get(plaza.unit_id) ?? plaza.unit_id}`;
+  const parentLabel = useCallback((jobPosition: JobPosition): string => {
+    if (jobPosition.area_id) return `Área: ${lookups.area.get(jobPosition.area_id) ?? jobPosition.area_id}`;
+    if (jobPosition.department_id) return `Departamento: ${lookups.department.get(jobPosition.department_id) ?? jobPosition.department_id}`;
+    if (jobPosition.section_id) return `Sección: ${lookups.section.get(jobPosition.section_id) ?? jobPosition.section_id}`;
+    if (jobPosition.unit_id) return `Unidad: ${lookups.unit.get(jobPosition.unit_id) ?? jobPosition.unit_id}`;
     return '—';
   }, [lookups]);
 
@@ -114,12 +114,12 @@ export default function PlazasPage() {
   }, [form.parentType, areas, departments, sections, units]);
 
   const filtered = useMemo(() =>
-    plazas.filter((p) =>
+    jobPositions.filter((p) =>
       [p.name, p.description ?? '', parentLabel(p)]
         .join(' ')
         .toLowerCase()
         .includes(search.toLowerCase())
-    ), [plazas, search, parentLabel]);
+    ), [jobPositions, search, parentLabel]);
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -141,7 +141,7 @@ export default function PlazasPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const payload: CreatePlazaPayload = {
+      const payload: CreateJobPositionPayload = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         job_position_type_id: form.job_position_type_id,
@@ -149,8 +149,8 @@ export default function PlazasPage() {
       if (form.parentType) {
         payload[`${form.parentType}_id`] = form.parentId;
       }
-      await adminService.createPlaza(payload);
-      await refreshPlazas();
+      await adminService.createJobPosition(payload);
+      await refreshJobPositions();
       setFormOpen(false);
       setSuccessMsg('Plaza creada correctamente.');
       setSuccessOpen(true);
@@ -166,9 +166,9 @@ export default function PlazasPage() {
     if (!deleteTarget) return;
     setIsSubmitting(true);
     try {
-      await adminService.deletePlaza(deleteTarget.id);
+      await adminService.deleteJobPosition(deleteTarget.id);
       setDeleteTarget(null);
-      await refreshPlazas();
+      await refreshJobPositions();
       setSuccessMsg('Plaza eliminada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
@@ -246,9 +246,9 @@ export default function PlazasPage() {
           </Box>
 
           <Stack spacing={1.5}>
-            {filtered.map((plaza) => (
+            {filtered.map((jobPosition) => (
               <Paper
-                key={plaza.id}
+                key={jobPosition.id}
                 elevation={0}
                 sx={{
                   display: 'flex',
@@ -260,27 +260,27 @@ export default function PlazasPage() {
                 }}
               >
                 <Typography variant="body2" sx={{ flex: COLS[0].flex, color: '#333', fontWeight: 600 }}>
-                  {plaza.name}
+                  {jobPosition.name}
                 </Typography>
                 <Typography
                   variant="body2"
                   noWrap
                   sx={{ flex: COLS[1].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
                 >
-                  {parentLabel(plaza)}
+                  {parentLabel(jobPosition)}
                 </Typography>
                 <Typography
                   variant="body2"
                   noWrap
                   sx={{ flex: COLS[2].flex, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', pr: 2 }}
                 >
-                  {plaza.description ?? '—'}
+                  {jobPosition.description ?? '—'}
                 </Typography>
                 <Typography variant="body2" sx={{ flex: COLS[3].flex, color: '#555' }}>
-                  {formatDate(plaza.created_at)}
+                  {formatDate(jobPosition.created_at)}
                 </Typography>
                 <Box sx={{ width: 48, display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton size="small" onClick={() => setDeleteTarget(plaza)} sx={{ color: '#9e9e9e' }}>
+                  <IconButton size="small" onClick={() => setDeleteTarget(jobPosition)} sx={{ color: '#9e9e9e' }}>
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
                 </Box>
@@ -337,7 +337,7 @@ export default function PlazasPage() {
             value={form.parentType}
             onChange={(e) => {
               // Reset the chosen entity when the parent kind changes.
-              setForm((prev) => ({ ...prev, parentType: e.target.value as PlazaParentType, parentId: '' }));
+              setForm((prev) => ({ ...prev, parentType: e.target.value as JobPositionParentType, parentId: '' }));
               setFormErrors((prev) => ({ ...prev, parentType: undefined, parentId: undefined }));
             }}
             size="small"

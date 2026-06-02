@@ -66,28 +66,28 @@ class UserService
    * @throws ApiException When the number is missing, the plaza does not exist,
    *                      or it is already held by another user.
    */
-  public function assignPlaza(string $userId, string $plazaNumber): void
+  public function assignJobPosition(string $userId, string $jobPositionNumber): void
   {
-    $plazaNumber = trim($plazaNumber);
-    if ($plazaNumber === '') {
-      throw new ApiException(ErrorType::missingField('plaza_number'));
+    $jobPositionNumber = trim($jobPositionNumber);
+    if ($jobPositionNumber === '') {
+      throw new ApiException(ErrorType::missingField('job_position_number'));
     }
 
-    $plaza = $this->jobPositionRepository->findActiveByName($plazaNumber);
-    if ($plaza === null) {
+    $jobPosition = $this->jobPositionRepository->findActiveByName($jobPositionNumber);
+    if ($jobPosition === null) {
       throw new ApiException(
-        ErrorType::from('PLAZA_NOT_FOUND', 'El número de plaza no existe.'), 404
+        ErrorType::from('JOB_POSITION_NOT_FOUND', 'El número de plaza no existe.'), 404
       );
     }
 
-    $currentHolder = $plaza['user_id'] ?? null;
+    $currentHolder = $jobPosition['user_id'] ?? null;
     if ($currentHolder !== null && (string) $currentHolder !== $userId) {
       throw new ApiException(
         ErrorType::conflict('La plaza ya está asignada a otro usuario.'), 409
       );
     }
 
-    $this->jobPositionRepository->assignToUser((string) $plaza['job_position_id'], $userId);
+    $this->jobPositionRepository->assignToUser((string) $jobPosition['job_position_id'], $userId);
   }
 
   /**
