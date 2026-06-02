@@ -71,7 +71,9 @@ class EmailService {
     string $token,
     int $expiresInMinutes
   ): string {
-    $expiry = $expiresInMinutes . ' minuto' . ($expiresInMinutes !== 1 ? 's' : '');
+    $expiry    = $expiresInMinutes . ' minuto' . ($expiresInMinutes !== 1 ? 's' : '');
+    $appUrl    = getenv('APP_URL') ?: 'http://localhost:5173';
+    $resetLink = $appUrl . '/recuperar-contrasena/nueva?token=' . urlencode($token);
 
     return <<<TEXT
     Estimado/a {$name},
@@ -79,18 +81,12 @@ class EmailService {
     Hemos recibido una solicitud para restablecer la contraseña asociada
     a su cuenta en el sistema SIGECAT de la Universidad de Costa Rica.
 
-    Su token de recuperación es:
+    Para establecer una nueva contraseña, ingrese al siguiente enlace:
 
-        {$token}
+        {$resetLink}
 
-    Este token es válido durante {$expiry}. Úselo en el endpoint:
-
-        POST /auth/password-recovery/reset
-        {
-          "token": "{$token}",
-          "password": "<nueva contraseña>",
-          "confirm_password": "<nueva contraseña>"
-        }
+    Este enlace es válido durante {$expiry}. Si no lo usa en ese tiempo,
+    deberá solicitar uno nuevo.
 
     Si usted no solicitó este cambio, ignore este mensaje.
     Su contraseña actual permanecerá sin cambios.
