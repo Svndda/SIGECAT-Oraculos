@@ -121,10 +121,6 @@ export const authService = {
     }
   },
 
-  /**
-   * Refreshes the token pair using the provided refresh token.
-   * Returns the new refresh token. The new access token is set as an HTTP‑only cookie.
-   */
   async refreshTokens(refreshToken: string): Promise<RefreshResponseData> {
     if (USE_MOCK) {
       await new Promise((r) => setTimeout(r, 300));
@@ -199,9 +195,23 @@ export const authService = {
     }
   },
 
-  async recoverPassword(email: string, newPassword: string): Promise<void> {
-    await new Promise((r) => setTimeout(r, 800));
-    void email;
-    void newPassword;
+  async requestPasswordRecovery(email: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/password-recovery/request', { email });
+    } catch (error) {
+      throw extractApiError(error);
+    }
+  },
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/password-recovery/reset', {
+        token,
+        password,
+        confirm_password: confirmPassword,
+      });
+    } catch (error) {
+      throw extractApiError(error);
+    }
   },
 };
