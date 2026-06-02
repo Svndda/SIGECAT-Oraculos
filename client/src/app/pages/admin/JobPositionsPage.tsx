@@ -8,6 +8,7 @@ import {
   Stack,
   MenuItem,
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -33,7 +34,7 @@ import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
 const EMPTY_FORM = {
-  name: '',
+  job_position_number: '',
   description: '',
   job_position_type_id: '',
   parentType: '' as JobPositionParentType | '',
@@ -127,7 +128,7 @@ export default function JobPositionsPage() {
     ), [jobPositions, search, parentLabel]);
 
   const columns: DataColumn<JobPosition>[] = [
-    { label: 'Número', flex: '0 0 18%', primary: true, render: (p) => p.name },
+    { label: 'Número', flex: '0 0 18%', primary: true, render: (p) => p.job_position_number },
     { label: 'Entidad', flex: '0 0 30%', truncate: true, render: (p) => parentLabel(p) },
     { label: 'Descripción', flex: '1', truncate: true, render: (p) => p.description ?? '—' },
     { label: 'Fecha de creación', flex: '0 0 18%', meta: true, render: (p) => formatDate(p.created_at) },
@@ -152,7 +153,7 @@ export default function JobPositionsPage() {
       jobPosition.area_id ?? jobPosition.department_id ??
       jobPosition.section_id ?? jobPosition.unit_id ?? '';
     setForm({
-      name: jobPosition.name,
+      job_position_number: jobPosition.job_position_number,
       description: jobPosition.description ?? '',
       job_position_type_id: jobPosition.job_position_type_id,
       parentType,
@@ -164,7 +165,7 @@ export default function JobPositionsPage() {
 
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
-    if (!form.name.trim()) errors.name = 'El número de plaza es requerido.';
+    if (!form.job_position_number.trim()) errors.job_position_number = 'El número de plaza es requerido.';
     if (!form.job_position_type_id) errors.job_position_type_id = 'El tipo de plaza es requerido.';
     if (!form.parentType) errors.parentType = 'El tipo de entidad es requerido.';
     if (!form.parentId) errors.parentId = 'La entidad es requerida.';
@@ -178,7 +179,7 @@ export default function JobPositionsPage() {
     try {
       if (editTarget) {
         const payload: UpdateJobPositionPayload = {
-          name: form.name.trim(),
+          job_position_number: form.job_position_number.trim(),
           description: form.description.trim(),
           job_position_type_id: form.job_position_type_id,
         };
@@ -189,7 +190,7 @@ export default function JobPositionsPage() {
         setSuccessMsg('Plaza actualizada correctamente.');
       } else {
         const payload: CreateJobPositionPayload = {
-          name: form.name.trim(),
+          job_position_number: form.job_position_number.trim(),
           description: form.description.trim() || undefined,
           job_position_type_id: form.job_position_type_id,
         };
@@ -299,31 +300,33 @@ export default function JobPositionsPage() {
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           <TextField
             label="Número de plaza"
-            value={form.name}
-            onChange={handleText('name')}
+            value={form.job_position_number}
+            onChange={handleText('job_position_number')}
             size="small"
             fullWidth
-            error={!!formErrors.name}
-            helperText={formErrors.name}
+            error={!!formErrors.job_position_number}
+            helperText={formErrors.job_position_number}
             required
           />
-          <TextField
-            select
-            label="Tipo de plaza"
-            value={form.job_position_type_id}
-            onChange={handleText('job_position_type_id')}
+          <Autocomplete
+            options={types}
+            getOptionLabel={(t) => t.name}
+            value={types.find((t) => t.job_position_type_id === form.job_position_type_id) ?? null}
+            onChange={(_, selected) => {
+              setField('job_position_type_id', selected?.job_position_type_id ?? '');
+            }}
             size="small"
             fullWidth
-            error={!!formErrors.job_position_type_id}
-            helperText={formErrors.job_position_type_id ?? (types.length === 0 ? 'No hay tipos de plaza registrados.' : '')}
-            required
-          >
-            {types.map((t) => (
-              <MenuItem key={t.job_position_type_id} value={t.job_position_type_id}>
-                {t.name}
-              </MenuItem>
-            ))}
-          </TextField>
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Tipo de plaza"
+                required
+                error={!!formErrors.job_position_type_id}
+                helperText={formErrors.job_position_type_id ?? (types.length === 0 ? 'No hay tipos de plaza registrados.' : '')}
+              />
+            )}
+          />
           <TextField
             select
             label="Tipo de entidad"
@@ -381,7 +384,7 @@ export default function JobPositionsPage() {
       <ModalAlert
         open={!!deleteTarget}
         title="Eliminar plaza"
-        message={`¿Está seguro que desea eliminar la plaza "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
+        message={`¿Está seguro que desea eliminar la plaza "${deleteTarget?.job_position_number}"? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
         cancelLabel="Cancelar"
         onClose={() => setDeleteTarget(null)}
