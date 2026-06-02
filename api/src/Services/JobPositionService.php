@@ -48,7 +48,7 @@ class JobPositionService
   {
     $dto->validate();
 
-    if ($this->repository->existsByNumber($dto->jobPositionNumber)) {
+    if ($this->repository->existsByName($dto->name)) {
       throw new ApiException(
         ErrorType::conflict('Ya existe una plaza registrada con ese número')
       );
@@ -75,7 +75,7 @@ class JobPositionService
       throw new ApiException(ErrorType::notFound('Plaza'));
     }
 
-    if ($dto->jobPositionNumber !== null && $this->repository->existsByNumber($dto->jobPositionNumber, $jobPositionId)) {
+    if ($dto->name !== null && $this->repository->existsByName($dto->name, $jobPositionId)) {
       throw new ApiException(
         ErrorType::conflict('Ya existe una plaza registrada con ese número')
       );
