@@ -1,5 +1,5 @@
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import type { Department } from '../../../services/departmentService';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 
@@ -8,7 +8,7 @@ interface DepartmentListProps {
   loading: boolean;
   areaMap: Map<string, string>;
   onEdit: (dept: Department) => void;
-  onDelete: (id: string) => void;
+  onDelete: (dept: Department) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -34,8 +34,8 @@ export default function DepartmentList(
       loading={loading}
       minWidth={800}
       actions={[
-        { icon: <EditIcon fontSize="small" />, label: 'Editar', onClick: onEdit },
-        { icon: <DeleteIcon fontSize="small" />, label: 'Eliminar', onClick: (d) => onDelete(d.department_id) },
+        { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: onEdit },
+        { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: onDelete },
       ]}
       emptyMessage="No se encontraron departamentos."
     />

@@ -14,11 +14,12 @@ import {
   useTheme,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
-import PersonIcon from '@mui/icons-material/Person';
-import GroupWorkIcon from '@mui/icons-material/GroupWork';
+import PeopleIcon from '@mui/icons-material/People';
 import CorporateFareIcon from '@mui/icons-material/CorporateFare';
+import BusinessIcon from '@mui/icons-material/Business';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import BadgeIcon from '@mui/icons-material/Badge';
+import WorkIcon from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -29,34 +30,33 @@ import ModalAlert from './modals/ModalAlert';
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
 
-const NAV_ITEMS = [
-  { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/' },
-  { label: 'Usuarios', icon: <PersonIcon fontSize="small" />, route: '/usuarios' },
-  { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/organizacion' },
-  { label: 'Departamentos', icon: <GroupWorkIcon fontSize="small" />, route: '/departamentos' },
-  { label: 'Secciones', icon: <GroupWorkIcon fontSize="small" />, route: '/secciones' },
-  { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades' },
-  { label: 'Plazas', icon: <BadgeIcon fontSize="small" />, route: '/plazas' },
+const ALL_NAV_ITEMS = [
+  { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/', adminOnly: false },
+  { label: 'Usuarios', icon: <PeopleIcon fontSize="small" />, route: '/usuarios', adminOnly: true },
+  { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/areas', adminOnly: true },
+  { label: 'Departamentos', icon: <BusinessIcon fontSize="small" />, route: '/departamentos', adminOnly: true },
+  { label: 'Secciones', icon: <ViewModuleIcon fontSize="small" />, route: '/secciones', adminOnly: true },
+  { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades', adminOnly: true },
+  { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
 ];
 
 interface SidebarProps {
-  /** Whether the mobile (temporary) drawer is open. */
   mobileOpen: boolean;
-  /** Closes the mobile drawer. */
   onMobileClose: () => void;
 }
 
 export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  // Desktop-only collapse state (icon rail vs labelled).
   const [collapsed, setCollapsed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Auto-close the mobile drawer whenever we grow past the breakpoint.
+  const isAdmin = user?.role === 'ADMIN';
+  const navItems = ALL_NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
+
   useEffect(() => {
     if (!isMobile) onMobileClose();
   }, [isMobile, onMobileClose]);
@@ -73,13 +73,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     if (isMobile) onMobileClose();
   };
 
-  /**
-   * Renders the drawer body. `showLabels` is true on mobile (full overlay)
-   * and on the expanded desktop rail; false on the collapsed desktop rail.
-   */
   const renderContent = (showLabels: boolean) => (
     <>
-      {/* User section */}
       <Box
         onClick={() => handleNavigate('/ajustes')}
         sx={{
@@ -90,69 +85,28 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           alignItems: 'center',
           cursor: 'pointer',
           transition: 'background-color 0.2s ease',
-          '&:hover': {
-            backgroundColor: '#f5f5f5',
-          },
+          '&:hover': { backgroundColor: '#f5f5f5' },
         }}
       >
         {showLabels ? (
           <>
-            <Avatar
-              sx={{
-                width: 38,
-                height: 38,
-                bgcolor: '#bdbdbd',
-                flexShrink: 0,
-              }}
-            />
-
-            <Box
-              sx={{
-                flex: 1,
-                overflow: 'hidden',
-                mx: 1.5,
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  color: '#999',
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5,
-                  lineHeight: 1,
-                }}
-                display="block"
-              >
+            <Avatar sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }} />
+            <Box sx={{ flex: 1, overflow: 'hidden', mx: 1.5 }}>
+              <Typography variant="caption" sx={{ color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }} display="block">
                 Usuario
               </Typography>
-
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                noWrap
-              >
-                {user
-                  ? `${user.first_name} ${user.last_name}`
-                  : ''}
+              <Typography variant="subtitle2" fontWeight="bold" noWrap>
+                {user ? `${user.first_name} ${user.last_name}` : ''}
               </Typography>
             </Box>
-
-            {/* Prevent navigation when clicking collapse button */}
             <IconButton
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-
-                if (isMobile) {
-                  onMobileClose();
-                } else {
-                  setCollapsed(true);
-                }
+                if (isMobile) onMobileClose();
+                else setCollapsed(true);
               }}
-              sx={{
-                flexShrink: 0,
-                color: '#666',
-              }}
+              sx={{ flexShrink: 0, color: '#666' }}
             >
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
@@ -164,10 +118,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               e.stopPropagation();
               setCollapsed(false);
             }}
-            sx={{
-              mx: 'auto',
-              color: '#666',
-            }}
+            sx={{ mx: 'auto', color: '#666' }}
           >
             <ChevronRightIcon fontSize="small" />
           </IconButton>
@@ -176,9 +127,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
       <Divider />
 
-      {/* Nav items */}
       <List sx={{ py: 1 }}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = location.pathname === item.route;
           return (
             <ListItemButton
@@ -195,12 +145,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 '&.Mui-selected:hover': { backgroundColor: '#e8e8e8' },
               }}
             >
-              <ListItemIcon
-                sx={{
-                  minWidth: showLabels ? 34 : 'auto',
-                  color: active ? '#12457d' : '#555',
-                }}
-              >
+              <ListItemIcon sx={{ minWidth: showLabels ? 34 : 'auto', color: active ? '#12457d' : '#555' }}>
                 {item.icon}
               </ListItemIcon>
               {showLabels && (
@@ -220,7 +165,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
       <Divider />
 
-      {/* Logout */}
       <List sx={{ py: 1 }}>
         <ListItemButton
           onClick={() => setConfirmOpen(true)}
@@ -236,12 +180,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <ListItemIcon sx={{ minWidth: showLabels ? 34 : 'auto', color: '#d32f2f' }}>
             <LogoutIcon fontSize="small" />
           </ListItemIcon>
-          {showLabels && (
-            <ListItemText
-              primary="Cerrar sesión"
-              primaryTypographyProps={{ variant: 'body2', color: '#d32f2f' }}
-            />
-          )}
+          {showLabels && <ListItemText primary="Cerrar sesión" primaryTypographyProps={{ variant: 'body2', color: '#d32f2f' }} />}
         </ListItemButton>
       </List>
     </>
@@ -249,7 +188,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop: permanent collapsible rail */}
       <Box
         sx={{
           display: { xs: 'none', md: 'flex' },
@@ -266,7 +204,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         {renderContent(!collapsed)}
       </Box>
 
-      {/* Mobile: temporary overlay drawer */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
