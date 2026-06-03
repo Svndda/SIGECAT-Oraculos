@@ -152,8 +152,8 @@ export default function DepartmentsPage() {
     }
   };
 
-  const handleDeleteRequest = (id: string) => {
-    setDeleteAlert({ open: true, id });
+  const handleDeleteRequest = (department: Department) => {
+    setDeleteAlert({ open: true, id: department.department_id });
   };
 
   const confirmDelete = async () => {
