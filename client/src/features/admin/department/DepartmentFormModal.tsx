@@ -49,7 +49,7 @@ export default function DepartmentFormModal({
           error={!!formErrors.area_id} helperText={formErrors.area_id} required
         >
           {areas.map((area) => (
-            <MenuItem key={area.id} value={area.id}>{area.name}</MenuItem>
+            <MenuItem key={area.area_id} value={area.area_id}>{area.name}</MenuItem>
           ))}
         </TextField>
         <TextField 

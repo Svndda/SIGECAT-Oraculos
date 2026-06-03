@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -6,19 +6,21 @@ import {
   Button,
   InputAdornment,
   Stack,
+  Pagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { areaService } from '../../../services/areaService';
 import type { Area } from '../../../services/areaService';
-import type { ServiceError } from '../../../services/common';
+import type { PageMeta, ServiceError } from '../../../services/common';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
+const LIMIT = 10;
 const EMPTY_FORM = { name: '', description: '' };
 
 /** Oracle default timestamps look like "28-MAY-26 05.34.02.776554 PM"; show the date part. */
@@ -29,7 +31,11 @@ function formatDate(dateStr: string): string {
 
 export default function OrganizationPage() {
   const [areas, setAreas] = useState<Area[]>([]);
+  const [meta, setMeta] = useState<PageMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [appliedFilter, setAppliedFilter] = useState('');
+  const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Area | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
@@ -40,27 +46,37 @@ export default function OrganizationPage() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  const refreshAreas = useCallback(async () => {
-    try {
-      const { data } = await areaService.getAreas({ limit: 100 });
-      setAreas(data);
-    } catch (error) {
-      const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
-    }
-  }, []);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setAppliedFilter(search.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const loadAreas = (isSubscribed: boolean) => {
+    setLoading(true);
+    areaService.getAreas({ page, limit: LIMIT, filter: appliedFilter })
+      .then((res) => {
+        if (!isSubscribed) return;
+        setAreas(res.data);
+        setMeta(res.meta);
+      })
+      .catch((error) => {
+        if (!isSubscribed) return;
+        const e = error as ServiceError;
+        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+      })
+      .finally(() => { if (isSubscribed) setLoading(false); });
+  };
 
   useEffect(() => {
-    void refreshAreas();
-  }, [refreshAreas]);
+    let isSubscribed = true;
+    loadAreas(isSubscribed);
+    return () => { isSubscribed = false; };
+  }, [page, appliedFilter]);
 
-  const filtered = useMemo(() =>
-    areas.filter((a) =>
-      [a.name, a.description ?? '']
-        .join(' ')
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    ), [areas, search]);
+  const totalPages = meta?.total_pages ?? 1;
 
   const openCreate = () => {
     setEditTarget(null);
@@ -95,8 +111,8 @@ export default function OrganizationPage() {
         await areaService.createArea(payload);
         setSuccessMsg('Área creada correctamente.');
       }
-      await refreshAreas();
       setFormOpen(false);
+      loadAreas(true);
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
@@ -112,7 +128,7 @@ export default function OrganizationPage() {
     try {
       await areaService.deleteArea(deleteTarget.area_id);
       setDeleteTarget(null);
-      await refreshAreas();
+      loadAreas(true);
       setSuccessMsg('Área eliminada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
@@ -131,12 +147,10 @@ export default function OrganizationPage() {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
-      {/* Header */}
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
         Áreas
       </Typography>
 
-      {/* Toolbar */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
         <TextField
           value={search}
@@ -174,16 +188,27 @@ export default function OrganizationPage() {
 
       <DataTable
         columns={COLS}
-        items={filtered}
+        items={areas}
         getKey={(area) => area.area_id}
         actions={[
           { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
           { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
         ]}
-        emptyMessage="No se encontraron áreas."
+        emptyMessage={loading ? 'Cargando...' : 'No se encontraron áreas.'}
       />
 
-      {/* Create / Edit modal */}
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            shape="rounded"
+          />
+        </Box>
+      )}
+
       <ModalForm
         open={formOpen}
         title={editTarget ? 'Editar Área' : 'Añadir Área'}
@@ -215,7 +240,6 @@ export default function OrganizationPage() {
         </Stack>
       </ModalForm>
 
-      {/* Delete confirmation */}
       <ModalAlert
         open={!!deleteTarget}
         title="Eliminar área"

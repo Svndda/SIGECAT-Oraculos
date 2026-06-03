@@ -93,7 +93,7 @@ export default function DepartmentsPage() {
   const totalPages = meta?.total_pages ?? 1;
   const areaMap = useMemo(() => {
     const map = new Map<string, string>();
-    areas.forEach(a => map.set(a.id, a.name));
+    areas.forEach(a => map.set(a.area_id, a.name));
     return map;
   }, [areas]);
 

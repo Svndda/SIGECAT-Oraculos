@@ -65,7 +65,7 @@ final class AreaResponseDTO {
 
   /**
    * @return array{
-   *   id: string,
+   *   area_id: string,
    *   name: string,
    *   description: string|null,
    *   created_at: string,
@@ -76,7 +76,7 @@ final class AreaResponseDTO {
    */
   public function toArray(): array {
     return [
-      'id'          => $this->id,
+      'area_id'     => $this->id,
       'name'        => $this->name,
       'description' => $this->description,
       'created_at'  => $this->createdAt,
