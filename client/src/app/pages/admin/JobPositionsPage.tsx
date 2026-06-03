@@ -7,6 +7,7 @@ import {
   InputAdornment,
   Stack,
   MenuItem,
+  Pagination,
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import SearchIcon from '@mui/icons-material/Search';
@@ -27,11 +28,13 @@ import type {
   CreateJobPositionPayload,
   UpdateJobPositionPayload,
 } from '../../../services/jobPositionService';
-import type { OrgOption, ServiceError } from '../../../services/common';
+import type { OrgOption, PageMeta, ServiceError } from '../../../services/common';
 import ModalForm from '../../../components/modals/ModalForm';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+
+const LIMIT = 10;
 
 const EMPTY_FORM = {
   job_position_number: '',
@@ -56,12 +59,18 @@ function formatDate(dateStr: string): string {
 
 export default function JobPositionsPage() {
   const [jobPositions, setJobPositions] = useState<JobPosition[]>([]);
+  const [meta, setMeta] = useState<PageMeta | null>(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [appliedFilter, setAppliedFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const [areas, setAreas] = useState<Area[]>([]);
   const [departments, setDepartments] = useState<OrgOption[]>([]);
   const [sections, setSections] = useState<OrgOption[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [types, setTypes] = useState<JobPositionType[]>([]);
-  const [search, setSearch] = useState('');
+
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<JobPosition | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JobPosition | null>(null);
@@ -72,29 +81,51 @@ export default function JobPositionsPage() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  const refreshJobPositions = useCallback(async () => {
-    try {
-      const { data } = await jobPositionService.getJobPositions({ limit: 100 });
-      setJobPositions(data);
-    } catch (error) {
-      const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
-    }
-  }, []);
+  // Debounce search → appliedFilter and reset to page 1.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setAppliedFilter(search.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const loadJobPositions = useCallback((isSubscribed: boolean) => {
+    setLoading(true);
+    jobPositionService.getJobPositions({ page, limit: LIMIT, filter: appliedFilter })
+      .then((res) => {
+        if (!isSubscribed) return;
+        setJobPositions(res.data);
+        setMeta(res.meta);
+      })
+      .catch((error) => {
+        if (!isSubscribed) return;
+        const e = error as ServiceError;
+        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+      })
+      .finally(() => { if (isSubscribed) setLoading(false); });
+  }, [page, appliedFilter]);
 
   useEffect(() => {
-    void refreshJobPositions();
-    // Option sources for the create form.
+    let isSubscribed = true;
+    loadJobPositions(isSubscribed);
+    return () => { isSubscribed = false; };
+  }, [loadJobPositions]);
+
+  // Option sources for create/edit form — loaded once.
+  useEffect(() => {
     jobPositionService.getJobPositionTypes().then(setTypes).catch(() => undefined);
     areaService.getAreas({ limit: 100 }).then(({ data }) => setAreas(data)).catch(() => undefined);
     unitService.getUnits({ limit: 100 }).then(({ data }) => setUnits(data)).catch(() => undefined);
     departmentService.getDepartments({ limit: 100 }).then(setDepartments).catch(() => undefined);
     sectionService.getSections({ limit: 100 }).then(setSections).catch(() => undefined);
-  }, [refreshJobPositions]);
+  }, []);
+
+  const totalPages = meta?.total_pages ?? 1;
 
   // Name lookups for each parent kind, to render a job position's owning entity.
   const lookups = useMemo(() => ({
-    area: new Map(areas.map((a) => [a.id, a.name])),
+    area: new Map(areas.map((a) => [a.area_id, a.name])),
     department: new Map(departments.map((d) => [d.id, d.name])),
     section: new Map(sections.map((s) => [s.id, s.name])),
     unit: new Map(units.map((u) => [u.id, u.name])),
@@ -111,21 +142,13 @@ export default function JobPositionsPage() {
   // Options for the entity dropdown, depending on the selected parent type.
   const parentOptions: OrgOption[] = useMemo(() => {
     switch (form.parentType) {
-      case 'area': return areas.map((a) => ({ id: a.id, name: a.name }));
+      case 'area': return areas.map((a) => ({ id: a.area_id, name: a.name }));
       case 'department': return departments;
       case 'section': return sections;
       case 'unit': return units.map((u) => ({ id: u.id, name: u.name }));
       default: return [];
     }
   }, [form.parentType, areas, departments, sections, units]);
-
-  const filtered = useMemo(() =>
-    jobPositions.filter((p) =>
-      [p.name, p.description ?? '', parentLabel(p)]
-        .join(' ')
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    ), [jobPositions, search, parentLabel]);
 
   const columns: DataColumn<JobPosition>[] = [
     { label: 'Número', flex: '0 0 18%', primary: true, render: (p) => p.job_position_number },
@@ -200,8 +223,8 @@ export default function JobPositionsPage() {
         await jobPositionService.createJobPosition(payload);
         setSuccessMsg('Plaza creada correctamente.');
       }
-      await refreshJobPositions();
       setFormOpen(false);
+      loadJobPositions(true);
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
@@ -217,7 +240,7 @@ export default function JobPositionsPage() {
     try {
       await jobPositionService.deleteJobPosition(deleteTarget.id);
       setDeleteTarget(null);
-      await refreshJobPositions();
+      loadJobPositions(true);
       setSuccessMsg('Plaza eliminada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
@@ -280,14 +303,27 @@ export default function JobPositionsPage() {
 
       <DataTable
         columns={columns}
-        items={filtered}
+        items={jobPositions}
         getKey={(p) => p.id}
+        loading={loading}
         actions={[
           { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
           { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
         ]}
-        emptyMessage="No se encontraron plazas."
+        emptyMessage={loading ? 'Cargando...' : 'No se encontraron plazas.'}
       />
+
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            shape="rounded"
+          />
+        </Box>
+      )}
 
       <ModalForm
         open={formOpen}
@@ -332,7 +368,6 @@ export default function JobPositionsPage() {
             label="Tipo de entidad"
             value={form.parentType}
             onChange={(e) => {
-              // Reset the chosen entity when the parent kind changes.
               setForm((prev) => ({ ...prev, parentType: e.target.value as JobPositionParentType, parentId: '' }));
               setFormErrors((prev) => ({ ...prev, parentType: undefined, parentId: undefined }));
             }}

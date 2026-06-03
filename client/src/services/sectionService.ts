@@ -28,8 +28,11 @@ export const sectionService = {
   /** Sections as selectable options (normalized to {id, name}). */
   async getSections(params: ListParams = {}): Promise<OrgOption[]> {
     try {
-      const res = await apiClient.get<{ data: OrgOption[] }>('/sections', { params });
-      return res.data.data ?? [];
+      const res = await apiClient.get<{ data: Array<{ id?: string; section_id?: string; SECTION_ID?: string; name?: string; NAME?: string }> }>('/sections', { params });
+      return (res.data.data ?? []).map((s) => ({
+        id: s.id ?? s.section_id ?? s.SECTION_ID ?? '',
+        name: s.name ?? s.NAME ?? '',
+      }));
     } catch (e) { throw extractApiError(e); }
   },
 
