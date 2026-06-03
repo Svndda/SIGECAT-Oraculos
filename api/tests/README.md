@@ -14,6 +14,29 @@ Tests para los casos del documento de especificación. Cada `tcXX_*.php` es un s
 | TC-06 | `tc06_dto_weak_password.php`     | Unitario (DTO)  | No              |
 | TC-07 | `tc07_sql_injection.php`          | Unitario (DB)   | No (sí DB)      |
 | TC-08 | `tc08_invalid_json.php`           | HTTP end-to-end | Sí              |
+| TC-09 | `tc09_area_dto_validation.php`           | Unitario (DTO) | No |
+| TC-10 | `tc10_area_response_dto.php`             | Unitario (DTO) | No |
+| TC-11 | `tc11_department_dto_validation.php`     | Unitario (DTO) | No |
+| TC-12 | `tc12_section_dto_validation.php`        | Unitario (DTO) | No |
+| TC-13 | `tc13_unit_dto_validation.php`           | Unitario (DTO) | No |
+| TC-14 | `tc14_job_position_dto_validation.php`   | Unitario (DTO) | No |
+| TC-15 | `tc15_job_position_parent_mapping.php`   | Unitario (DTO) | No |
+| TC-16 | `tc16_job_position_update_dto.php`       | Unitario (DTO) | No |
+| TC-17 | `tc17_unit_response_dto.php`             | Unitario (DTO) | No |
+
+## Pruebas de entidades (TC-09..17)
+
+Cubren la lógica de negocio de las entidades organizativas (área, departamento,
+sección, unidad, plaza) a nivel de DTO — validación y mapeo de respuesta — sin
+necesidad de servidor ni base de datos. Incluyen regresiones de los bugs
+corregidos recientemente:
+
+- **TC-10** fija el contrato `area_id` del `AreaResponseDTO` (bug "Error al
+  eliminar / El recurso 'Área' no pudo ser localizado").
+- **TC-14/TC-15** cubren la regla "una plaza pertenece a exactamente una
+  entidad", detrás de los errores `ORA-02290` / `ORA-01722` de creación de plazas.
+- **TC-17** verifica la normalización de claves Oracle en el listado de unidades
+  (bug del select de entidad que no se podía elegir).
 
 ## Precondiciones
 
