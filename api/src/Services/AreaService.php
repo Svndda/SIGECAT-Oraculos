@@ -129,7 +129,7 @@ class AreaService {
    *
    * @param string $status One of active|deleted|all (default active). With
    *                       'active', a soft-deleted area returns 404.
-   * @return array{id: string, name: string, description: string|null, created_at: string, created_by: string, is_deleted: int, deleted_at: string|null}
+   * @return array{area_id: string, name: string, description: string|null, created_at: string, created_by: string, is_deleted: int, deleted_at: string|null}
    * @throws ApiException
    */
   public function getById(string $areaId, string $status = 'active'): array {

@@ -124,8 +124,8 @@ class SectionService {
    *
    * @param string $status One of active|deleted|all (default active). With
    *                       'active', a soft-deleted section returns 404.
-   * @return array{section_id: string, name: string|null, description: string|null,
- *   is_deleted: int, deleted_at: string|null}
+   * @return array{section_id: string, area_id: string, name: string|null, description: string|null,
+ *   created_at: string, created_by: string}
    * @throws ApiException
    */
   public function getById(string $sectionId, string $status = 'active'): array {
@@ -133,14 +133,12 @@ class SectionService {
       throw new ApiException(ErrorType::missingField('section_id'));
     }
 
-    $status = $this->normalizeStatus($status);
-
     $row = $this->sectionRepository->findById($sectionId);
     if ($row === null) {
       throw new ApiException(ErrorType::notFound('Section'));
     }
 
-    return UpdateSectionDTO::fromArray($row)->toArray();
+    return $row;
   }
 
   /**
