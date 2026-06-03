@@ -7,11 +7,11 @@ import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
-import OrganizationPage from './pages/admin/OrganizationPage';
+import AreasPage from './pages/admin/AreasPage.tsx';
 import UnitsPage from './pages/admin/UnitsPage';
 import JobPositionsPage from './pages/admin/JobPositionsPage';
 import UsersPage from './pages/admin/UsersPage';
-import SettingsPage from './pages/admin/SettingsPage';
+import SettingsPage from './pages/SettingsPage.tsx';
 import { RecordsProvider } from '../context/RecordsContext';
 import { AuthProvider } from '../context/AuthContext';
 import PrivateRoute from '../components/PrivateRoute';
@@ -19,7 +19,6 @@ import DepartmentsPage from './pages/admin/DepartmentsPage';
 import RoleRoute from "../components/RoleRoute.tsx";
 import AccessDeniedPage from "./pages/AccessDeniedPage.tsx";
 import SectionsPage from './pages/admin/SectionsPage.tsx';
-
 
 function App() {
   return (
@@ -43,9 +42,8 @@ function App() {
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />
                 <Route path="ajustes" element={<SettingsPage />} />
 
-
                 <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
-                  <Route path="organizacion" element={<OrganizationPage />} />
+                  <Route path="areas" element={<AreasPage />} />
                   <Route path="unidades" element={<UnitsPage />} />
                   <Route path="secciones" element={<SectionsPage />} />
                   <Route path="departamentos" element={<DepartmentsPage />} />

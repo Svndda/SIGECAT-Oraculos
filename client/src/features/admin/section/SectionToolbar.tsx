@@ -42,7 +42,6 @@ export default function SectionToolbar({ search, onSearchChange, onAddClick }: S
             fontWeight: 600,
             textTransform: 'none',
             fontSize: '0.9rem',
-            width: { xs: '100%', sm: 'auto' },
           }}
         >
           Añadir Sección

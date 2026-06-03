@@ -1,36 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  InputAdornment,
-  Pagination,
-  Stack,
-  MenuItem,
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { Box, Pagination } from '@mui/material';
 import { unitService } from '../../../services/unitService';
 import type { Unit, CreateUnitPayload, UpdateUnitPayload } from '../../../services/unitService';
 import { departmentService } from '../../../services/departmentService';
 import { sectionService } from '../../../services/sectionService';
 import type { OrgOption, PageMeta, ServiceError } from '../../../services/common';
-import DataTable, { type DataColumn } from '../../../components/DataTable';
-import ModalForm from '../../../components/modals/ModalForm';
+import UnitToolbar from '../../../features/admin/unit/UnitToolbar';
+import UnitList from '../../../features/admin/unit/UnitList';
+import UnitFormModal from '../../../features/admin/unit/UnitFormModal';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
 const LIMIT = 10;
-
 type AssignmentType = 'department' | 'section';
-
-const ASSIGNMENT_TYPES: { value: AssignmentType; label: string }[] = [
-  { value: 'department', label: 'Departamento' },
-  { value: 'section', label: 'Sección' },
-];
 
 const EMPTY_FORM = {
   name: '',
@@ -39,12 +22,6 @@ const EMPTY_FORM = {
   assignmentId: '',
 };
 
-/** Oracle default timestamps look like "28-MAY-26 05.34.02.776554 PM"; show the date part. */
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '—';
-  return dateStr.split(' ')[0];
-}
-
 export default function UnitsPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
@@ -52,7 +29,6 @@ export default function UnitsPage() {
   const [search, setSearch] = useState('');
   const [appliedFilter, setAppliedFilter] = useState('');
   const [loading, setLoading] = useState(false);
-
   const [departments, setDepartments] = useState<OrgOption[]>([]);
   const [sections, setSections] = useState<OrgOption[]>([]);
 
@@ -67,7 +43,7 @@ export default function UnitsPage() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Debounce the search input into appliedFilter and reset to page 1.
+  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => {
       setAppliedFilter(search.trim());
@@ -95,7 +71,7 @@ export default function UnitsPage() {
     void loadUnits();
   }, [loadUnits]);
 
-  // Option sources for the create form, also used to label each unit's owner.
+  // Cargar opciones para los selects
   useEffect(() => {
     departmentService.getDepartments({ limit: 100 }).then(setDepartments).catch(() => undefined);
     sectionService.getSections({ limit: 100 }).then(setSections).catch(() => undefined);
@@ -119,15 +95,6 @@ export default function UnitsPage() {
       default: return [];
     }
   }, [form.assignmentType, departments, sections]);
-
-  const totalPages = meta?.total_pages ?? 1;
-
-  const columns: DataColumn<Unit>[] = [
-    { label: 'Nombre', flex: '0 0 26%', primary: true, render: (u) => u.name },
-    { label: 'Descripción', flex: '1', truncate: true, render: (u) => u.description ?? '—' },
-    { label: 'Pertenece a', flex: '0 0 22%', truncate: true, render: (u) => belongsTo(u) },
-    { label: 'Fecha de creación', flex: '0 0 18%', meta: true, render: (u) => formatDate(u.created_at) },
-  ];
 
   const openCreate = () => {
     setEditTarget(null);
@@ -153,9 +120,6 @@ export default function UnitsPage() {
     if (formErrors[field]) setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const handleText = (field: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setField(field, e.target.value);
-
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
     if (!form.name.trim()) errors.name = 'El nombre es requerido.';
@@ -170,15 +134,12 @@ export default function UnitsPage() {
     setIsSubmitting(true);
     try {
       if (editTarget) {
-        // The assignment type is locked on edit, so only the entity within the
-        // same kind can change (the backend update cannot clear the other column).
         const payload: UpdateUnitPayload = {
           name: form.name.trim(),
           description: form.description.trim(),
         };
         if (form.assignmentType === 'department') payload.department_id = form.assignmentId;
         else if (form.assignmentType === 'section') payload.section_id = form.assignmentId;
-
         await unitService.updateUnit(editTarget.id, payload);
         setSuccessMsg('Unidad actualizada correctamente.');
       } else {
@@ -188,7 +149,6 @@ export default function UnitsPage() {
         };
         if (form.assignmentType === 'department') payload.department_id = form.assignmentId;
         else if (form.assignmentType === 'section') payload.section_id = form.assignmentId;
-
         await unitService.createUnit(payload);
         setSuccessMsg('Unidad creada correctamente.');
       }
@@ -214,68 +174,26 @@ export default function UnitsPage() {
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
-      setDeleteTarget(null);
       setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const totalPages = meta?.total_pages ?? 1;
+
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
-        Unidades
-      </Typography>
+      <UnitToolbar search={search} onSearchChange={setSearch} onAddClick={openCreate} />
 
-      {/* Toolbar */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
-        <TextField
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre"
-          size="small"
-          sx={{ width: { xs: '100%', sm: 280 }, backgroundColor: 'white', borderRadius: 1 }}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
-        <Button
-          variant="contained"
-          onClick={openCreate}
-          sx={{
-            backgroundColor: '#1a2b4a',
-            '&:hover': { backgroundColor: '#111d33' },
-            px: 3,
-            fontWeight: 600,
-            textTransform: 'none',
-            fontSize: '0.9rem',
-            width: { xs: '100%', sm: 'auto' },
-          }}
-        >
-          Añadir Unidad
-        </Button>
-      </Box>
-
-      <DataTable
-        columns={columns}
-        items={units}
-        getKey={(unit) => unit.id}
+      <UnitList
+        units={units}
         loading={loading}
-        actions={[
-          { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
-          { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
-        ]}
-        emptyMessage="No se encontraron unidades."
+        onEdit={openEdit}
+        onDelete={setDeleteTarget}
+        belongsTo={belongsTo}
       />
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Pagination
@@ -288,82 +206,18 @@ export default function UnitsPage() {
         </Box>
       )}
 
-      {/* Create / Edit modal */}
-      <ModalForm
+      <UnitFormModal
         open={formOpen}
-        title={editTarget ? 'Editar Unidad' : 'Añadir Unidad'}
+        isEditing={!!editTarget}
+        form={form}
+        formErrors={formErrors}
+        assignmentOptions={assignmentOptions}
+        isSubmitting={isSubmitting}
         onClose={() => setFormOpen(false)}
         onConfirm={handleConfirm}
-        confirmLabel={editTarget ? 'Guardar cambios' : 'Confirmar'}
-        isSubmitting={isSubmitting}
-      >
-        <Stack spacing={2.5} sx={{ pt: 1 }}>
-          <TextField
-            label="Nombre"
-            value={form.name}
-            onChange={handleText('name')}
-            size="small"
-            fullWidth
-            error={!!formErrors.name}
-            helperText={formErrors.name}
-            required
-          />
-          <TextField
-            select
-            label="Tipo de asignación"
-            value={form.assignmentType}
-            onChange={(e) => {
-              // Reset the chosen entity when the assignment kind changes.
-              setForm((prev) => ({ ...prev, assignmentType: e.target.value as AssignmentType, assignmentId: '' }));
-              setFormErrors((prev) => ({ ...prev, assignmentType: undefined, assignmentId: undefined }));
-            }}
-            size="small"
-            fullWidth
-            disabled={!!editTarget}
-            error={!!formErrors.assignmentType}
-            helperText={editTarget ? 'El tipo de asignación no se puede cambiar.' : formErrors.assignmentType}
-            required
-          >
-            {ASSIGNMENT_TYPES.map((t) => (
-              <MenuItem key={t.value} value={t.value}>
-                {t.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Entidad"
-            value={form.assignmentId}
-            onChange={handleText('assignmentId')}
-            size="small"
-            fullWidth
-            disabled={!form.assignmentType}
-            error={!!formErrors.assignmentId}
-            helperText={
-              formErrors.assignmentId ??
-              (form.assignmentType && assignmentOptions.length === 0 ? 'No hay entidades de este tipo registradas.' : '')
-            }
-            required
-          >
-            {assignmentOptions.map((o) => (
-              <MenuItem key={o.id} value={o.id}>
-                {o.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="Descripción"
-            value={form.description}
-            onChange={handleText('description')}
-            size="small"
-            fullWidth
-            multiline
-            rows={3}
-          />
-        </Stack>
-      </ModalForm>
+        onFieldChange={setField}
+      />
 
-      {/* Delete confirmation */}
       <ModalAlert
         open={!!deleteTarget}
         title="Eliminar unidad"

@@ -10,13 +10,13 @@ import {
   CircularProgress,
   Grid,
 } from '@mui/material';
-import { jobPositionService } from '../../../services/jobPositionService';
-import { userService, type UpdateProfilePayload } from '../../../services/userService';
-import { authService } from '../../../services/authService';
-import type { ServiceError } from '../../../services/common';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
-import { validateInstitutionalEmail } from '../../../utils/validation';
+import { jobPositionService } from '../../services/jobPositionService.ts';
+import { userService, type UpdateProfilePayload } from '../../services/userService.ts';
+import { authService } from '../../services/authService.ts';
+import type { ServiceError } from '../../services/common.ts';
+import ModalError from '../../components/modals/ModalError.tsx';
+import ModalSuccess from '../../components/modals/ModalSuccess.tsx';
+import { validateInstitutionalEmail } from '../../utils/validation.ts';
 
 // Función para dividir "Juan Carlos" → { first_name: "Juan", second_name: "Carlos" }
 const splitFullName = (fullName: string) => {

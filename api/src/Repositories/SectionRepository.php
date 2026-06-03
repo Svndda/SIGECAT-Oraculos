@@ -259,15 +259,68 @@ final class SectionRepository extends Repository
     }
   }
 
-  public function countSections(string $filter = '', string $status = 'active'): int {
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS total
-       FROM AREAS
-       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status)
-    );
-    $stmt->execute([':filter' => '%' . $filter . '%']);
+  /**
+   * Counts the total number of sections matching the filter and status.
+   *
+   * @param string $filter Search filter (applies to name, case-insensitive).
+   * @param string $status One of 'active', 'deleted', 'all'.
+   * @return int Total count.
+   */
+  public function countSections(string $filter = '', string $status = 'active'): int
+  {
+    $sql = '
+        SELECT COUNT(*) AS total
+        FROM SECTIONS
+        WHERE 1 = 1' . $this->statusCondition($status);
+
+    // Add name filter if provided
+    if ($filter !== '') {
+      $sql .= ' AND UPPER(name) LIKE UPPER(:filter)';
+    }
+
+    $stmt = $this->db->prepare($sql);
+
+    if ($filter !== '') {
+      $stmt->bindValue(':filter', '%' . $filter . '%');
+    }
+
+    $stmt->execute();
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
+  }
+
+  /**
+   * Returns a paginated list of sections with optional filter and status.
+   *
+   * @param int $offset Number of records to skip.
+   * @param int $limit  Maximum number of records to return.
+   * @param string $filter Search filter (name).
+   * @param string $status One of 'active', 'deleted', 'all'.
+   * @return array<int, array<string, mixed>>
+   */
+  public function getSections(int $offset, int $limit, string $filter = '', string $status = 'active'): array
+  {
+    $sql = '
+        SELECT section_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at
+        FROM SECTIONS
+        WHERE 1 = 1' . $this->statusCondition($status);
+
+    if ($filter !== '') {
+      $sql .= ' AND UPPER(name) LIKE UPPER(:filter)';
+    }
+
+    $sql .= ' ORDER BY created_at DESC OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY';
+
+    $stmt = $this->db->prepare($sql);
+
+    if ($filter !== '') {
+      $stmt->bindValue(':filter', '%' . $filter . '%');
+    }
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
   /**
@@ -280,23 +333,5 @@ final class SectionRepository extends Repository
       'all'     => '',
       default   => ' AND is_deleted = 0',
     };
-  }
-
-    /**
-   * @return array<int, array<string, mixed>>
-   */
-  public function getSections(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
-    $stmt = $this->db->prepare(
-      'SELECT section_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at
-       FROM SECTIONS
-       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
-       ORDER BY created_at DESC
-       OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
-    );
-    $stmt->bindValue(':filter', '%' . $filter . '%');
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 }

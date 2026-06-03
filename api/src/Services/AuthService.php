@@ -76,7 +76,7 @@ final class AuthService
     // Reset attempts on successful login
     $this->userRepository->resetFailedAttempts($userId);
 
-    $accessTtl = 60;
+    $accessTtl = 60 * 5;
     $refreshTtl = 3600; // 1 Hour
 
     $rawAccessToken = bin2hex(random_bytes(32));
@@ -136,7 +136,7 @@ final class AuthService
     }
 
     $userId = $stored['user_id'];
-    $accessTtl = 60;
+    $accessTtl = 60 * 5;
     $refreshTtl = 3600; // 1 Hour
 
     // Generate new raw tokens

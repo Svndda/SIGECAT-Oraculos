@@ -1,5 +1,5 @@
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import type { Section } from '../../../services/sectionService';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 
@@ -32,8 +32,8 @@ export default function SectionList({ sections, loading, areaMap, onEdit, onDele
       loading={loading}
       minWidth={800}
       actions={[
-        { icon: <EditIcon fontSize="small" />, label: 'Editar', onClick: onEdit },
-        { icon: <DeleteIcon fontSize="small" />, label: 'Eliminar', onClick: onDelete },
+        { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: onEdit },
+        { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: onDelete },
       ]}
       emptyMessage="No se encontraron secciones."
     />

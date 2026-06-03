@@ -1,21 +1,11 @@
-import { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  InputAdornment,
-  Stack,
-  Pagination,
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { useState, useEffect, useCallback } from 'react';
+import { Box, Pagination } from '@mui/material';
 import { areaService } from '../../../services/areaService';
 import type { Area } from '../../../services/areaService';
 import type { PageMeta, ServiceError } from '../../../services/common';
-import DataTable, { type DataColumn } from '../../../components/DataTable';
-import ModalForm from '../../../components/modals/ModalForm';
+import AreaToolbar from '../../../features/admin/area/AreaToolbar';
+import AreaList from '../../../features/admin/area/AreaList';
+import AreaFormModal from '../../../features/admin/area/AreaFormModal';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
@@ -23,13 +13,7 @@ import ModalAlert from '../../../components/modals/ModalAlert';
 const LIMIT = 10;
 const EMPTY_FORM = { name: '', description: '' };
 
-/** Oracle default timestamps look like "28-MAY-26 05.34.02.776554 PM"; show the date part. */
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '—';
-  return dateStr.split(' ')[0];
-}
-
-export default function OrganizationPage() {
+export default function AreasPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -54,27 +38,23 @@ export default function OrganizationPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const loadAreas = (isSubscribed: boolean) => {
+  const loadAreas = useCallback(() => {
     setLoading(true);
-    areaService.getAreas({ page, limit: LIMIT, filter: appliedFilter })
+    return areaService.getAreas({ page, limit: LIMIT, filter: appliedFilter })
       .then((res) => {
-        if (!isSubscribed) return;
         setAreas(res.data);
         setMeta(res.meta);
       })
       .catch((error) => {
-        if (!isSubscribed) return;
         const e = error as ServiceError;
         setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
       })
-      .finally(() => { if (isSubscribed) setLoading(false); });
-  };
+      .finally(() => setLoading(false));
+  }, [page, appliedFilter]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    loadAreas(isSubscribed);
-    return () => { isSubscribed = false; };
-  }, [page, appliedFilter]);
+    void loadAreas();
+  }, [loadAreas]);
 
   const totalPages = meta?.total_pages ?? 1;
 
@@ -111,8 +91,8 @@ export default function OrganizationPage() {
         await areaService.createArea(payload);
         setSuccessMsg('Área creada correctamente.');
       }
+      await loadAreas();
       setFormOpen(false);
-      loadAreas(true);
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
@@ -128,12 +108,11 @@ export default function OrganizationPage() {
     try {
       await areaService.deleteArea(deleteTarget.area_id);
       setDeleteTarget(null);
-      loadAreas(true);
+      await loadAreas();
       setSuccessMsg('Área eliminada correctamente.');
       setSuccessOpen(true);
     } catch (error) {
       const e = error as ServiceError;
-      setDeleteTarget(null);
       setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
     } finally {
       setIsSubmitting(false);
@@ -147,54 +126,13 @@ export default function OrganizationPage() {
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: '#1a1a1a' }}>
-        Áreas
-      </Typography>
+      <AreaToolbar search={search} onSearchChange={setSearch} onAddClick={openCreate} />
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
-        <TextField
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar"
-          size="small"
-          sx={{ width: { xs: '100%', sm: 260 }, backgroundColor: 'white', borderRadius: 1 }}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <SearchIcon sx={{ color: '#999', fontSize: 20 }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
-        <Button
-          variant="contained"
-          onClick={openCreate}
-          sx={{
-            backgroundColor: '#1a2b4a',
-            '&:hover': { backgroundColor: '#111d33' },
-            px: 3,
-            fontWeight: 600,
-            textTransform: 'none',
-            fontSize: '0.9rem',
-            width: { xs: '100%', sm: 'auto' },
-          }}
-        >
-          Añadir Área
-        </Button>
-      </Box>
-
-      <DataTable
-        columns={COLS}
-        items={areas}
-        getKey={(area) => area.area_id}
-        actions={[
-          { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: openEdit },
-          { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: setDeleteTarget },
-        ]}
-        emptyMessage={loading ? 'Cargando...' : 'No se encontraron áreas.'}
+      <AreaList
+        areas={areas}
+        loading={loading}
+        onEdit={openEdit}
+        onDelete={setDeleteTarget}
       />
 
       {totalPages > 1 && (
@@ -209,36 +147,16 @@ export default function OrganizationPage() {
         </Box>
       )}
 
-      <ModalForm
+      <AreaFormModal
         open={formOpen}
-        title={editTarget ? 'Editar Área' : 'Añadir Área'}
+        isEditing={!!editTarget}
+        form={form}
+        formErrors={formErrors}
+        isSubmitting={isSubmitting}
         onClose={() => setFormOpen(false)}
         onConfirm={handleConfirm}
-        confirmLabel={editTarget ? 'Guardar cambios' : 'Confirmar'}
-        isSubmitting={isSubmitting}
-      >
-        <Stack spacing={2.5} sx={{ pt: 1 }}>
-          <TextField
-            label="Nombre"
-            value={form.name}
-            onChange={handleFormChange('name')}
-            size="small"
-            fullWidth
-            error={!!formErrors.name}
-            helperText={formErrors.name}
-            required
-          />
-          <TextField
-            label="Descripción"
-            value={form.description}
-            onChange={handleFormChange('description')}
-            size="small"
-            fullWidth
-            multiline
-            rows={3}
-          />
-        </Stack>
-      </ModalForm>
+        onChange={handleFormChange}
+      />
 
       <ModalAlert
         open={!!deleteTarget}
@@ -265,9 +183,3 @@ export default function OrganizationPage() {
     </Box>
   );
 }
-
-const COLS: DataColumn<Area>[] = [
-  { label: 'Nombre', flex: '0 0 26%', primary: true, render: (a) => a.name },
-  { label: 'Descripción', flex: '1', truncate: true, render: (a) => a.description ?? '—' },
-  { label: 'Fecha de creación', flex: '0 0 20%', meta: true, render: (a) => formatDate(a.created_at) },
-];
