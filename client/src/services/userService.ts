@@ -12,11 +12,12 @@ export interface AdminUser {
 
 export interface RegisterUserPayload {
   first_name: string;
-  last_name: string;
+  second_name?: string;
+  first_last_name: string;
+  second_last_name: string;
   email: string;
   role: 'admin' | 'employee';
   password: string;
-  created_by: string;
 }
 
 export interface UserProfile {
@@ -81,8 +82,8 @@ export const userService = {
       const user: AdminUser = {
         id: Date.now().toString(),
         email: payload.email,
-        first_name: payload.first_name,
-        last_name: payload.last_name,
+        first_name: [payload.first_name, payload.second_name].filter(Boolean).join(' '),
+        last_name: `${payload.first_last_name} ${payload.second_last_name}`,
         role: payload.role,
       };
       mockUsers = [user, ...mockUsers];
@@ -93,8 +94,8 @@ export const userService = {
       return {
         id: '',
         email: payload.email,
-        first_name: payload.first_name,
-        last_name: payload.last_name,
+        first_name: [payload.first_name, payload.second_name].filter(Boolean).join(' '),
+        last_name: `${payload.first_last_name} ${payload.second_last_name}`,
         role: payload.role,
       };
     } catch (e) { throw extractApiError(e); }
