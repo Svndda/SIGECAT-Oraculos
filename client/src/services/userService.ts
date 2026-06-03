@@ -19,6 +19,23 @@ export interface RegisterUserPayload {
   created_by: string;
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  job_class_id?: string | null;
+}
+
+export interface UpdateProfilePayload {
+  first_name?: string;
+  second_name?: string;
+  first_last_name?: string;
+  second_last_name?: string;
+  email?: string;
+}
+
 const USE_MOCK = false;
 
 const INITIAL_USERS: AdminUser[] = [
@@ -81,5 +98,24 @@ export const userService = {
         role: payload.role,
       };
     } catch (e) { throw extractApiError(e); }
+  },
+
+  async getProfile(): Promise<UserProfile> {
+    try {
+      // Consume el endpoint GET /users/me del UserController
+      const res = await apiClient.get<{ data: UserProfile }>('/users/me');
+      return res.data.data;
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
+  async updateProfile(payload: UpdateProfilePayload): Promise<void> {
+    try {
+      // Consume el endpoint PATCH /users/me mapeado al UpdateUserDTO
+      await apiClient.patch('/users/me', payload);
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 };

@@ -41,6 +41,8 @@ function App() {
                 <Route path="employee-form" element={<EmployeeFormPage />} />
                 <Route path="work-hours" element={<WorkHoursPage />} />
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />
+                <Route path="ajustes" element={<SettingsPage />} />
+
 
                 <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
                   <Route path="organizacion" element={<OrganizationPage />} />
@@ -49,7 +51,6 @@ function App() {
                   <Route path="departamentos" element={<DepartmentsPage />} />
                   <Route path="plazas" element={<JobPositionsPage />} />
                   <Route path="usuarios" element={<UsersPage />} />
-                  <Route path="ajustes" element={<SettingsPage />} />
                 </Route>
               </Route>
             </Route>
