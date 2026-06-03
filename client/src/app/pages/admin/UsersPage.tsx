@@ -7,13 +7,11 @@ import {
   Stack,
   MenuItem,
   InputAdornment,
-  IconButton,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import { userService } from '../../../services/userService';
 import { jobClassService } from '../../../services/jobClassService';
@@ -22,6 +20,7 @@ import type { JobClass } from '../../../services/jobClassService';
 import type { ServiceError } from '../../../services/common';
 import { useAuth } from '../../../context/AuthContext';
 import ModalForm from '../../../components/modals/ModalForm';
+import UserFormModal from '../../../features/admin/user/UserFormModal';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
@@ -34,7 +33,9 @@ const ROLES = [
 
 const EMPTY_FORM = {
   first_name: '',
-  last_name: '',
+  second_name: '',
+  first_last_name: '',
+  second_last_name: '',
   email: '',
   role: '' as 'admin' | 'employee' | '',
   password: '',
@@ -146,8 +147,9 @@ export default function UsersPage() {
 
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
-    if (!form.first_name.trim()) errors.first_name = 'El nombre es requerido.';
-    if (!form.last_name.trim()) errors.last_name = 'Los apellidos son requeridos.';
+    if (!form.first_name.trim()) errors.first_name = 'El primer nombre es requerido.';
+    if (!form.first_last_name.trim()) errors.first_last_name = 'El primer apellido es requerido.';
+    if (!form.second_last_name.trim()) errors.second_last_name = 'El segundo apellido es requerido.';
     const emailError = validateInstitutionalEmail(form.email);
     if (emailError) errors.email = emailError;
     if (!form.role) errors.role = 'El rol es requerido.';
@@ -162,11 +164,12 @@ export default function UsersPage() {
     try {
       const created = await userService.registerUser({
         first_name: form.first_name,
-        last_name: form.last_name,
+        second_name: form.second_name || undefined,
+        first_last_name: form.first_last_name,
+        second_last_name: form.second_last_name,
         email: form.email,
         role: form.role as 'admin' | 'employee',
         password: form.password,
-        created_by: currentUser?.id ?? '',
       });
       setUsers((prev) => [created, ...prev]);
       setFormOpen(false);
@@ -265,86 +268,17 @@ export default function UsersPage() {
       />
 
       {/* Register user modal */}
-      <ModalForm
+      <UserFormModal
         open={formOpen}
-        title="Registrar Usuario"
+        form={form}
+        formErrors={formErrors}
+        isSubmitting={isSubmitting}
+        showPassword={showPassword}
+        onTogglePasswordVisibility={() => setShowPassword((p) => !p)}
         onClose={() => setFormOpen(false)}
         onConfirm={handleConfirm}
-        confirmLabel="Confirmar"
-        isSubmitting={isSubmitting}
-      >
-        <Stack spacing={2.5} sx={{ pt: 1 }}>
-          <TextField
-            label="Nombre"
-            value={form.first_name}
-            onChange={handleChange('first_name')}
-            size="small"
-            fullWidth
-            error={!!formErrors.first_name}
-            helperText={formErrors.first_name}
-            required
-          />
-          <TextField
-            label="Apellidos"
-            value={form.last_name}
-            onChange={handleChange('last_name')}
-            size="small"
-            fullWidth
-            error={!!formErrors.last_name}
-            helperText={formErrors.last_name}
-            required
-          />
-          <TextField
-            label="Correo institucional"
-            type="email"
-            value={form.email}
-            onChange={handleChange('email')}
-            placeholder="usuario@ucr.ac.cr"
-            size="small"
-            fullWidth
-            error={!!formErrors.email}
-            helperText={formErrors.email}
-            required
-          />
-          <TextField
-            select
-            label="Rol"
-            value={form.role}
-            onChange={handleChange('role')}
-            size="small"
-            fullWidth
-            error={!!formErrors.role}
-            helperText={formErrors.role}
-            required
-          >
-            {ROLES.map((r) => (
-              <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="Contraseña temporal"
-            type={showPassword ? 'text' : 'password'}
-            value={form.password}
-            onChange={handleChange('password')}
-            size="small"
-            fullWidth
-            error={!!formErrors.password}
-            helperText={formErrors.password}
-            required
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setShowPassword((p) => !p)} edge="end">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        </Stack>
-      </ModalForm>
+        onChange={handleChange}
+      />
 
       {/* Assign occupational class modal */}
       <ModalForm
