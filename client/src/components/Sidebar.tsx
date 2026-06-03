@@ -80,33 +80,95 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const renderContent = (showLabels: boolean) => (
     <>
       {/* User section */}
-      <Box sx={{ px: 1.5, py: 2, minHeight: 72, display: 'flex', alignItems: 'center' }}>
+      <Box
+        onClick={() => handleNavigate('/ajustes')}
+        sx={{
+          px: 1.5,
+          py: 2,
+          minHeight: 72,
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease',
+          '&:hover': {
+            backgroundColor: '#f5f5f5',
+          },
+        }}
+      >
         {showLabels ? (
           <>
-            <Avatar sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }} />
-            <Box sx={{ flex: 1, overflow: 'hidden', mx: 1.5 }}>
+            <Avatar
+              sx={{
+                width: 38,
+                height: 38,
+                bgcolor: '#bdbdbd',
+                flexShrink: 0,
+              }}
+            />
+
+            <Box
+              sx={{
+                flex: 1,
+                overflow: 'hidden',
+                mx: 1.5,
+              }}
+            >
               <Typography
                 variant="caption"
-                sx={{ color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, lineHeight: 1 }}
+                sx={{
+                  color: '#999',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  lineHeight: 1,
+                }}
                 display="block"
               >
                 Usuario
               </Typography>
-              <Typography variant="subtitle2" fontWeight="bold" noWrap>
-                {user ? `${user.first_name} ${user.last_name}` : ''}
+
+              <Typography
+                variant="subtitle2"
+                fontWeight="bold"
+                noWrap
+              >
+                {user
+                  ? `${user.first_name} ${user.last_name}`
+                  : ''}
               </Typography>
             </Box>
-            {/* Collapse control: desktop collapses the rail, mobile closes the drawer. */}
+
+            {/* Prevent navigation when clicking collapse button */}
             <IconButton
               size="small"
-              onClick={() => (isMobile ? onMobileClose() : setCollapsed(true))}
-              sx={{ flexShrink: 0, color: '#666' }}
+              onClick={(e) => {
+                e.stopPropagation();
+
+                if (isMobile) {
+                  onMobileClose();
+                } else {
+                  setCollapsed(true);
+                }
+              }}
+              sx={{
+                flexShrink: 0,
+                color: '#666',
+              }}
             >
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
           </>
         ) : (
-          <IconButton size="small" onClick={() => setCollapsed(false)} sx={{ mx: 'auto', color: '#666' }}>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCollapsed(false);
+            }}
+            sx={{
+              mx: 'auto',
+              color: '#666',
+            }}
+          >
             <ChevronRightIcon fontSize="small" />
           </IconButton>
         )}

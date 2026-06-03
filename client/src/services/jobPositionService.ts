@@ -18,7 +18,7 @@ export interface JobPosition {
 
 export interface JobPositionType {
   job_position_type_id: string;
-  job_position_number: string;
+  name: string;
 }
 
 /** The four parent entity kinds a job position can hang from (mutually exclusive). */
@@ -49,39 +49,51 @@ export const jobPositionService = {
     try {
       const res = await apiClient.get<{ data: JobPosition[]; meta: PageMeta }>('/job-positions', { params });
       return { data: res.data.data ?? [], meta: res.data.meta };
-    } catch (e) { throw extractApiError(e); }
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 
   async getJobPositionTypes(): Promise<JobPositionType[]> {
     try {
       const res = await apiClient.get<{ data: JobPositionType[] }>('/job-position-types');
       return res.data.data ?? [];
-    } catch (e) { throw extractApiError(e); }
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 
   async createJobPosition(payload: CreateJobPositionPayload): Promise<void> {
     try {
       await apiClient.post('/job-positions', payload);
-    } catch (e) { throw extractApiError(e); }
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 
   async deleteJobPosition(id: string): Promise<void> {
     try {
       await apiClient.delete(`/job-positions/${id}`);
-    } catch (e) { throw extractApiError(e); }
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 
   /** Admin edit of a plaza's own fields (number, description, type, parent). */
   async editJobPosition(id: string, payload: UpdateJobPositionPayload): Promise<void> {
     try {
       await apiClient.patch(`/job-positions/${id}`, payload);
-    } catch (e) { throw extractApiError(e); }
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 
   /** Links the authenticated user to the job position matching the given number. */
   async updateJobPosition(jobPositionNumber: string): Promise<void> {
     try {
       await apiClient.patch('/users/me/job-position', { job_position_number: jobPositionNumber });
-    } catch (e) { throw extractApiError(e); }
+    } catch (e) {
+      throw extractApiError(e);
+    }
   },
 };
