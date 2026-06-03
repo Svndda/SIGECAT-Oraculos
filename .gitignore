@@ -6,6 +6,10 @@ node_modules/
 .pnp.js
 .vite/
 
+# JetBrains IDEs
+.idea/
+api/.idea/
+
 # testing
 coverage/
 
@@ -30,6 +34,9 @@ yarn-error.log*
 
 # OCI configuration (contains sensitive credentials)
 api/config/oci_config.php
+
+# Mail configuration (contains SMTP credentials)
+api/config/mail_config.php
 
 # PHP Dependencies (Composer)
 vendor

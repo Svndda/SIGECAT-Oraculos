@@ -121,6 +121,8 @@ final class Request
     $rawPath = $_SERVER['REQUEST_URI'] ?? '/';
     $sanitized = filter_var($rawPath, FILTER_SANITIZE_URL);
     $path = is_string($sanitized) ? $sanitized : '/';
+    // Strip query string so routes match regardless of query params.
+    $path = strtok($path, '?') ?: '/';
     $basePath = '/api/public';
     if (stripos($path, $basePath) === 0) {
       $path = substr($path, strlen($basePath));

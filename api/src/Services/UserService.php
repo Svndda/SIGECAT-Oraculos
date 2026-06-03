@@ -3,94 +3,123 @@ declare(strict_types=1);
 
 namespace Services;
 
-use DTO\LoginUserDTO;
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
+use DTO\UserResponseDTO;
+use DTO\PasswordValidator;
 use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
-use Repositories\AuthRepository;
-use Services\AuthService;
+use Repositories\JobPositionRepository;
+use Repositories\JobClassRepository;
 use PDO;
 
 /**
  * UserService
  *
- * Orchestrates all business logic related to users.
- *
- * Responsibilities:
- * - Delegates structural validation to DTOs.
- * - Delegates persistence to UserRepository.
- * - Enforces business rules (duplicate email, invalid credentials,
- *   locked accounts, etc.) by throwing ApiExceptions.
- * - Has no knowledge of HTTP transport (no $_POST, $_SESSION, headers).
+ * Orchestrates business logic related to user profile management.
+ * Relies on UserRepository for persistence.
  */
-class UserService {
-  private const MAX_FAILED_ATTEMPTS = 5;
-
+class UserService
+{
   private UserRepository $userRepository;
+  private JobPositionRepository $jobPositionRepository;
+  private JobClassRepository $jobClassRepository;
 
-  public function __construct(private PDO $pdo) {
+  public function __construct(private PDO $pdo)
+  {
     $this->userRepository = new UserRepository($this->pdo);
+    $this->jobPositionRepository = new JobPositionRepository($this->pdo);
+    $this->jobClassRepository = new JobClassRepository($this->pdo);
   }
 
   /**
-   * Validates credentials and returns the authenticated user data.
+   * Assigns an occupational class (JOB_CLASS) to a user.
    *
-   * Business rules:
-   * - User must exist.
-   * - Account must be active.
-   * - Account must not be locked (too many failed attempts).
-   * - Password must match the stored hash.
-   * - Resets failed-attempt counter on success.
-   *
-   * @return array<string, mixed>  Authenticated user row (no password_hash).
-   * @throws ApiException
+   * @throws ApiException When the class id is missing, the user does not
+   *                      exist, or the class does not exist.
    */
-  public function login(LoginUserDTO $dto): array {
-    $dto->validate();
-
-    $user = $this->userRepository->findByEmail($dto->email);
-
-    if ($user === null) {
-      throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'));
+  public function assignJobClass(string $userId, string $jobClassId): void
+  {
+    $jobClassId = trim($jobClassId);
+    if ($jobClassId === '') {
+      throw new ApiException(ErrorType::missingField('job_class_id'));
     }
 
-    if ((int) $user['is_active'] === 0) {
-      throw new ApiException(ErrorType::from('ACCOUNT_INACTIVE', 'La cuenta está desactivada'));
+    if ($this->userRepository->findById($userId) === null) {
+      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'), 404);
     }
 
-    if ((int) $user['failed_logging_attempts'] >= self::MAX_FAILED_ATTEMPTS) {
-      throw new ApiException(ErrorType::from('ACCOUNT_LOCKED', 'La cuenta está bloqueada por demasiados intentos fallidos'));
+    if (!$this->jobClassRepository->existsById($jobClassId)) {
+      throw new ApiException(ErrorType::from('JOB_CLASS_NOT_FOUND', 'La clase ocupacional no existe'), 404);
     }
 
-    if (password_verify($dto->password, $user['password_hash']) === false) {
-      $this->userRepository->incrementFailedAttempts($user['user_id']);
-      throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'));
-    }
-
-    $this->userRepository->resetFailedAttempts($user['user_id']);
-
-    unset($user['password_hash']);
-    return $user;
+    $this->userRepository->updateJobClass($userId, $jobClassId);
   }
 
+  /**
+   * Assigns the plaza identified by its number ("número de plaza") to the user.
+   *
+   * The user is linked to the existing plaza (JOB_POSITIONS) whose name matches
+   * the given number; any plaza they previously held is released.
+   *
+   * @throws ApiException When the number is missing, the plaza does not exist,
+   *                      or it is already held by another user.
+   */
+  public function assignJobPosition(string $userId, string $jobPositionNumber): void
+  {
+    $jobPositionNumber = trim($jobPositionNumber);
+    if ($jobPositionNumber === '') {
+      throw new ApiException(ErrorType::missingField('job_position_number'));
+    }
+
+    $jobPosition = $this->jobPositionRepository->findActiveByName($jobPositionNumber);
+    if ($jobPosition === null) {
+      throw new ApiException(
+        ErrorType::from('JOB_POSITION_NOT_FOUND', 'El número de plaza no existe.'), 404
+      );
+    }
+
+    $currentHolder = $jobPosition['user_id'] ?? null;
+    if ($currentHolder !== null && (string) $currentHolder !== $userId) {
+      throw new ApiException(
+        ErrorType::conflict('La plaza ya está asignada a otro usuario.'), 409
+      );
+    }
+
+    $this->jobPositionRepository->assignToUser((string) $jobPosition['job_position_id'], $userId);
+  }
+
+  /**
+   * Normalizes the status filter.
+   *
+   * @throws ApiException
+   */
+  private function normalizeStatus(string $status): string
+  {
+    $normalized = $status === '' ? 'active' : strtolower($status);
+    if (!in_array($normalized, ['active', 'deleted', 'all'], true)) {
+      throw new ApiException(ErrorType::invalidField('status'));
+    }
+    return $normalized;
+  }
 
   /**
    * Registers a new user.
    *
-   * Business rules:
-   * - Email must not already exist.
-   * - created_by must correspond to an existing user.
-   *
    * @throws ApiException
    */
-  public function register(string $createdBy, RegisterUserDTO $dto): void  {
+  public function register(string $createdBy, RegisterUserDTO $dto): void
+  {
     $dto->validate();
 
-    $existing = $this->userRepository->findByEmail($dto->email);
+    $existing = $this->userRepository->findByEmail($dto->email, 'all');
     if ($existing !== null) {
-        throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está registrado'));
+      throw new ApiException(
+        ErrorType::from(
+          'EMAIL_TAKEN', 'El correo ya está registrado'
+        )
+      );
     }
 
     $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
@@ -100,27 +129,68 @@ class UserService {
   /**
    * Applies a partial update to an existing user.
    *
-   * Business rules:
-   * - Target user must exist.
-   * - If email changes, the new one must not belong to another user.
-   *
    * @throws ApiException
    */
-  public function update(string $userId, UpdateUserDTO $dto): void  {
+  public function update(string $userId, UpdateUserDTO $dto): void
+  {
     $dto->validate();
 
     if ($dto->email !== null) {
-        $emailOwner = $this->userRepository->findByEmail($dto->email);
-        if ($emailOwner !== null && $emailOwner['user_id'] !== $userId) {
-        throw new ApiException(ErrorType::from('EMAIL_TAKEN', 'El correo ya está en uso por otro usuario'));
-        }
+      $emailOwner = $this->userRepository->findByEmail(
+        $dto->email, 'all'
+      );
+      if ($emailOwner !== null && $emailOwner['user_id'] !== $userId) {
+        throw new ApiException(
+          ErrorType::from(
+            'EMAIL_TAKEN',
+            'El correo ya está en uso por otro usuario'
+          )
+        );
+      }
     }
 
     if ($dto->password !== null) {
-        $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
+      $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
     }
 
     $this->userRepository->update($userId, $dto);
+  }
+
+  /**
+   * Changes the authenticated user's password.
+   *
+   * Business rules:
+   * - Current password is required and must match the stored hash.
+   * - New password must satisfy the strength policy.
+   *
+   * @throws ApiException
+   */
+  public function changePassword(string $userId, string $currentPassword, string $newPassword): void
+  {
+    if ($currentPassword === '') {
+      throw new ApiException(ErrorType::missingField('current_password'));
+    }
+    if ($newPassword === '') {
+      throw new ApiException(ErrorType::missingField('new_password'));
+    }
+
+    // Enforce the new password strength policy.
+    PasswordValidator::validate($newPassword);
+
+    $user = $this->userRepository->findById($userId);
+    if ($user === null) {
+      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'));
+    }
+
+    // Verify the current password against the stored hash.
+    if (password_verify($currentPassword, (string) $user['password_hash']) === false) {
+      throw new ApiException(
+        ErrorType::from('INVALID_CREDENTIALS', 'La contraseña actual es incorrecta')
+      );
+    }
+
+    $hashed = password_hash($newPassword, PASSWORD_BCRYPT);
+    $this->userRepository->updatePasswordById($userId, $hashed);
   }
 
   /**
@@ -129,17 +199,158 @@ class UserService {
    * @return array<string, mixed>
    * @throws ApiException
    */
-  public function getById(string $userId): array  {
+  public function getById(string $userId, string $status = 'active'): array
+  {
     if (empty($userId)) {
       throw new ApiException(ErrorType::missingField('user_id'));
     }
 
-    $user = $this->userRepository->findById($userId);
+    $status = $this->normalizeStatus($status);
+    $user = $this->userRepository->findById($userId, $status);
+
     if ($user === null) {
-      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'));
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
     }
 
-    unset($user['password_hash']);
-    return $user;
+    return UserResponseDTO::fromArray($user)->toArray();
+  }
+
+  /**
+   * Compiles filter sets to fetch pagination groups of users.
+   *
+   * @return array<string, mixed>
+   */
+  public function getAllUsers(
+    int $page = 1,
+    int $limit = 10,
+    string $filter = '',
+    string $status = 'active'
+  ): array
+  {
+    $page = max(1, $page);
+    $limit = max(1, min(100, $limit));
+    $status = $this->normalizeStatus($status);
+    $offset = ($page - 1) * $limit;
+
+    $total = $this->userRepository->countAll($filter, $status);
+    $users = $this->userRepository->findAllPaginated(
+      $limit, $offset, $filter, $status
+    );
+
+    $data = array_map(
+      static fn(array $row) => UserResponseDTO::fromArray($row)->toArray(),
+      $users
+    );
+
+    return [
+      'data' => $data,
+      'meta' => [
+        'page'        => $page,
+        'limit'       => $limit,
+        'total'       => $total,
+        'total_pages' => (int) ceil($total / $limit)
+      ]
+    ];
+  }
+
+  /**
+   * Executes logical deletion mechanisms onto a specific user record.
+   *
+   * @throws ApiException
+   */
+  public function deleteUser(string $userId, string $deletedBy): void
+  {
+    if (empty($userId)) {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+
+    $existing = $this->userRepository->findById($userId, 'active');
+    if ($existing === null) {
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
+    }
+
+    if ($userId === $deletedBy) {
+      throw new ApiException(
+        ErrorType::conflict('No puedes eliminar tu propia cuenta de usuario')
+      );
+    }
+
+    // A regular admin cannot delete another admin; the target must be demoted
+    // first. (A future "técnico admin" role is intended to lift this rule.)
+    if (($existing['role'] ?? null) === 'admin') {
+      throw new ApiException(
+        ErrorType::from(
+          'CANNOT_DELETE_ADMIN',
+          'No puede eliminar a un administrador. Cambie su rol a empleado antes de eliminarlo.'
+        )
+      );
+    }
+
+    $this->userRepository->delete($userId, $deletedBy);
+  }
+
+  /**
+   * Changes a user's role. Admin-only operation; the actor cannot change their
+   * own role (avoids self-lockout).
+   *
+   * @throws ApiException
+   */
+  public function changeRole(string $userId, string $role, string $actorId): void
+  {
+    if (empty($userId)) {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+    if (trim($role) === '') {
+      throw new ApiException(ErrorType::missingField('role'));
+    }
+    if (!\DTO\AllowedUserRoles::isValid($role)) {
+      throw new ApiException(ErrorType::invalidField('role'));
+    }
+    if ($userId === $actorId) {
+      throw new ApiException(
+        ErrorType::conflict('No puede cambiar su propio rol.')
+      );
+    }
+
+    $existing = $this->userRepository->findById($userId, 'active');
+    if ($existing === null) {
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
+    }
+
+    $this->userRepository->updateRole($userId, $role);
+  }
+
+  /**
+   * Resurrects a logically deleted user profile.
+   *
+   * @throws ApiException
+   */
+  public function restoreUser(string $userId): void
+  {
+    if (empty($userId)) {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+
+    $existing = $this->userRepository->findById($userId, 'all');
+    if ($existing === null) {
+      throw new ApiException(
+        ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
+      );
+    }
+
+    $isDeleted = (int) ($existing['is_deleted'] ?? $existing['IS_DELETED'] ?? 0);
+    if ($isDeleted === 0) {
+      throw new ApiException(
+        ErrorType::conflict('El usuario no se encuentra eliminado')
+      );
+    }
+
+    $this->userRepository->restore($userId);
   }
 }

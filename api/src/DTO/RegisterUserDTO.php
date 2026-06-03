@@ -20,33 +20,37 @@ use Http\ErrorType;
 class RegisterUserDTO {
   public string $email;
   public string $firstName;
-  public string $lastName;
+  public ?string $secondName;
+  public string $firstLastName;
+  public string $secondLastName;
+
   public string $password;
   public string $role;
 
-  private function __construct (string $email, string $firstName,
-      string $lastName, string $password, string $role) {
+  private function __construct (
+    string $email, string $firstName, ?string $secondName,
+    string $firstLastName, string $secondLastName,
+    string $password, string $role
+  ) {
     $this->email = $email;
     $this->firstName = $firstName;
-    $this->lastName = $lastName;
+    $this->secondName = $secondName;
+    $this->firstLastName = $firstLastName;
+    $this->secondLastName = $secondLastName;
     $this->password = $password;
     $this->role = $role;
   }
 
   /**
-   * @param array{
-   * email?: string,
-   * first_name?: string,
-   * last_name?: string,
-   * password?: string,
-   * role?: string,
-   * } $data
+   * @param array<string, mixed> $data Raw request payload; keys may be absent.
    */
   public static function fromArray(array $data): self {
     return new self (
       (string) ($data["email"] ?? ''),
       (string) ($data['first_name'] ?? ''),
-      (string) ($data['last_name'] ?? ''),
+      (string) ($data['second_name'] ?? null),
+      (string) ($data['first_last_name'] ?? ''),
+      (string) ($data['second_last_name'] ?? ''),
       (string) ($data['password'] ?? ''),
       (string) ($data['role'] ?? ''),
     );
@@ -56,11 +60,15 @@ class RegisterUserDTO {
     EmailValidator::validate($this->email);
     
     if (empty($this->firstName) === TRUE) {
-      throw new ApiException(ErrorType::missingField("firstName"));
+      throw new ApiException(ErrorType::missingField("first_name"));
     }
 
-    if (empty($this->lastName) === TRUE) {
-      throw new ApiException(ErrorType::missingField("lastName"));
+    if (empty($this->firstLastName) === TRUE) {
+      throw new ApiException(ErrorType::missingField("first_last_name"));
+    }
+
+    if (empty($this->secondLastName) === TRUE) {
+      throw new ApiException(ErrorType::missingField("second_last_name"));
     }
 
     if (empty($this->password) === TRUE) {

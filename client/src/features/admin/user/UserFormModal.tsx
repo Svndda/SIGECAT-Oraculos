@@ -1,0 +1,146 @@
+import { TextField, MenuItem, Stack, InputAdornment, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import ModalForm from '../../../components/modals/ModalForm';
+
+interface UserFormState {
+  first_name: string;
+  second_name: string;
+  first_last_name: string;
+  second_last_name: string;
+  email: string;
+  role: 'admin' | 'employee' | '';
+  password: string;
+}
+
+interface UserFormModalProps {
+  open: boolean;
+  form: UserFormState;
+  formErrors: Partial<Record<keyof UserFormState, string>>;
+  isSubmitting: boolean;
+  showPassword: boolean;
+  onTogglePasswordVisibility: () => void;
+  onClose: () => void;
+  onConfirm: () => void;
+  onChange: (field: keyof UserFormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const ROLES = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'employee', label: 'Empleado' },
+];
+
+export default function UserFormModal({
+  open,
+  form,
+  formErrors,
+  isSubmitting,
+  showPassword,
+  onTogglePasswordVisibility,
+  onClose,
+  onConfirm,
+  onChange,
+}: UserFormModalProps) {
+  return (
+    <ModalForm
+      open={open}
+      title="Registrar Usuario"
+      onClose={onClose}
+      onConfirm={onConfirm}
+      confirmLabel="Confirmar"
+      isSubmitting={isSubmitting}
+    >
+      <Stack spacing={2.5} sx={{ pt: 1 }}>
+        <TextField
+          label="Primer nombre *"
+          value={form.first_name}
+          onChange={onChange('first_name')}
+          size="small"
+          fullWidth
+          error={!!formErrors.first_name}
+          helperText={formErrors.first_name}
+          required
+        />
+        <TextField
+          label="Segundo nombre (opcional)"
+          value={form.second_name}
+          onChange={onChange('second_name')}
+          size="small"
+          fullWidth
+          error={!!formErrors.second_name}
+          helperText={formErrors.second_name}
+        />
+        <TextField
+          label="Primer apellido *"
+          value={form.first_last_name}
+          onChange={onChange('first_last_name')}
+          size="small"
+          fullWidth
+          error={!!formErrors.first_last_name}
+          helperText={formErrors.first_last_name}
+          required
+        />
+        <TextField
+          label="Segundo apellido *"
+          value={form.second_last_name}
+          onChange={onChange('second_last_name')}
+          size="small"
+          fullWidth
+          error={!!formErrors.second_last_name}
+          helperText={formErrors.second_last_name}
+          required
+        />
+        <TextField
+          label="Correo institucional *"
+          type="email"
+          value={form.email}
+          onChange={onChange('email')}
+          placeholder="usuario@ucr.ac.cr"
+          size="small"
+          fullWidth
+          error={!!formErrors.email}
+          helperText={formErrors.email}
+          required
+        />
+        <TextField
+          select
+          label="Rol *"
+          value={form.role}
+          onChange={onChange('role')}
+          size="small"
+          fullWidth
+          error={!!formErrors.role}
+          helperText={formErrors.role}
+          required
+        >
+          {ROLES.map((r) => (
+            <MenuItem key={r.value} value={r.value}>
+              {r.label}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          label="Contraseña temporal *"
+          type={showPassword ? 'text' : 'password'}
+          value={form.password}
+          onChange={onChange('password')}
+          size="small"
+          fullWidth
+          error={!!formErrors.password}
+          helperText={formErrors.password}
+          required
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={onTogglePasswordVisibility} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Stack>
+    </ModalForm>
+  );
+}

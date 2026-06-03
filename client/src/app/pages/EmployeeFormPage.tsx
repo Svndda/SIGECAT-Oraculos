@@ -126,7 +126,7 @@ export default function EmployeeFormPage() {
         </Typography>
 
         {/* Formulario */}
-        <Paper sx={{ p: 4, backgroundColor: '#f9f9fd' }}>
+        <Paper sx={{ p: { xs: 2, sm: 4 }, backgroundColor: '#f9f9fd' }}>
           <Stack spacing={3}>
             {/* SECCIÓN 1: CAMPOS PRINCIPALES */}
             <Box>
@@ -326,7 +326,7 @@ export default function EmployeeFormPage() {
             {/* SECCIÓN 3: INFORMACIÓN DEL SSO */}
             <Box sx={{ p: 2, bgcolor: '#f0f8ff', borderRadius: 1 }}>
               <Stack spacing={2}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
                     Esta información puede venir del SSO:
                   </Typography>
@@ -335,7 +335,7 @@ export default function EmployeeFormPage() {
                     size="small"
                     color="primary"
                     onClick={() => setIsSsoExpanded(!isSsoExpanded)}
-                    sx={{ backgroundColor: '#1565c0' }}
+                    sx={{ backgroundColor: '#1565c0', alignSelf: { xs: 'flex-end', sm: 'auto' } }}
                   >
                     {isSsoExpanded ? 'Ocultar' : 'Autocompletar datos'}
                   </Button>
@@ -389,7 +389,7 @@ export default function EmployeeFormPage() {
             </Box>
 
             {/* Botones */}
-            <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+            <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}

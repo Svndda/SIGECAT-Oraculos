@@ -20,20 +20,27 @@ interface LoginResponseData {
 }
 
 interface BackendLoginData {
-  ACCESS_TOKEN: string;
-  REFRESH_TOKEN: string;
-  USER_ID: string;
-  EMAIL: string;
-  NAME: string;
-  ROLE: string;
+  access_token: string;
+  refresh_token: string;
+  user_id: string;
+  email: string;
+  name: string;
+  role: string;
 }
 
 interface BackendUserData {
-  USER_ID: string;
-  EMAIL: string;
-  FIRST_NAME: string;
-  LAST_NAME: string;
-  ROLE: string;
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+}
+
+interface RefreshResponseData {
+  access_token: string;
+  access_expires_at: string;
+  refresh_token: string;
+  refresh_expires_at: string;
 }
 
 const USE_MOCK = false;
@@ -57,7 +64,6 @@ function extractApiError(error: unknown): ServiceError {
         if (errors?.length) return errors[0];
       }
 
-      // PHP echo pollution: body arrived as string, try to extract JSON errors
       if (typeof raw === 'string') {
         const match = raw.match(/\{[\s\S]*\}/);
         if (match) {
@@ -97,19 +103,39 @@ export const authService = {
     try {
       const response = await apiClient.post<{ data: BackendLoginData }>('/auth/login', { email, password });
       const d = response.data.data;
-      localStorage.setItem('sigecat_user_id', d.USER_ID);
-      const [firstName, ...rest] = d.NAME.split(' ');
+      localStorage.setItem('sigecat_user_id', d.user_id);
+      const [firstName, ...rest] = (d.name ?? '').split(' ');
       return {
         user: {
-          id: d.USER_ID,
-          email: d.EMAIL,
+          id: d.user_id,
+          email: d.email,
           first_name: firstName ?? '',
           last_name: rest.join(' '),
-          role: mapRole(d.ROLE),
+          role: mapRole(d.role),
         },
-        access_token: d.ACCESS_TOKEN,
-        refresh_token: d.REFRESH_TOKEN,
+        access_token: d.access_token,
+        refresh_token: d.refresh_token,
       };
+    } catch (error) {
+      throw extractApiError(error);
+    }
+  },
+
+  async refreshTokens(refreshToken: string): Promise<RefreshResponseData> {
+    if (USE_MOCK) {
+      await new Promise((r) => setTimeout(r, 300));
+      return {
+        access_token: 'mock_refreshed_access_' + Date.now(),
+        access_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        refresh_token: 'mock_refreshed_refresh_' + Date.now(),
+        refresh_expires_at: new Date(Date.now() + 86400000).toISOString(),
+      };
+    }
+    try {
+      const response = await apiClient.post<{ data: RefreshResponseData }>('/auth/refresh', {
+        refresh_token: refreshToken,
+      });
+      return response.data.data;
     } catch (error) {
       throw extractApiError(error);
     }
@@ -140,11 +166,11 @@ export const authService = {
       const response = await apiClient.get<{ data: BackendUserData }>(`/users/${userId}`);
       const d = response.data.data;
       return {
-        id: d.USER_ID,
-        email: d.EMAIL,
-        first_name: d.FIRST_NAME,
-        last_name: d.LAST_NAME,
-        role: mapRole(d.ROLE),
+        id: d.id,
+        email: d.email,
+        first_name: d.first_name,
+        last_name: d.last_name,
+        role: mapRole(d.role),
       };
     } catch (error) {
       throw extractApiError(error);
@@ -159,18 +185,33 @@ export const authService = {
       }
       return;
     }
-    void currentPassword;
     try {
-      await apiClient.put('/users/me', { password: newPassword });
+      await apiClient.patch('/users/me/password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
     } catch (error) {
       throw extractApiError(error);
     }
   },
 
-  async recoverPassword(email: string, newPassword: string): Promise<void> {
-    // Mock only — no backend endpoint defined for password recovery
-    await new Promise((r) => setTimeout(r, 800));
-    void email;
-    void newPassword;
+  async requestPasswordRecovery(email: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/password-recovery/request', { email });
+    } catch (error) {
+      throw extractApiError(error);
+    }
+  },
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/password-recovery/reset', {
+        token,
+        password,
+        confirm_password: confirmPassword,
+      });
+    } catch (error) {
+      throw extractApiError(error);
+    }
   },
 };

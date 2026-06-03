@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use Services\AuthService;
-use Repositories\UserRepository;
 use Http\Request;
 
 /**
@@ -30,10 +29,10 @@ function validateSessionToken(PDO $db): void
   }
 
   try {
-    $authService = new \Services\AuthService($db);
+    $authService = new AuthService($db);
     $user = $authService->requireAuth();
-    \Http\Request::setUser($user);
-  } catch (\Exception $e) { // @phpstan-ignore-line
+    Request::setUser($user);
+  } catch (Exception $e) {
     /**
      * Authentication failures are logged but not fatal here, 
      * as some endpoints might allow public access. 
