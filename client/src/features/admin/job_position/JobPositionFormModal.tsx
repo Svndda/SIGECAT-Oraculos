@@ -112,27 +112,27 @@ export default function JobPositionFormModal({
           ))}
         </TextField>
 
-        <TextField
-          select
-          label="Entidad"
-          value={form.parentId}
-          onChange={(e) => onFieldChange('parentId', e.target.value)}
+        <Autocomplete
+          options={parentOptions}
+          getOptionLabel={(o) => o.name}
+          value={parentOptions.find((o) => o.id === form.parentId) ?? null}
+          disabled={!form.parentType}
+          onChange={(_, selected) => onFieldChange('parentId', selected?.id ?? '')}
           size="small"
           fullWidth
-          disabled={!form.parentType}
-          error={!!formErrors.parentId}
-          helperText={
-            formErrors.parentId ??
-            (form.parentType && parentOptions.length === 0 ? 'No hay entidades de este tipo registradas.' : '')
-          }
-          required
-        >
-          {parentOptions.map((o) => (
-            <MenuItem key={o.id} value={o.id}>
-              {o.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Entidad"
+              required
+              error={!!formErrors.parentId}
+              helperText={
+                formErrors.parentId ??
+                (form.parentType && parentOptions.length === 0 ? 'No hay entidades de este tipo registradas.' : '')
+              }
+            />
+          )}
+        />
 
         <TextField
           label="Descripción"

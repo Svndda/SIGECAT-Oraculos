@@ -1,4 +1,5 @@
-import { TextField, MenuItem, Stack, InputAdornment, IconButton } from '@mui/material';
+import { TextField, Stack, InputAdornment, IconButton } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import ModalForm from '../../../components/modals/ModalForm';
 
@@ -101,23 +102,27 @@ export default function UserFormModal({
           helperText={formErrors.email}
           required
         />
-        <TextField
-          select
-          label="Rol *"
-          value={form.role}
-          onChange={onChange('role')}
+        <Autocomplete
+          options={ROLES}
+          getOptionLabel={(r) => r.label}
+          value={ROLES.find((r) => r.value === form.role) ?? null}
+          onChange={(_, selected) => {
+            onChange('role')({
+              target: { value: selected?.value ?? '' },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }}
           size="small"
           fullWidth
-          error={!!formErrors.role}
-          helperText={formErrors.role}
-          required
-        >
-          {ROLES.map((r) => (
-            <MenuItem key={r.value} value={r.value}>
-              {r.label}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Rol"
+              required
+              error={!!formErrors.role}
+              helperText={formErrors.role}
+            />
+          )}
+        />
         <TextField
           label="Contraseña temporal *"
           type={showPassword ? 'text' : 'password'}

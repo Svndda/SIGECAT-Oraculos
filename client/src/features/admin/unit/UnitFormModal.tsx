@@ -1,4 +1,5 @@
 import { TextField, MenuItem, Stack } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { OrgOption } from '../../../services/common';
 
@@ -39,6 +40,8 @@ export default function UnitFormModal({
   onConfirm,
   onFieldChange,
 }: UnitFormModalProps) {
+  const selectedAssignment = assignmentOptions.find((o) => o.id === form.assignmentId) ?? null;
+
   return (
     <ModalForm
       open={open}
@@ -65,7 +68,7 @@ export default function UnitFormModal({
           value={form.assignmentType}
           onChange={(e) => {
             onFieldChange('assignmentType', e.target.value);
-            onFieldChange('assignmentId', ''); // reset entity when type changes
+            onFieldChange('assignmentId', '');
           }}
           size="small"
           fullWidth
@@ -80,29 +83,29 @@ export default function UnitFormModal({
             </MenuItem>
           ))}
         </TextField>
-        <TextField
-          select
-          label="Entidad"
-          value={form.assignmentId}
-          onChange={(e) => onFieldChange('assignmentId', e.target.value)}
+        <Autocomplete
+          options={assignmentOptions}
+          getOptionLabel={(o) => o.name}
+          value={selectedAssignment}
+          disabled={!form.assignmentType}
+          onChange={(_, selected) => onFieldChange('assignmentId', selected?.id ?? '')}
           size="small"
           fullWidth
-          disabled={!form.assignmentType}
-          error={!!formErrors.assignmentId}
-          helperText={
-            formErrors.assignmentId ??
-            (form.assignmentType && assignmentOptions.length === 0
-              ? 'No hay entidades de este tipo registradas.'
-              : '')
-          }
-          required
-        >
-          {assignmentOptions.map((o) => (
-            <MenuItem key={o.id} value={o.id}>
-              {o.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Entidad"
+              required
+              error={!!formErrors.assignmentId}
+              helperText={
+                formErrors.assignmentId ??
+                (form.assignmentType && assignmentOptions.length === 0
+                  ? 'No hay entidades de este tipo registradas.'
+                  : '')
+              }
+            />
+          )}
+        />
         <TextField
           label="Descripción"
           value={form.description}
