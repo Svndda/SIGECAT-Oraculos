@@ -30,6 +30,11 @@ import ModalAlert from './modals/ModalAlert';
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrador',
+  EMPLOYEE: 'Funcionario',
+};
+
 const ALL_NAV_ITEMS = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/', adminOnly: false },
   { label: 'Usuarios', icon: <PeopleIcon fontSize="small" />, route: '/usuarios', adminOnly: true },
@@ -91,11 +96,11 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         {showLabels ? (
           <>
             <Avatar sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }} />
-            <Box sx={{ flex: 1, overflow: 'hidden', mx: 1.5 }}>
+            <Box sx={{ flex: 1, minWidth: 0, mx: 1.5 }}>
               <Typography variant="caption" sx={{ color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }} display="block">
-                Usuario
+                {user ? (ROLE_LABELS[user.role] ?? user.role) : ''}
               </Typography>
-              <Typography variant="subtitle2" fontWeight="bold" noWrap>
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ wordBreak: 'break-word', lineHeight: 1.3 }}>
                 {user ? `${user.first_name} ${user.last_name}` : ''}
               </Typography>
             </Box>
