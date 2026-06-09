@@ -42,8 +42,7 @@ export const recordsService = {
     try {
       const response = await axios.get(`${API_BASE}/records`);
       return response.data;
-    } catch (error) {
-      console.error('Error fetching records:', error);
+    } catch {
       return [];
     }
   },
