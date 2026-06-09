@@ -63,4 +63,12 @@ return [
     ['method' => 'PATCH',  'path' => '/units/{id}', 'controller' => 'UnitController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/units/{id}', 'controller' => 'UnitController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/units/{id}/restore', 'controller' => 'UnitController', 'action' => 'restore'],
+
+    // Rest time routes
+    ['method' => 'POST',   'path' => '/rest-time',      'controller' => 'RestTimeController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/rest-time',      'controller' => 'RestTimeController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'show'],
+    ['method' => 'PATCH',  'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'update'],
+    ['method' => 'DELETE', 'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'delete'],
+    ['method' => 'POST',   'path' => '/rest-time/{id}/restore', 'controller' => 'RestTimeController', 'action' => 'restore'],
 ];
