@@ -1,4 +1,5 @@
-import { TextField, MenuItem, Stack } from '@mui/material';
+import { TextField, Stack } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { Area } from '../../../services/areaService';
 
@@ -24,6 +25,8 @@ export default function SectionFormModal({
   open, isEditing, form, formErrors, areas, isSubmitting,
   onClose, onConfirm, onChange
 }: SectionFormModalProps) {
+  const selectedArea = areas.find((a) => a.area_id === form.area_id) ?? null;
+
   return (
     <ModalForm
       open={open}
@@ -44,23 +47,27 @@ export default function SectionFormModal({
           helperText={formErrors.name}
           required
         />
-        <TextField
-          select
-          label="Área a la que pertenece"
-          value={form.area_id}
-          onChange={onChange('area_id')}
+        <Autocomplete
+          options={areas}
+          getOptionLabel={(a) => a.name}
+          value={selectedArea}
+          onChange={(_, selected) => {
+            onChange('area_id')({
+              target: { value: selected?.area_id ?? '' },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }}
           size="small"
           fullWidth
-          error={!!formErrors.area_id}
-          helperText={formErrors.area_id || (areas.length === 0 ? 'No hay áreas registradas.' : '')}
-          required
-        >
-          {areas.map((area) => (
-            <MenuItem key={area.area_id} value={area.area_id}>
-              {area.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Área a la que pertenece"
+              required
+              error={!!formErrors.area_id}
+              helperText={formErrors.area_id ?? (areas.length === 0 ? 'No hay áreas registradas.' : '')}
+            />
+          )}
+        />
         <TextField
           label="Descripción"
           value={form.description}

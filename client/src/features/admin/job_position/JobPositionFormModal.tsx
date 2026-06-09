@@ -1,4 +1,4 @@
-import { TextField, MenuItem, Stack } from '@mui/material';
+import { TextField, Stack } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { OrgOption } from '../../../services/common';
@@ -45,6 +45,7 @@ export default function JobPositionFormModal({
   onFieldChange,
 }: JobPositionFormModalProps) {
   const selectedType = types.find((t) => t.job_position_type_id === form.job_position_type_id) ?? null;
+  const selectedParentType = PARENT_TYPES.find((p) => p.value === form.parentType) ?? null;
 
   return (
     <ModalForm
@@ -90,49 +91,48 @@ export default function JobPositionFormModal({
           )}
         />
 
-        <TextField
-          select
-          label="Tipo de entidad"
-          value={form.parentType}
-          onChange={(e) => {
-            // Reset the chosen entity when the parent kind changes.
-            onFieldChange('parentType', e.target.value);
+        <Autocomplete
+          options={PARENT_TYPES}
+          getOptionLabel={(p) => p.label}
+          value={selectedParentType}
+          onChange={(_, selected) => {
+            onFieldChange('parentType', selected?.value ?? '');
             onFieldChange('parentId', '');
           }}
           size="small"
           fullWidth
-          error={!!formErrors.parentType}
-          helperText={formErrors.parentType}
-          required
-        >
-          {PARENT_TYPES.map((p) => (
-            <MenuItem key={p.value} value={p.value}>
-              {p.label}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Tipo de entidad"
+              required
+              error={!!formErrors.parentType}
+              helperText={formErrors.parentType}
+            />
+          )}
+        />
 
-        <TextField
-          select
-          label="Entidad"
-          value={form.parentId}
-          onChange={(e) => onFieldChange('parentId', e.target.value)}
+        <Autocomplete
+          options={parentOptions}
+          getOptionLabel={(o) => o.name}
+          value={parentOptions.find((o) => o.id === form.parentId) ?? null}
+          disabled={!form.parentType}
+          onChange={(_, selected) => onFieldChange('parentId', selected?.id ?? '')}
           size="small"
           fullWidth
-          disabled={!form.parentType}
-          error={!!formErrors.parentId}
-          helperText={
-            formErrors.parentId ??
-            (form.parentType && parentOptions.length === 0 ? 'No hay entidades de este tipo registradas.' : '')
-          }
-          required
-        >
-          {parentOptions.map((o) => (
-            <MenuItem key={o.id} value={o.id}>
-              {o.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Entidad"
+              required
+              error={!!formErrors.parentId}
+              helperText={
+                formErrors.parentId ??
+                (form.parentType && parentOptions.length === 0 ? 'No hay entidades de este tipo registradas.' : '')
+              }
+            />
+          )}
+        />
 
         <TextField
           label="Descripción"

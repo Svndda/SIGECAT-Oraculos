@@ -1,4 +1,5 @@
-import { TextField, MenuItem, Stack } from '@mui/material';
+import { TextField, Stack } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { OrgOption } from '../../../services/common';
 
@@ -39,6 +40,9 @@ export default function UnitFormModal({
   onConfirm,
   onFieldChange,
 }: UnitFormModalProps) {
+  const selectedAssignmentType = ASSIGNMENT_TYPES.find((t) => t.value === form.assignmentType) ?? null;
+  const selectedAssignment = assignmentOptions.find((o) => o.id === form.assignmentId) ?? null;
+
   return (
     <ModalForm
       open={open}
@@ -59,50 +63,50 @@ export default function UnitFormModal({
           helperText={formErrors.name}
           required
         />
-        <TextField
-          select
-          label="Tipo de asignación"
-          value={form.assignmentType}
-          onChange={(e) => {
-            onFieldChange('assignmentType', e.target.value);
-            onFieldChange('assignmentId', ''); // reset entity when type changes
+        <Autocomplete
+          options={ASSIGNMENT_TYPES}
+          getOptionLabel={(t) => t.label}
+          value={selectedAssignmentType}
+          disabled={isEditing}
+          onChange={(_, selected) => {
+            onFieldChange('assignmentType', selected?.value ?? '');
+            onFieldChange('assignmentId', '');
           }}
           size="small"
           fullWidth
-          disabled={isEditing}
-          error={!!formErrors.assignmentType}
-          helperText={isEditing ? 'El tipo de asignación no se puede cambiar.' : formErrors.assignmentType}
-          required
-        >
-          {ASSIGNMENT_TYPES.map((t) => (
-            <MenuItem key={t.value} value={t.value}>
-              {t.label}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="Entidad"
-          value={form.assignmentId}
-          onChange={(e) => onFieldChange('assignmentId', e.target.value)}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Tipo de asignación"
+              required
+              error={!!formErrors.assignmentType}
+              helperText={isEditing ? 'El tipo de asignación no se puede cambiar.' : formErrors.assignmentType}
+            />
+          )}
+        />
+        <Autocomplete
+          options={assignmentOptions}
+          getOptionLabel={(o) => o.name}
+          value={selectedAssignment}
+          disabled={!form.assignmentType}
+          onChange={(_, selected) => onFieldChange('assignmentId', selected?.id ?? '')}
           size="small"
           fullWidth
-          disabled={!form.assignmentType}
-          error={!!formErrors.assignmentId}
-          helperText={
-            formErrors.assignmentId ??
-            (form.assignmentType && assignmentOptions.length === 0
-              ? 'No hay entidades de este tipo registradas.'
-              : '')
-          }
-          required
-        >
-          {assignmentOptions.map((o) => (
-            <MenuItem key={o.id} value={o.id}>
-              {o.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Entidad"
+              required
+              error={!!formErrors.assignmentId}
+              helperText={
+                formErrors.assignmentId ??
+                (form.assignmentType && assignmentOptions.length === 0
+                  ? 'No hay entidades de este tipo registradas.'
+                  : '')
+              }
+            />
+          )}
+        />
         <TextField
           label="Descripción"
           value={form.description}
