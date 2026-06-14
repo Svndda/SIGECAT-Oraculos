@@ -39,7 +39,7 @@ final class UserRepository extends Repository {
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
               first_name, second_name, first_last_name, second_last_name,
-              job_class_id, password_hash, is_active, is_password_temp,
+              password_hash, is_active, is_password_temp,
               failed_logging_attempts, created_at, created_by,
               is_deleted, deleted_at, deleted_by
        FROM USERS
@@ -56,7 +56,7 @@ final class UserRepository extends Repository {
   public function findByEmail(string $email, string $status = 'active'): ?array {
     $stmt = $this->db->prepare(
       'SELECT user_id, role, email,
-              first_name, second_name, first_last_name,second_last_name,
+              first_name, second_name, first_last_name, second_last_name,
               password_hash, is_active, is_password_temp,
               failed_logging_attempts, created_at, created_by,
               is_deleted, deleted_at, deleted_by
@@ -161,22 +161,6 @@ final class UserRepository extends Repository {
     }
   }
 
-  /** Assigns (or clears, when null) the user's occupational class. */
-  public function updateJobClass(string $userId, ?string $jobClassId): void {
-    $this->beginTransaction();
-    try {
-      $stmt = $this->db->prepare(
-        'UPDATE USERS SET job_class_id = :job_class_id
-         WHERE user_id = :user_id AND is_deleted = 0'
-      );
-      $stmt->execute([':job_class_id' => $jobClassId, ':user_id' => $userId]);
-      $this->commit();
-    } catch (PDOException $e) {
-      $this->rollBack();
-      throw $e;
-    }
-  }
-
   public function updateRole(string $userId, string $role): void {
     $this->beginTransaction();
     try {
@@ -197,7 +181,7 @@ final class UserRepository extends Repository {
   {
     $sql = '
         SELECT user_id, role, email, first_name, second_name, first_last_name, second_last_name,
-               job_class_id, is_active, is_password_temp, failed_logging_attempts, created_at, created_by,
+               is_active, is_password_temp, failed_logging_attempts, created_at, created_by,
                is_deleted, deleted_at, deleted_by
         FROM USERS
         WHERE (UPPER(first_name) LIKE UPPER(:filter) 

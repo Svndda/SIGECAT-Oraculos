@@ -1,5 +1,4 @@
 import { Typography } from '@mui/material';
-import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
@@ -8,19 +7,15 @@ import type { AdminUser } from '../../../services/userService';
 interface UserListProps {
   users: AdminUser[];
   loading: boolean;
-  onAssignClass: (user: AdminUser) => void;
   onChangeRole: (user: AdminUser) => void;
   onDelete: (user: AdminUser) => void;
-  className: (id?: string) => string;
 }
 
 export default function UserList({
   users,
   loading,
-  onAssignClass,
   onChangeRole,
-  onDelete,
-  className,
+  onDelete
 }: UserListProps) {
   const columns: DataColumn<AdminUser>[] = [
     {
@@ -49,8 +44,7 @@ export default function UserList({
           {u.role === 'admin' ? 'Administrador' : 'Empleado'}
         </Typography>
       ),
-    },
-    { label: 'Clase ocupacional', flex: '0 0 22%', render: (u) => className(u.job_class_id) },
+    }
   ];
 
   return (
@@ -60,12 +54,6 @@ export default function UserList({
       getKey={(u) => u.id}
       loading={loading}
       actions={[
-        {
-          icon: <AssignmentIndIcon fontSize="small" />,
-          label: 'Asignar clase',
-          color: '#1a2b4a',
-          onClick: onAssignClass,
-        },
         {
           icon: <AdminPanelSettingsIcon fontSize="small" />,
           label: 'Cambiar rol',

@@ -17,6 +17,7 @@ import type { ServiceError } from '../../../services/authService';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import { validatePassword } from '../../../utils/validation';
+import PasswordStrengthFeedback from '../../../components/PasswordStrengthFeedback';
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -155,6 +156,7 @@ export default function ChangePasswordPage() {
                     },
                   }}
                 />
+                <PasswordStrengthFeedback password={newPassword} />
               </Box>
 
               <Box>

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Services;
 
+use DTO\AllowedUserRoles;
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
 use DTO\UserResponseDTO;
@@ -34,30 +35,6 @@ class UserService
   }
 
   /**
-   * Assigns an occupational class (JOB_CLASS) to a user.
-   *
-   * @throws ApiException When the class id is missing, the user does not
-   *                      exist, or the class does not exist.
-   */
-  public function assignJobClass(string $userId, string $jobClassId): void
-  {
-    $jobClassId = trim($jobClassId);
-    if ($jobClassId === '') {
-      throw new ApiException(ErrorType::missingField('job_class_id'));
-    }
-
-    if ($this->userRepository->findById($userId) === null) {
-      throw new ApiException(ErrorType::from('USER_NOT_FOUND', 'El usuario no existe'), 404);
-    }
-
-    if (!$this->jobClassRepository->existsById($jobClassId)) {
-      throw new ApiException(ErrorType::from('JOB_CLASS_NOT_FOUND', 'La clase ocupacional no existe'), 404);
-    }
-
-    $this->userRepository->updateJobClass($userId, $jobClassId);
-  }
-
-  /**
    * Assigns the plaza identified by its number ("número de plaza") to the user.
    *
    * The user is linked to the existing plaza (JOB_POSITIONS) whose name matches
@@ -81,13 +58,13 @@ class UserService
     }
 
     $currentHolder = $jobPosition['user_id'] ?? null;
-    if ($currentHolder !== null && (string) $currentHolder !== $userId) {
+    if ($currentHolder !== null && (string)$currentHolder !== $userId) {
       throw new ApiException(
         ErrorType::conflict('La plaza ya está asignada a otro usuario.'), 409
       );
     }
 
-    $this->jobPositionRepository->assignToUser((string) $jobPosition['job_position_id'], $userId);
+    $this->jobPositionRepository->assignToUser((string)$jobPosition['job_position_id'], $userId);
   }
 
   /**
@@ -183,7 +160,7 @@ class UserService
     }
 
     // Verify the current password against the stored hash.
-    if (password_verify($currentPassword, (string) $user['password_hash']) === false) {
+    if (password_verify($currentPassword, (string)$user['password_hash']) === false) {
       throw new ApiException(
         ErrorType::from('INVALID_CREDENTIALS', 'La contraseña actual es incorrecta')
       );
@@ -223,8 +200,8 @@ class UserService
    * @return array<string, mixed>
    */
   public function getAllUsers(
-    int $page = 1,
-    int $limit = 10,
+    int    $page = 1,
+    int    $limit = 10,
     string $filter = '',
     string $status = 'active'
   ): array
@@ -247,10 +224,10 @@ class UserService
     return [
       'data' => $data,
       'meta' => [
-        'page'        => $page,
-        'limit'       => $limit,
-        'total'       => $total,
-        'total_pages' => (int) ceil($total / $limit)
+        'page' => $page,
+        'limit' => $limit,
+        'total' => $total,
+        'total_pages' => (int)ceil($total / $limit)
       ]
     ];
   }
@@ -299,7 +276,8 @@ class UserService
    *
    * @throws ApiException
    */
-  public function changeRole(string $userId, string $role, string $actorId): void
+  public function changeRole(
+    string $userId, string $role, string $actorId): void
   {
     if (empty($userId)) {
       throw new ApiException(ErrorType::missingField('user_id'));
@@ -307,7 +285,7 @@ class UserService
     if (trim($role) === '') {
       throw new ApiException(ErrorType::missingField('role'));
     }
-    if (!\DTO\AllowedUserRoles::isValid($role)) {
+    if (!AllowedUserRoles::isValid($role)) {
       throw new ApiException(ErrorType::invalidField('role'));
     }
     if ($userId === $actorId) {
@@ -316,7 +294,7 @@ class UserService
       );
     }
 
-    $existing = $this->userRepository->findById($userId, 'active');
+    $existing = $this->userRepository->findById($userId);
     if ($existing === null) {
       throw new ApiException(
         ErrorType::from('USER_NOT_FOUND', 'El usuario no existe')
@@ -344,7 +322,7 @@ class UserService
       );
     }
 
-    $isDeleted = (int) ($existing['is_deleted'] ?? $existing['IS_DELETED'] ?? 0);
+    $isDeleted = (int)($existing['is_deleted'] ?? $existing['IS_DELETED'] ?? 0);
     if ($isDeleted === 0) {
       throw new ApiException(
         ErrorType::conflict('El usuario no se encuentra eliminado')

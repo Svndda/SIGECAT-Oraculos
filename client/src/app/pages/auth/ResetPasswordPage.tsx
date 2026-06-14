@@ -20,6 +20,7 @@ import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import Header from '../../../components/Header';
 import { validatePassword } from '../../../utils/validation';
+import PasswordStrengthFeedback from '../../../components/PasswordStrengthFeedback';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -147,6 +148,8 @@ export default function ResetPasswordPage() {
                       },
                     }}
                   />
+                  <PasswordStrengthFeedback password={newPassword} />
+                  
                 </Box>
 
                 <Box>
