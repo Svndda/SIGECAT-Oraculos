@@ -21,8 +21,8 @@ export const RecordsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const data = await recordsService.getRecords();
       setRecords(data);
-    } catch (error) {
-      console.error('Error loading records:', error);
+    } catch {
+      // backend not yet implemented
     }
   };
 
