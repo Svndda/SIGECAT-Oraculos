@@ -45,7 +45,12 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      const user = await login(email, password);
+      if (user?.is_password_temp) {
+        navigate('/cambiar-contrasena', { replace: true });
+      } else {
+        navigate('/');
+      }
       navigate('/');
     } catch (error) {
       const serviceError = error as ServiceError;

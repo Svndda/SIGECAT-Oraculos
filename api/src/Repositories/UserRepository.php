@@ -133,6 +133,7 @@ final class UserRepository extends Repository {
     }
     if ($dto->password !== null) {
       $fields[] = 'password_hash = :password_hash';
+      $fields[] = 'is_password_temp = 0';
       $params[':password_hash'] = $dto->password;
     }
     if ($dto->role !== null) {

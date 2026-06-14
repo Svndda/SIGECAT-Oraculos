@@ -6,7 +6,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -53,11 +53,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<AuthUser> => {
     const { user: loggedUser, refresh_token } = await authService.login(email, password);
     localStorage.setItem('sigecat_refresh_token', refresh_token);
     localStorage.setItem('sigecat_user_id', loggedUser.id);
     setUser(loggedUser);
+    return loggedUser;
   };
 
   const logout = async (): Promise<void> => {

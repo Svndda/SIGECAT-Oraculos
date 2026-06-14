@@ -105,7 +105,8 @@ final class AuthService
         'user_id' => $userId,
         'email' => $user['email'],
         'name' => implode(' ', $nameParts),
-        'role' => $user['role'] ?? 'usr',
+        'role' => $user['role'] ?? 'employee',
+        'is_password_temp' => (int) $user['is_password_temp'] === 1,
       ],
       'meta' => [
         'token_type' => 'Bearer',
