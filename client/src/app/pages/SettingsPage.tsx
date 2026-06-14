@@ -15,6 +15,8 @@ import { authService } from '../../services/authService.ts';
 import type { ServiceError } from '../../services/common.ts';
 import ModalError from '../../components/modals/ModalError.tsx';
 import ModalSuccess from '../../components/modals/ModalSuccess.tsx';
+import { validatePassword } from '../../utils/validation.ts';
+import PasswordStrengthFeedback from '../../components/PasswordStrengthFeedback.tsx';
 
 export default function SettingsPage() {
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -60,10 +62,18 @@ export default function SettingsPage() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!passwords.currentPassword || !passwords.newPassword || !passwords.confirmPassword) {
       setModalError({ open: true, title: 'Validación', message: 'Todos los campos de contraseña son requeridos.' });
       return;
     }
+
+    const pwdError = validatePassword(passwords.newPassword);
+    if (pwdError) {
+      setModalError({ open: true, title: 'Validación', message: pwdError });
+      return;
+    }
+
     if (passwords.newPassword !== passwords.confirmPassword) {
       setModalError({ open: true, title: 'Validación', message: 'Las contraseñas nuevas no coinciden.' });
       return;
@@ -134,6 +144,7 @@ export default function SettingsPage() {
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Nueva Contraseña</Typography>
                   <TextField fullWidth type="password" size="small" name="newPassword" value={passwords.newPassword} onChange={handlePasswordChange} />
+                  <PasswordStrengthFeedback password={passwords.newPassword} />
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Confirmar Nueva Contraseña</Typography>

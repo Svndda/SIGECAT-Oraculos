@@ -7,7 +7,6 @@ export interface AdminUser {
   first_name: string;
   last_name: string;
   role: 'admin' | 'employee';
-  job_class_id?: string;
 }
 
 export interface RegisterUserPayload {
@@ -26,7 +25,6 @@ export interface UserProfile {
   first_name: string;
   last_name: string;
   role: string;
-  job_class_id?: string | null;
 }
 
 export interface UpdateProfilePayload {
@@ -41,7 +39,7 @@ const USE_MOCK = false;
 
 const INITIAL_USERS: AdminUser[] = [
   { id: '01MOCK001', email: 'admin@ucr.ac.cr', first_name: 'Admin', last_name: 'UCR', role: 'admin' },
-  { id: '01MOCK002', email: 'empleado@ucr.ac.cr', first_name: 'María', last_name: 'González', role: 'employee', job_class_id: '5200' },
+  { id: '01MOCK002', email: 'empleado@ucr.ac.cr', first_name: 'María', last_name: 'González', role: 'employee'},
 ];
 
 let mockUsers: AdminUser[] = [...INITIAL_USERS];

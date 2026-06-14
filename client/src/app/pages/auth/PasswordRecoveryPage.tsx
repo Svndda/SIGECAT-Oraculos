@@ -99,7 +99,7 @@ export default function PasswordRecoveryPage() {
                   {isSubmitting ? (
                     <CircularProgress size={22} sx={{ color: 'white' }} />
                   ) : (
-                    'Enviar instrucciones'
+                    'Enviar enlace de recuperación'
                   )}
                 </Button>
 

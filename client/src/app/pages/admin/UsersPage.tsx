@@ -64,29 +64,8 @@ export default function UsersPage() {
       `${u.first_name} ${u.last_name} ${u.email} ${u.role}`
         .toLowerCase()
         .includes(search.toLowerCase())
-    ), [users, search]);
-
-  // Handlers para asignar clase
-  const openAssign = (user: AdminUser) => {
-    setAssignTarget(user);
-    setSelectedClassId(user.job_class_id ?? '');
-  };
-  const handleAssign = async () => {
-    if (!assignTarget || !selectedClassId) return;
-    setIsSubmitting(true);
-    try {
-      await userService.assignJobClass(assignTarget.id, selectedClassId);
-      setUsers((prev) => prev.map((u) => (u.id === assignTarget.id ? { ...u, job_class_id: selectedClassId } : u)));
-      setAssignTarget(null);
-      setSuccessMsg('Clase ocupacional asignada correctamente.');
-      setSuccessOpen(true);
-    } catch (error) {
-      const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al asignar', message: e.message ?? 'Error del servidor.' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    ), [users, search]
+  );
 
   // Handlers para cambiar rol
   const openRole = (user: AdminUser) => {
@@ -184,10 +163,8 @@ export default function UsersPage() {
       <UserList
         users={filtered}
         loading={loading}
-        onAssignClass={openAssign}
         onChangeRole={openRole}
         onDelete={setDeleteTarget}
-        className={className}
       />
 
       {/* Modales usando componentes específicos */}
@@ -201,17 +178,6 @@ export default function UsersPage() {
         onClose={() => setFormOpen(false)}
         onConfirm={handleConfirmCreate}
         onChange={handleFormChange}
-      />
-
-      <AssignClassModal
-        open={!!assignTarget}
-        targetUser={assignTarget}
-        selectedClassId={selectedClassId}
-        jobClasses={jobClasses}
-        isSubmitting={isSubmitting}
-        onSelectClass={setSelectedClassId}
-        onClose={() => setAssignTarget(null)}
-        onConfirm={handleAssign}
       />
 
       <ChangeRoleModal

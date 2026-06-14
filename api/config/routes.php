@@ -17,7 +17,6 @@ return [
     ['method' => 'GET',    'path' => '/users/me',            'controller' => 'UserController', 'action' => 'show'],
     ['method' => 'GET',    'path' => '/users',               'controller' => 'UserController', 'action' => 'index'],
     ['method' => 'GET',    'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'getById'],
-    ['method' => 'PATCH',  'path' => '/users/{id}/job-class','controller' => 'UserController', 'action' => 'assignJobClass'],
     ['method' => 'PATCH',  'path' => '/users/{id}/role',     'controller' => 'UserController', 'action' => 'changeRole'],
     ['method' => 'DELETE', 'path' => '/users/{id}',          'controller' => 'UserController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/users/{id}/restore',  'controller' => 'UserController', 'action' => 'restore'],
