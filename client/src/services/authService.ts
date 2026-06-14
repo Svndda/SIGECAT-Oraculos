@@ -6,6 +6,7 @@ export interface AuthUser {
   first_name: string;
   last_name: string;
   role: 'ADMIN' | 'EMPLOYEE';
+  is_password_temp?: boolean;
 }
 
 export interface ServiceError {
@@ -26,6 +27,7 @@ interface BackendLoginData {
   email: string;
   name: string;
   role: string;
+  is_password_temp: boolean;
 }
 
 interface BackendUserData {
@@ -34,6 +36,7 @@ interface BackendUserData {
   first_name: string;
   last_name: string;
   role: string;
+  is_password_temp: boolean;
 }
 
 interface RefreshResponseData {
@@ -112,6 +115,7 @@ export const authService = {
           first_name: firstName ?? '',
           last_name: rest.join(' '),
           role: mapRole(d.role),
+          is_password_temp: Boolean(d.is_password_temp),
         },
         access_token: d.access_token,
         refresh_token: d.refresh_token,
@@ -171,6 +175,7 @@ export const authService = {
         first_name: d.first_name,
         last_name: d.last_name,
         role: mapRole(d.role),
+        is_password_temp: Boolean(d.is_password_temp),
       };
     } catch (error) {
       throw extractApiError(error);
