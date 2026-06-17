@@ -2,12 +2,12 @@ import { TextField, Stack } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { OrgOption } from '../../../services/common';
-import type { JobPositionType, JobPositionParentType } from '../../../services/jobPositionService';
+import type { Job, JobPositionParentType } from '../../../services/jobPositionService';
 
 interface JobPositionFormState {
   job_position_number: string;
   description: string;
-  job_position_type_id: string;
+  job_id: string;
   parentType: JobPositionParentType | '';
   parentId: string;
 }
@@ -17,7 +17,7 @@ interface JobPositionFormModalProps {
   isEditing: boolean;
   form: JobPositionFormState;
   formErrors: Partial<Record<keyof JobPositionFormState, string>>;
-  types: JobPositionType[];
+  types: Job[];
   parentOptions: OrgOption[];
   isSubmitting: boolean;
   onClose: () => void;
@@ -44,7 +44,7 @@ export default function JobPositionFormModal({
   onConfirm,
   onFieldChange,
 }: JobPositionFormModalProps) {
-  const selectedType = types.find((t) => t.job_position_type_id === form.job_position_type_id) ?? null;
+  const selectedType = types.find((t) => t.job_id === form.job_id) ?? null;
   const selectedParentType = PARENT_TYPES.find((p) => p.value === form.parentType) ?? null;
 
   return (
@@ -73,7 +73,7 @@ export default function JobPositionFormModal({
           getOptionLabel={(t) => t.name}
           value={selectedType}
           onChange={(_, selected) => {
-            onFieldChange('job_position_type_id', selected?.job_position_type_id ?? '');
+            onFieldChange('job_id', selected?.job_id ?? '');
           }}
           size="small"
           fullWidth
@@ -82,9 +82,9 @@ export default function JobPositionFormModal({
               {...params}
               label="Tipo de plaza"
               required
-              error={!!formErrors.job_position_type_id}
+              error={!!formErrors.job_id}
               helperText={
-                formErrors.job_position_type_id ??
+                formErrors.job_id ??
                 (types.length === 0 ? 'No hay tipos de plaza registrados.' : '')
               }
             />

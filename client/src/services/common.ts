@@ -2,7 +2,7 @@
  * Shared types and helpers for the admin domain services.
  *
  * Each entity has its own service module (areaService, unitService,
- * sectionService, jobPositionService, jobClassService, userService, …),
+ * sectionService, jobPositionService, userService, …),
  * mirroring the backend's per-entity service layer. This module holds the
  * pieces they all share so none of them grows into a monolith.
  */

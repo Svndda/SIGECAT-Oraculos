@@ -13,7 +13,7 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Supports partial updates: name, description, job_position_type_id and the
+ * - Supports partial updates: name, description, job_id and the
  *   parent entity are all optional.
  * - When any parent column is present, exactly one must be set (mirrors the
  *   CHECK_JOB_POSITION_PARENT constraint); the repository then clears the other
@@ -25,7 +25,7 @@ use Http\ErrorType;
 final class UpdateJobPositionDTO {
   public readonly ?string $jobPositionNumber;
   public readonly ?string $description;
-  public readonly ?string $jobPositionTypeId;
+  public readonly ?string $jobId;
   public readonly ?string $areaId;
   public readonly ?string $departmentId;
   public readonly ?string $sectionId;
@@ -34,7 +34,7 @@ final class UpdateJobPositionDTO {
   private function __construct(
     ?string $jobPositionNumber,
     ?string $description,
-    ?string $jobPositionTypeId,
+    ?string $jobId,
     ?string $areaId,
     ?string $departmentId,
     ?string $sectionId,
@@ -42,7 +42,7 @@ final class UpdateJobPositionDTO {
   ) {
     $this->jobPositionNumber = $jobPositionNumber;
     $this->description = $description;
-    $this->jobPositionTypeId = $jobPositionTypeId;
+    $this->jobId = $jobId;
     $this->areaId = $areaId;
     $this->departmentId = $departmentId;
     $this->sectionId = $sectionId;
@@ -62,7 +62,7 @@ final class UpdateJobPositionDTO {
     return new self(
       isset($data['job_position_number']) ? (string) $data['job_position_number'] : null,
       isset($data['description']) ? (string) $data['description'] : null,
-      $opt('job_position_type_id'),
+      $opt('job_id'),
       $opt('area_id'),
       $opt('department_id'),
       $opt('section_id'),
@@ -132,7 +132,7 @@ final class UpdateJobPositionDTO {
 
     $hasAny = $this->jobPositionNumber !== null
       || $this->description !== null
-      || $this->jobPositionTypeId !== null
+      || $this->jobId !== null
       || $parentCount === 1;
     if (!$hasAny) {
       throw new ApiException(

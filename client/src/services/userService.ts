@@ -56,12 +56,6 @@ export const userService = {
     } catch (e) { throw extractApiError(e); }
   },
 
-  async assignJobClass(userId: string, jobClassId: string): Promise<void> {
-    try {
-      await apiClient.patch(`/users/${userId}/job-class`, { job_class_id: jobClassId });
-    } catch (e) { throw extractApiError(e); }
-  },
-
   async changeRole(userId: string, role: 'admin' | 'employee'): Promise<void> {
     try {
       await apiClient.patch(`/users/${userId}/role`, { role });

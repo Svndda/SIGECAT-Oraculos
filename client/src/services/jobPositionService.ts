@@ -5,7 +5,7 @@ export interface JobPosition {
   id: string;
   job_position_number: string;
   description: string | null;
-  job_position_type_id: string;
+  job_id: string;
   area_id: string | null;
   department_id: string | null;
   section_id: string | null;
@@ -16,8 +16,8 @@ export interface JobPosition {
   deleted_at: string | null;
 }
 
-export interface JobPositionType {
-  job_position_type_id: string;
+export interface Job {
+  job_id: string;
   name: string;
 }
 
@@ -27,7 +27,7 @@ export type JobPositionParentType = 'area' | 'department' | 'section' | 'unit';
 export interface CreateJobPositionPayload {
   job_position_number: string;
   description?: string;
-  job_position_type_id: string;
+  job_id: string;
   area_id?: string;
   department_id?: string;
   section_id?: string;
@@ -37,7 +37,7 @@ export interface CreateJobPositionPayload {
 export interface UpdateJobPositionPayload {
   job_position_number?: string;
   description?: string;
-  job_position_type_id?: string;
+  job_id?: string;
   area_id?: string;
   department_id?: string;
   section_id?: string;
@@ -54,9 +54,9 @@ export const jobPositionService = {
     }
   },
 
-  async getJobPositionTypes(): Promise<JobPositionType[]> {
+  async getJobs(): Promise<Job[]> {
     try {
-      const res = await apiClient.get<{ data: JobPositionType[] }>('/job-position-types');
+      const res = await apiClient.get<{ data: Job[] }>('/jobs');
       return res.data.data ?? [];
     } catch (e) {
       throw extractApiError(e);

@@ -41,7 +41,7 @@ return [
     ['method' => 'GET',    'path' => '/job-classes', 'controller' => 'JobClassController', 'action' => 'index'],
 
     // Plaza (job position) routes
-    ['method' => 'GET',    'path' => '/job-position-types', 'controller' => 'JobPositionController', 'action' => 'types'],
+    ['method' => 'GET',    'path' => '/jobs', 'controller' => 'JobPositionController', 'action' => 'types'],
     ['method' => 'POST',   'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'create'],
     ['method' => 'GET',    'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'index'],
     ['method' => 'PATCH',  'path' => '/job-positions/{id}', 'controller' => 'JobPositionController', 'action' => 'update'],

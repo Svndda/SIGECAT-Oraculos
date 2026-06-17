@@ -13,7 +13,7 @@ use Http\ErrorType;
  * Responsibilities:
  * - Maps incoming request data using fromArray().
  * - Ensures the user identifier (user_id) is provided.
- * - Supports partial updates by allowing optional fields (email, name, password, role, job class, is_active).
+ * - Supports partial updates by allowing optional fields (email, name, password, role, is_active).
  * - Validates each field only if it is present in the request.
  * - Ensures email format is valid when provided.
  * - Enforces password rules if a new password is included.
@@ -27,7 +27,6 @@ class UpdateUserDTO {
   public ?string $firstLastName;
   public ?string $secondLastName;
   public ?string $password;
-  public ?string $jobPosition;
   public ?string $role;
   public ?int $isActive;
 
@@ -38,7 +37,6 @@ class UpdateUserDTO {
     ?string $firstLastName,
     ?string $secondLastName,
     ?string $password,
-    ?string $jobPosition,
     ?string $role,
     ?int $isActive
   ) {
@@ -48,7 +46,6 @@ class UpdateUserDTO {
     $this->firstLastName = $firstLastName;
     $this->secondLastName = $secondLastName;
     $this->password = $password;
-    $this->jobPosition = $jobPosition;
     $this->role = $role;
     $this->isActive = $isActive;
   }
@@ -61,7 +58,6 @@ class UpdateUserDTO {
    * first_last_name?: string,
    * second_last_name?: string,
    * password?: string,
-   * job_class_id?: string,
    * role?: string,
    * is_active?: int
    * } $data
@@ -74,7 +70,6 @@ class UpdateUserDTO {
       isset($data['first_last_name'])  ? (string) $data['first_last_name']  : null,
       isset($data['second_last_name']) ? (string) $data['second_last_name'] : null,
       isset($data['password'])         ? (string) $data['password']         : null,
-      isset($data['job_class_id'])     ? (string) $data['job_class_id']     : null,
       isset($data['role'])             ? (string) $data['role']             : null,
       isset($data['is_active'])        ? (int)    $data['is_active']        : null,
     );

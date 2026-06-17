@@ -6,6 +6,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useRecords } from '../../context/RecordsContext';
+import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
+import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
+import DeclarationWorkday from '../../features/employee/DeclarationWorkday';
 
 interface HourRow {
   id: number;
@@ -250,6 +253,15 @@ export default function WorkHoursPage() {
             </Button>
           </Box>
         </Paper>
+
+        {/* Jornada laboral (magnitud + límites) */}
+        <DeclarationWorkday />
+
+        {/* Funciones de la jornada (búsqueda en catálogo + funciones personalizadas) */}
+        <DeclarationFunctions />
+
+        {/* Permisos y licencias */}
+        <DeclarationLicenses />
 
         {/* Mensaje de Guardado */}
         {message && (

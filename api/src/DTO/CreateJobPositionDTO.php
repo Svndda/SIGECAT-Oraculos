@@ -19,7 +19,7 @@ use Http\ErrorType;
 final class CreateJobPositionDTO {
   public readonly string $jobPositionNumber;
   public readonly ?string $description;
-  public readonly string $jobPositionTypeId;
+  public readonly string $jobId;
   public readonly ?string $areaId;
   public readonly ?string $departmentId;
   public readonly ?string $sectionId;
@@ -28,7 +28,7 @@ final class CreateJobPositionDTO {
   private function __construct(
     string $jobPositionNumber,
     ?string $description,
-    string $jobPositionTypeId,
+    string $jobId,
     ?string $areaId,
     ?string $departmentId,
     ?string $sectionId,
@@ -36,7 +36,7 @@ final class CreateJobPositionDTO {
   ) {
     $this->jobPositionNumber = $jobPositionNumber;
     $this->description = $description;
-    $this->jobPositionTypeId = $jobPositionTypeId;
+    $this->jobId = $jobId;
     $this->areaId = $areaId;
     $this->departmentId = $departmentId;
     $this->sectionId = $sectionId;
@@ -56,7 +56,7 @@ final class CreateJobPositionDTO {
     return new self(
       (string) ($data['job_position_number'] ?? ''),
       isset($data['description']) ? (string) $data['description'] : null,
-      (string) ($data['job_position_type_id'] ?? ''),
+      (string) ($data['job_id'] ?? ''),
       $opt('area_id'),
       $opt('department_id'),
       $opt('section_id'),
@@ -99,8 +99,8 @@ final class CreateJobPositionDTO {
         ErrorType::from('INVALID_JOB_POSITION_DESC', 'La descripción no puede exceder los 255 caracteres'), 400
       );
     }
-    if (trim($this->jobPositionTypeId) === '') {
-      throw new ApiException(ErrorType::missingField('job_position_type_id'));
+    if (trim($this->jobId) === '') {
+      throw new ApiException(ErrorType::missingField('job_id'));
     }
 
     $parentCount = count(array_filter(
