@@ -24,6 +24,11 @@ class EmailValidator {
       throw new ApiException(ErrorType::missingField("email"));
     }
 
+    // Length limit mirrors the USERS.email column to avoid an ORA-12899.
+    if (strlen($email) > 255) {
+      throw new ApiException(ErrorType::invalidField("email", "No puede exceder los 255 caracteres"));
+    }
+
     if (filter_var($email, FILTER_VALIDATE_EMAIL) === FALSE) {
       throw new ApiException(ErrorType::invalidEmail());
     }
