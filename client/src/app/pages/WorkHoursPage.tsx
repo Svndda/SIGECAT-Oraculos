@@ -6,6 +6,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useRecords } from '../../context/RecordsContext';
+import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
 
 interface HourRow {
   id: number;
@@ -250,6 +251,9 @@ export default function WorkHoursPage() {
             </Button>
           </Box>
         </Paper>
+
+        {/* Funciones de la jornada (búsqueda en catálogo + funciones personalizadas) */}
+        <DeclarationFunctions />
 
         {/* Mensaje de Guardado */}
         {message && (
