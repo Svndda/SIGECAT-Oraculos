@@ -4,7 +4,6 @@ namespace Controllers;
 
 use DTO\CreateRestTimeDTO;
 use DTO\UpdateRestTimeDTO;
-use Exception;
 use Http\ApiException;
 use Http\Request;
 use Http\Response;
@@ -53,8 +52,6 @@ class RestTimeController
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
@@ -81,8 +78,6 @@ class RestTimeController
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
