@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { useRecords } from '../../context/RecordsContext';
 import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
+import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
 
 interface HourRow {
   id: number;
@@ -254,6 +255,9 @@ export default function WorkHoursPage() {
 
         {/* Funciones de la jornada (búsqueda en catálogo + funciones personalizadas) */}
         <DeclarationFunctions />
+
+        {/* Permisos y licencias */}
+        <DeclarationLicenses />
 
         {/* Mensaje de Guardado */}
         {message && (
