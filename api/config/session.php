@@ -20,9 +20,6 @@ function validateSessionToken(PDO $db): void
 
   $authorization = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
   $sessionToken = $_COOKIE['sigecat_session_token'] ?? null;
-  
-  error_log('[Session] Token exists: ' . ($sessionToken ? 'YES' : 'NO'));
-  error_log('[Session] All cookies: ' . json_encode($_COOKIE));
 
   if (!$sessionToken && !str_starts_with($authorization, 'Bearer ')) {
     return;
