@@ -16,8 +16,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import type { ServiceError } from '../../../services/authService';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
+import { useSnackbar } from '../../../context/SnackbarContext';
 import Header from '../../../components/Header';
 import { validatePassword } from '../../../utils/validation';
 import PasswordStrengthFeedback from '../../../components/PasswordStrengthFeedback';
@@ -33,8 +32,7 @@ export default function ResetPasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
+  const snackbar = useSnackbar();
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
@@ -53,22 +51,14 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
     try {
       await authService.resetPassword(token, newPassword, confirmPassword);
-      setSuccessOpen(true);
+      snackbar.success('Su contraseña ha sido actualizada exitosamente. Puede iniciar sesión con su nueva contraseña.');
+      navigate('/login');
     } catch (error) {
       const serviceError = error as ServiceError;
-      setModalError({
-        open: true,
-        title: 'Error al restablecer contraseña',
-        message: serviceError.message ?? 'Error del servidor. Intente de nuevo más tarde.',
-      });
+      snackbar.error(serviceError.message ?? 'Error del servidor. Intente de nuevo más tarde.');
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleSuccessClose = () => {
-    setSuccessOpen(false);
-    navigate('/login');
   };
 
   if (!token) {
@@ -220,19 +210,6 @@ export default function ResetPasswordPage() {
           </Stack>
         </Paper>
       </Box>
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((prev) => ({ ...prev, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Contraseña restablecida"
-        message="Su contraseña ha sido actualizada exitosamente. Puede iniciar sesión con su nueva contraseña."
-        onClose={handleSuccessClose}
-      />
     </Box>
   );
 }

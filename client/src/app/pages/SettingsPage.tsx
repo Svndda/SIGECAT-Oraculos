@@ -13,8 +13,7 @@ import {
 import { userService } from '../../services/userService.ts';
 import { authService } from '../../services/authService.ts';
 import type { ServiceError } from '../../services/common.ts';
-import ModalError from '../../components/modals/ModalError.tsx';
-import ModalSuccess from '../../components/modals/ModalSuccess.tsx';
+import { useSnackbar } from '../../context/SnackbarContext';
 import { validatePassword } from '../../utils/validation.ts';
 import PasswordStrengthFeedback from '../../components/PasswordStrengthFeedback.tsx';
 
@@ -34,8 +33,7 @@ export default function SettingsPage() {
   });
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [modalSuccess, setModalSuccess] = useState({ open: false, title: '', message: '' });
+  const snackbar = useSnackbar();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -48,13 +46,13 @@ export default function SettingsPage() {
         });
       } catch (err) {
         const serviceError = err as ServiceError;
-        setModalError({ open: true, title: 'Error', message: serviceError.message ?? 'No se pudo cargar el perfil.' });
+        snackbar.error(serviceError.message ?? 'No se pudo cargar el perfil.');
       } finally {
         setLoadingInitial(false);
       }
     };
     loadProfile();
-  }, []);
+  }, [snackbar]);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswords({ ...passwords, [e.target.name]: e.target.value });
@@ -64,29 +62,29 @@ export default function SettingsPage() {
     e.preventDefault();
 
     if (!passwords.currentPassword || !passwords.newPassword || !passwords.confirmPassword) {
-      setModalError({ open: true, title: 'Validación', message: 'Todos los campos de contraseña son requeridos.' });
+      snackbar.error('Todos los campos de contraseña son requeridos.');
       return;
     }
 
     const pwdError = validatePassword(passwords.newPassword);
     if (pwdError) {
-      setModalError({ open: true, title: 'Validación', message: pwdError });
+      snackbar.error(pwdError);
       return;
     }
 
     if (passwords.newPassword !== passwords.confirmPassword) {
-      setModalError({ open: true, title: 'Validación', message: 'Las contraseñas nuevas no coinciden.' });
+      snackbar.error('Las contraseñas nuevas no coinciden.');
       return;
     }
 
     setIsSubmittingPassword(true);
     try {
       await authService.changePassword(passwords.currentPassword, passwords.newPassword);
-      setModalSuccess({ open: true, title: 'Contraseña actualizada', message: 'Su contraseña ha sido cambiada de forma segura.' });
+      snackbar.success('Su contraseña ha sido cambiada de forma segura.');
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       const serviceError = err as ServiceError;
-      setModalError({ open: true, title: 'Error de seguridad', message: serviceError.message ?? 'Error al cambiar la contraseña.' });
+      snackbar.error(serviceError.message ?? 'Error al cambiar la contraseña.');
     } finally {
       setIsSubmittingPassword(false);
     }
@@ -158,19 +156,6 @@ export default function SettingsPage() {
           </Paper>
         </Stack>
       </Box>
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={modalSuccess.open}
-        title={modalSuccess.title}
-        message={modalSuccess.message}
-        onClose={() => setModalSuccess((p) => ({ ...p, open: false }))}
-      />
     </Container>
   );
 }

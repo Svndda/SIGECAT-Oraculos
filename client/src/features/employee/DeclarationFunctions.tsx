@@ -6,9 +6,8 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { employeeFunctionService, type CatalogFunction } from '../../services/employeeFunctionService';
 import type { ServiceError } from '../../services/common';
-import ModalSuccess from '../../components/modals/ModalSuccess';
-import ModalError from '../../components/modals/ModalError';
 import ModalForm from '../../components/modals/ModalForm';
+import { useSnackbar } from '../../context/SnackbarContext';
 
 interface CustomFunctionForm {
   name: string;
@@ -53,9 +52,7 @@ export default function DeclarationFunctions() {
   const [customErrors, setCustomErrors] = useState<Partial<Record<keyof CustomFunctionForm, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorState, setErrorState] = useState({ open: false, title: '', message: '' });
+  const snackbar = useSnackbar();
 
   // The function is "inexistente" when a non-empty search returns no catalogue match.
   const canCreateCustom = inputValue.trim() !== '' && !loadingCatalog && catalog.length === 0;
@@ -68,14 +65,14 @@ export default function DeclarationFunctions() {
       .then(setCatalog)
       .catch((error) => {
         const e = error as ServiceError;
-        setErrorState({ open: true, title: 'Error al buscar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoadingCatalog(false));
   };
 
   const addToDeclaration = (fn: CatalogFunction) => {
     if (declared.some((d) => d.id === fn.id)) {
-      setErrorState({ open: true, title: 'Función repetida', message: 'Esa función ya está en tu lista.' });
+      snackbar.error('Esa función ya está en tu lista.');
       return;
     }
     setDeclared((prev) => [
@@ -86,8 +83,7 @@ export default function DeclarationFunctions() {
       },
     ]);
     setSelected(null);
-    setSuccessMsg(`Función "${fn.name}" agregada a tu jornada.`);
-    setSuccessOpen(true);
+    snackbar.success(`Función "${fn.name}" agregada a tu jornada.`);
   };
 
   const removeFromDeclaration = (id: string) => {
@@ -157,7 +153,7 @@ export default function DeclarationFunctions() {
       addToDeclaration(created);
     } catch (error) {
       const e = error as ServiceError;
-      setErrorState({ open: true, title: 'Error al crear', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -339,19 +335,6 @@ export default function DeclarationFunctions() {
           />
         </Stack>
       </ModalForm>
-
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
-      <ModalError
-        open={errorState.open}
-        title={errorState.title}
-        message={errorState.message}
-        onClose={() => setErrorState((p) => ({ ...p, open: false }))}
-      />
     </Paper>
   );
 }
