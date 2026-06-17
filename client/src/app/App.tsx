@@ -14,6 +14,7 @@ import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/SettingsPage.tsx';
 import { RecordsProvider } from '../context/RecordsContext';
 import { AuthProvider } from '../context/AuthContext';
+import { SnackbarProvider } from '../context/SnackbarContext';
 import PrivateRoute from '../components/PrivateRoute';
 import DepartmentsPage from './pages/admin/DepartmentsPage';
 import RoleRoute from "../components/RoleRoute.tsx";
@@ -24,7 +25,8 @@ function App() {
   return (
     <AuthProvider>
       <RecordsProvider>
-        <BrowserRouter>
+        <SnackbarProvider>
+          <BrowserRouter>
           <Routes>
 
             {/* Public routes */}
@@ -53,7 +55,8 @@ function App() {
               </Route>
             </Route>
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </SnackbarProvider>
       </RecordsProvider>
     </AuthProvider>
   );
