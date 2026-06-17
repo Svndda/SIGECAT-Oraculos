@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
-  Box, Paper, Stack, Typography, Autocomplete, TextField, Button,
-  List, ListItem, ListItemText, IconButton, Chip,
+  Box, Paper, Stack, Typography, Autocomplete, TextField, Button, IconButton, Chip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -27,6 +26,10 @@ export interface DeclaredFunction {
   is_custom: boolean;
   /** Weekly time dedicated to the function, in minutes. */
   minutes: number;
+  /** Extraordinary (overtime) minutes for the function. */
+  overtime_minutes: number;
+  /** Reason/detail for the overtime; required when overtime_minutes > 0. */
+  justification: string;
 }
 
 /** Formats a minutes amount as "Xh Ym" for the weekly total. */
@@ -77,7 +80,10 @@ export default function DeclarationFunctions() {
     }
     setDeclared((prev) => [
       ...prev,
-      { id: fn.id, name: fn.name, description: fn.description, is_custom: fn.is_custom, minutes: fn.expected_time ?? 0 },
+      {
+        id: fn.id, name: fn.name, description: fn.description, is_custom: fn.is_custom,
+        minutes: fn.expected_time ?? 0, overtime_minutes: 0, justification: '',
+      },
     ]);
     setSelected(null);
     setSuccessMsg(`Función "${fn.name}" agregada a tu jornada.`);
@@ -88,11 +94,26 @@ export default function DeclarationFunctions() {
     setDeclared((prev) => prev.filter((d) => d.id !== id));
   };
 
+  // Parses a minutes input into a non-negative integer (empty/invalid -> 0).
+  const parseMinutes = (raw: string): number => {
+    const n = Math.trunc(Number(raw));
+    return raw.trim() === '' || !Number.isFinite(n) || n < 0 ? 0 : n;
+  };
+
   // Story 4: assign/edit the weekly minutes of a function (the time is in minutes).
   const updateMinutes = (id: string, raw: string) => {
-    const n = Math.trunc(Number(raw));
-    const minutes = raw.trim() === '' || !Number.isFinite(n) || n < 0 ? 0 : n;
+    const minutes = parseMinutes(raw);
     setDeclared((prev) => prev.map((d) => (d.id === id ? { ...d, minutes } : d)));
+  };
+
+  // Story 5: extraordinary minutes and their justification.
+  const updateOvertime = (id: string, raw: string) => {
+    const overtime_minutes = parseMinutes(raw);
+    setDeclared((prev) => prev.map((d) => (d.id === id ? { ...d, overtime_minutes } : d)));
+  };
+
+  const updateJustification = (id: string, justification: string) => {
+    setDeclared((prev) => prev.map((d) => (d.id === id ? { ...d, justification } : d)));
   };
 
   const totalMinutes = declared.reduce((sum, d) => sum + d.minutes, 0);
@@ -196,41 +217,69 @@ export default function DeclarationFunctions() {
           Aún no has agregado funciones a tu jornada.
         </Typography>
       ) : (
-        <List dense disablePadding>
-          {declared.map((d) => (
-            <ListItem
-              key={d.id}
-              sx={{ backgroundColor: 'white', borderRadius: 1, mb: 1, alignItems: 'flex-start', gap: 2 }}
-              secondaryAction={
-                <IconButton edge="end" size="small" onClick={() => removeFromDeclaration(d.id)} sx={{ color: '#d32f2f' }}>
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
-              }
-            >
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {d.name}
-                    {d.is_custom && <Chip label="Personalizada" size="small" color="primary" variant="outlined" />}
+        <Stack spacing={1.5}>
+          {declared.map((d) => {
+            const needsJustification = d.overtime_minutes > 0 && d.justification.trim() === '';
+            return (
+              <Paper key={d.id} variant="outlined" sx={{ p: 2, backgroundColor: 'white' }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography sx={{ fontWeight: 600 }}>{d.name}</Typography>
+                      {d.is_custom && <Chip label="Personalizada" size="small" color="primary" variant="outlined" />}
+                    </Box>
+                    {d.description && (
+                      <Typography variant="body2" color="text.secondary">{d.description}</Typography>
+                    )}
                   </Box>
-                }
-                secondary={d.description ?? undefined}
-              />
-              {/* Story 4: weekly minutes for this function */}
-              <TextField
-                label="Minutos / semana"
-                type="number"
-                size="small"
-                value={d.minutes === 0 ? '' : d.minutes}
-                onChange={(e) => updateMinutes(d.id, e.target.value)}
-                error={d.minutes < 0}
-                helperText={d.minutes < 0 ? 'Tiempo inválido.' : undefined}
-                inputProps={{ min: 0, step: 5 }}
-                sx={{ width: 140, mr: 5, backgroundColor: 'white' }}
-              />
-            </ListItem>
-          ))}
-        </List>
+                  <IconButton size="small" onClick={() => removeFromDeclaration(d.id)} sx={{ color: '#d32f2f' }}>
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1.5 }}>
+                  {/* Story 4: regular weekly minutes */}
+                  <TextField
+                    label="Minutos / semana"
+                    type="number"
+                    size="small"
+                    value={d.minutes === 0 ? '' : d.minutes}
+                    onChange={(e) => updateMinutes(d.id, e.target.value)}
+                    inputProps={{ min: 0, step: 5 }}
+                    sx={{ width: 160 }}
+                  />
+                  {/* Story 5: extraordinary minutes */}
+                  <TextField
+                    label="Minutos extra"
+                    type="number"
+                    size="small"
+                    value={d.overtime_minutes === 0 ? '' : d.overtime_minutes}
+                    onChange={(e) => updateOvertime(d.id, e.target.value)}
+                    inputProps={{ min: 0, step: 5 }}
+                    sx={{ width: 160 }}
+                  />
+                </Stack>
+
+                {/* Story 5: justification, required when there are overtime minutes */}
+                {d.overtime_minutes > 0 && (
+                  <TextField
+                    label="Justificación del tiempo extraordinario"
+                    value={d.justification}
+                    onChange={(e) => updateJustification(d.id, e.target.value)}
+                    error={needsJustification}
+                    helperText={needsJustification ? 'La justificación es obligatoria si hay tiempo extraordinario.' : undefined}
+                    size="small"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    required
+                    sx={{ mt: 1.5 }}
+                  />
+                )}
+              </Paper>
+            );
+          })}
+        </Stack>
       )}
 
       {/* Story 4: weekly workload total (time handled in minutes) */}
