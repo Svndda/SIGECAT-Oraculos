@@ -25,6 +25,15 @@ export interface DeclaredFunction {
   name: string;
   description: string | null;
   is_custom: boolean;
+  /** Weekly time dedicated to the function, in minutes. */
+  minutes: number;
+}
+
+/** Formats a minutes amount as "Xh Ym" for the weekly total. */
+function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 export default function DeclarationFunctions() {
@@ -68,7 +77,7 @@ export default function DeclarationFunctions() {
     }
     setDeclared((prev) => [
       ...prev,
-      { id: fn.id, name: fn.name, description: fn.description, is_custom: fn.is_custom },
+      { id: fn.id, name: fn.name, description: fn.description, is_custom: fn.is_custom, minutes: fn.expected_time ?? 0 },
     ]);
     setSelected(null);
     setSuccessMsg(`Función "${fn.name}" agregada a tu jornada.`);
@@ -78,6 +87,15 @@ export default function DeclarationFunctions() {
   const removeFromDeclaration = (id: string) => {
     setDeclared((prev) => prev.filter((d) => d.id !== id));
   };
+
+  // Story 4: assign/edit the weekly minutes of a function (the time is in minutes).
+  const updateMinutes = (id: string, raw: string) => {
+    const n = Math.trunc(Number(raw));
+    const minutes = raw.trim() === '' || !Number.isFinite(n) || n < 0 ? 0 : n;
+    setDeclared((prev) => prev.map((d) => (d.id === id ? { ...d, minutes } : d)));
+  };
+
+  const totalMinutes = declared.reduce((sum, d) => sum + d.minutes, 0);
 
   // Story 1: open the create form, prefilled with the searched name.
   const openCreate = () => {
@@ -182,7 +200,7 @@ export default function DeclarationFunctions() {
           {declared.map((d) => (
             <ListItem
               key={d.id}
-              sx={{ backgroundColor: 'white', borderRadius: 1, mb: 1 }}
+              sx={{ backgroundColor: 'white', borderRadius: 1, mb: 1, alignItems: 'flex-start', gap: 2 }}
               secondaryAction={
                 <IconButton edge="end" size="small" onClick={() => removeFromDeclaration(d.id)} sx={{ color: '#d32f2f' }}>
                   <DeleteOutlineIcon fontSize="small" />
@@ -198,9 +216,33 @@ export default function DeclarationFunctions() {
                 }
                 secondary={d.description ?? undefined}
               />
+              {/* Story 4: weekly minutes for this function */}
+              <TextField
+                label="Minutos / semana"
+                type="number"
+                size="small"
+                value={d.minutes === 0 ? '' : d.minutes}
+                onChange={(e) => updateMinutes(d.id, e.target.value)}
+                error={d.minutes < 0}
+                helperText={d.minutes < 0 ? 'Tiempo inválido.' : undefined}
+                inputProps={{ min: 0, step: 5 }}
+                sx={{ width: 140, mr: 5, backgroundColor: 'white' }}
+              />
             </ListItem>
           ))}
         </List>
+      )}
+
+      {/* Story 4: weekly workload total (time handled in minutes) */}
+      {declared.length > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: '1px solid #e0e0e0' }}>
+          <Typography variant="caption" color="text.secondary">
+            El tiempo se registra en minutos.
+          </Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#12457d' }}>
+            Carga semanal: {totalMinutes} min ({formatMinutes(totalMinutes)})
+          </Typography>
+        </Box>
       )}
 
       <ModalForm
