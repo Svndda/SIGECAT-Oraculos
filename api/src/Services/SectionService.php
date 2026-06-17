@@ -124,8 +124,7 @@ class SectionService {
    *
    * @param string $status One of active|deleted|all (default active). With
    *                       'active', a soft-deleted section returns 404.
-   * @return array{section_id: string, area_id: string, name: string|null, description: string|null,
- *   created_at: string, created_by: string}
+   * @return array<string, mixed> The section row as returned by the repository.
    * @throws ApiException
    */
   public function getById(string $sectionId, string $status = 'active'): array {
