@@ -4,7 +4,6 @@ namespace Controllers;
 
 use DTO\CreateDepartmentDTO;
 use DTO\UpdateDepartmentDTO;
-use Exception;
 use Http\ApiException;
 use Http\Request;
 use Http\Response;
@@ -46,8 +45,6 @@ class DepartmentController {
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
@@ -74,8 +71,6 @@ class DepartmentController {
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 

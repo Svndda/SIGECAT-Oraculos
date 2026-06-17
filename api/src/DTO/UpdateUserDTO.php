@@ -80,15 +80,23 @@ class UpdateUserDTO {
       EmailValidator::validate($this->email);
     }
 
+    // Length limits mirror the USERS columns, so an over-long value is rejected
+    // with a clear message instead of bubbling up as an ORA-12899 database error.
     if ($this->firstName !== null) {
       $this->firstName = trim($this->firstName);
       if ($this->firstName === '') {
         throw new ApiException(ErrorType::invalidField('first_name'));
       }
+      if (strlen($this->firstName) > 25) {
+        throw new ApiException(ErrorType::invalidField('first_name', 'No puede exceder los 25 caracteres'));
+      }
     }
 
     if ($this->secondName !== null) {
       $this->secondName = trim($this->secondName);
+      if (strlen($this->secondName) > 55) {
+        throw new ApiException(ErrorType::invalidField('second_name', 'No puede exceder los 55 caracteres'));
+      }
     }
 
     if ($this->firstLastName !== null) {
@@ -96,12 +104,18 @@ class UpdateUserDTO {
       if ($this->firstLastName === '') {
         throw new ApiException(ErrorType::invalidField('first_last_name'));
       }
+      if (strlen($this->firstLastName) > 55) {
+        throw new ApiException(ErrorType::invalidField('first_last_name', 'No puede exceder los 55 caracteres'));
+      }
     }
 
     if ($this->secondLastName !== null) {
       $this->secondLastName = trim($this->secondLastName);
       if ($this->secondLastName === '') {
         throw new ApiException(ErrorType::invalidField('second_last_name'));
+      }
+      if (strlen($this->secondLastName) > 55) {
+        throw new ApiException(ErrorType::invalidField('second_last_name', 'No puede exceder los 55 caracteres'));
       }
     }
 

@@ -5,7 +5,6 @@ namespace Controllers;
 
 use DTO\RegisterUserDTO;
 use DTO\UpdateUserDTO;
-use Exception;
 use Http\ApiException;
 use Http\Request;
 use Http\Response;
@@ -51,8 +50,6 @@ class UserController
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
@@ -75,8 +72,6 @@ class UserController
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
