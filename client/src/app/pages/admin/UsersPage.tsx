@@ -1,15 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Box } from '@mui/material';
 import { userService } from '../../../services/userService';
-import { jobClassService } from '../../../services/jobClassService';
 import type { AdminUser } from '../../../services/userService';
-import type { JobClass } from '../../../services/jobClassService';
 import type { ServiceError } from '../../../services/common';
 import UserToolbar from '../../../features/admin/user/UserToolbar';
 import UserList from '../../../features/admin/user/UserList';
 import UserFormModal from '../../../features/admin/user/UserFormModal';
 import ChangeRoleModal from '../../../features/admin/user/ChangeRoleModal';
-import AssignClassModal from '../../../features/admin/user/AssignClassModal';
 import ModalError from '../../../components/modals/ModalError';
 import ModalSuccess from '../../../components/modals/ModalSuccess';
 import { validateInstitutionalEmail } from '../../../utils/validation';
@@ -28,7 +25,6 @@ const EMPTY_FORM = {
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState('');
-  const [jobClasses, setJobClasses] = useState<JobClass[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Estados para modales
@@ -38,8 +34,6 @@ export default function UsersPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [assignTarget, setAssignTarget] = useState<AdminUser | null>(null);
-  const [selectedClassId, setSelectedClassId] = useState('');
   const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('employee');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
@@ -51,13 +45,8 @@ export default function UsersPage() {
   // Carga inicial
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      userService.getUsers().then(setUsers),
-      jobClassService.getJobClasses().then(setJobClasses),
-    ]).catch(() => {}).finally(() => setLoading(false));
+    userService.getUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false));
   }, []);
-
-  const className = (id?: string) => jobClasses.find((c) => c.id === id)?.name ?? '—';
 
   const filtered = useMemo(() =>
     users.filter((u) =>

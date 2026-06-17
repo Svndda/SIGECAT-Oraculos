@@ -12,7 +12,6 @@ use Http\ApiException;
 use Http\ErrorType;
 use Repositories\UserRepository;
 use Repositories\JobPositionRepository;
-use Repositories\JobClassRepository;
 use PDO;
 
 /**
@@ -25,13 +24,11 @@ class UserService
 {
   private UserRepository $userRepository;
   private JobPositionRepository $jobPositionRepository;
-  private JobClassRepository $jobClassRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->userRepository = new UserRepository($this->pdo);
     $this->jobPositionRepository = new JobPositionRepository($this->pdo);
-    $this->jobClassRepository = new JobClassRepository($this->pdo);
   }
 
   /**
