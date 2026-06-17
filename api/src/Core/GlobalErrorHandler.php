@@ -7,6 +7,7 @@ use Http\Response;
 use Http\ErrorType;
 use Http\ApiException;
 use ErrorException;
+use PDOException;
 use Throwable;
 
 /**
@@ -54,25 +55,20 @@ class GlobalErrorHandler
 
   /**
    * Catches all unhandled exceptions and generates a standardized JSON response.
-   * 
-   * If the exception is an instance of ApiException, it uses the specific 
-   * ErrorType and HTTP status defined within. Otherwise, it defaults to a 500 Internal Error.
-   * 
+   *
+   * The technical detail of every failure is logged server-side, but it is never
+   * forwarded to the client:
+   * - ApiException carries an already user-safe message and status.
+   * - PDOException is translated into a friendly, human-readable message
+   *   (the raw ORA-##### text stays in the log only).
+   * - Any other unexpected error returns a generic 500 message.
+   *
    * @param Throwable $e The caught exception or error.
    * @return void
    */
   public static function handleException(Throwable $e): void
   {
-    $logEntry = sprintf(
-      "[%s] %s: %s in %s:%d\n",
-      date('Y-m-d H:i:s'),
-      get_class($e),
-      $e->getMessage(),
-      $e->getFile(),
-      $e->getLine()
-    );
-
-    file_put_contents('/tmp/debug_api.log', $logEntry, FILE_APPEND);
+    self::logThrowable($e);
 
     if ($e instanceof ApiException) {
       Response::error(
@@ -82,9 +78,81 @@ class GlobalErrorHandler
       return;
     }
 
+    if ($e instanceof PDOException) {
+      $apiError = self::translateDatabaseError($e);
+      Response::error(
+        $apiError->getError(),
+        $apiError->getHttpStatus()
+      );
+      return;
+    }
+
     Response::error(
-      ErrorType::internal($e->getMessage()),
+      ErrorType::internal('Ocurrió un error inesperado. Intente de nuevo más tarde.'),
       500
+    );
+  }
+
+  /**
+   * Logs the technical detail of a failure to the server's error log.
+   * This is the only place the raw, internal message is kept.
+   *
+   * @param Throwable $e The caught exception or error.
+   * @return void
+   */
+  private static function logThrowable(Throwable $e): void
+  {
+    error_log(sprintf(
+      '[SIGECAT] %s: %s in %s:%d',
+      get_class($e),
+      $e->getMessage(),
+      $e->getFile(),
+      $e->getLine()
+    ));
+  }
+
+  /**
+   * Maps a database failure to a safe, human-readable ApiException.
+   *
+   * Oracle reports the cause in an "ORA-#####" token inside the driver message;
+   * we map the common ones to clear Spanish messages and fall back to a generic
+   * database error for everything else. The original ORA text is never exposed.
+   *
+   * @param PDOException $e The database exception raised by the driver.
+   * @return ApiException
+   */
+  private static function translateDatabaseError(PDOException $e): ApiException
+  {
+    if (preg_match('/ORA-(\d{5})/', $e->getMessage(), $matches) === 1) {
+      return match ($matches[1]) {
+        // Unique constraint violated.
+        '00001' => new ApiException(
+          ErrorType::conflict('Ya existe un registro con esos datos.'), 409
+        ),
+        // Value too large for column.
+        '12899' => new ApiException(
+          ErrorType::from('FIELD_TOO_LONG', 'Uno de los campos supera la longitud permitida.'), 400
+        ),
+        // Cannot insert NULL into a NOT NULL column.
+        '01400' => new ApiException(
+          ErrorType::from('MISSING_REQUIRED_FIELD', 'Falta completar un campo obligatorio.'), 400
+        ),
+        // Parent key not found (FK references a missing row).
+        '02291' => new ApiException(
+          ErrorType::from('INVALID_REFERENCE', 'La referencia indicada no existe.'), 400
+        ),
+        // Child record found (cannot delete because of dependent rows).
+        '02292' => new ApiException(
+          ErrorType::conflict('No se puede eliminar porque tiene registros asociados.'), 409
+        ),
+        default => new ApiException(
+          ErrorType::from('DATABASE_ERROR', 'No se pudo completar la operación por un problema con la base de datos.'), 500
+        ),
+      };
+    }
+
+    return new ApiException(
+      ErrorType::from('DATABASE_ERROR', 'No se pudo completar la operación por un problema con la base de datos.'), 500
     );
   }
 }
