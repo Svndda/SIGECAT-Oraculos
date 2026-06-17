@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Paper, Stack, Typography, TextField, MenuItem } from '@mui/material';
+import { Box, Paper, Stack, Typography, TextField, MenuItem, Button } from '@mui/material';
 import { employeeWorkdayService, type WorkdayMagnitude } from '../../services/employeeWorkdayService';
 import type { ServiceError } from '../../services/common';
 import ModalError from '../../components/modals/ModalError';
+import ModalSuccess from '../../components/modals/ModalSuccess';
 
 export default function DeclarationWorkday() {
   const [magnitudes, setMagnitudes] = useState<WorkdayMagnitude[]>([]);
   const [magnitudeId, setMagnitudeId] = useState('');
+  const [fieldError, setFieldError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [successOpen, setSuccessOpen] = useState(false);
   const [errorState, setErrorState] = useState({ open: false, title: '', message: '' });
 
   useEffect(() => {
@@ -23,6 +27,24 @@ export default function DeclarationWorkday() {
   // Story 6: the chosen magnitude defines the weekly and overtime limits.
   const selected = useMemo(() => magnitudes.find((m) => m.id === magnitudeId) ?? null, [magnitudes, magnitudeId]);
 
+  // Story 7: assign/validate the workday.
+  const handleAssign = async () => {
+    if (!selected) {
+      setFieldError('Seleccione la magnitud de la jornada.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await employeeWorkdayService.assignWorkday({ magnitudeId });
+      setSuccessOpen(true);
+    } catch (error) {
+      const e = error as ServiceError;
+      setErrorState({ open: true, title: 'Error al asignar', message: e.message ?? 'Error del servidor.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4, backgroundColor: '#f9f9fd' }}>
       <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#12457d' }}>
@@ -33,7 +55,12 @@ export default function DeclarationWorkday() {
         select
         label="Magnitud de la jornada"
         value={magnitudeId}
-        onChange={(e) => setMagnitudeId(e.target.value)}
+        onChange={(e) => {
+          setMagnitudeId(e.target.value);
+          if (fieldError) setFieldError('');
+        }}
+        error={!!fieldError}
+        helperText={fieldError}
         size="small"
         fullWidth
         sx={{ backgroundColor: 'white', maxWidth: 360 }}
@@ -56,6 +83,23 @@ export default function DeclarationWorkday() {
         </Box>
       )}
 
+      <Box sx={{ mt: 2 }}>
+        <Button
+          variant="contained"
+          onClick={handleAssign}
+          disabled={isSubmitting}
+          sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' } }}
+        >
+          {isSubmitting ? 'Asignando...' : 'Asignar jornada'}
+        </Button>
+      </Box>
+
+      <ModalSuccess
+        open={successOpen}
+        title="Operación exitosa"
+        message="Jornada laboral asignada correctamente."
+        onClose={() => setSuccessOpen(false)}
+      />
       <ModalError
         open={errorState.open}
         title={errorState.title}
