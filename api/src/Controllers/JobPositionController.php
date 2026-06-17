@@ -110,7 +110,7 @@ class JobPositionController
   }
 
   /**
-   * GET /job-position-types
+   * GET /jobs
    * Lists the available plaza types for selection. Admin only.
    */
   public function types(): void

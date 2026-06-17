@@ -17,7 +17,7 @@ final class JobPositionResponseDTO {
   public readonly string $id;
   public readonly string $jobPositionNumber;
   public readonly ?string $description;
-  public readonly string $jobPositionTypeId;
+  public readonly string $jobId;
   public readonly ?string $areaId;
   public readonly ?string $departmentId;
   public readonly ?string $sectionId;
@@ -31,7 +31,7 @@ final class JobPositionResponseDTO {
     string $id,
     string $jobPositionNumber,
     ?string $description,
-    string $jobPositionTypeId,
+    string $jobId,
     ?string $areaId,
     ?string $departmentId,
     ?string $sectionId,
@@ -44,7 +44,7 @@ final class JobPositionResponseDTO {
     $this->id = $id;
     $this->jobPositionNumber = $jobPositionNumber;
     $this->description = $description;
-    $this->jobPositionTypeId = $jobPositionTypeId;
+    $this->jobId = $jobId;
     $this->areaId = $areaId;
     $this->departmentId = $departmentId;
     $this->sectionId = $sectionId;
@@ -64,7 +64,7 @@ final class JobPositionResponseDTO {
       (string) ($get('job_position_id') ?? ''),
       (string) ($get('job_position_number') ?? ''),
       $str($get('description')),
-      (string) ($get('job_position_type_id') ?? ''),
+      (string) ($get('job_id') ?? ''),
       $str($get('area_id')),
       $str($get('department_id')),
       $str($get('section_id')),
@@ -81,7 +81,7 @@ final class JobPositionResponseDTO {
    *   id: string,
    *   job_position_number: string,
    *   description: string|null,
-   *   job_position_type_id: string,
+   *   job_id: string,
    *   area_id: string|null,
    *   department_id: string|null,
    *   section_id: string|null,
@@ -97,7 +97,7 @@ final class JobPositionResponseDTO {
       'id'                   => $this->id,
       'job_position_number' => $this->jobPositionNumber,
       'description'          => $this->description,
-      'job_position_type_id' => $this->jobPositionTypeId,
+      'job_id' => $this->jobId,
       'area_id'              => $this->areaId,
       'department_id'        => $this->departmentId,
       'section_id'           => $this->sectionId,

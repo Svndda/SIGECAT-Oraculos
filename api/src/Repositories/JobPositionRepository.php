@@ -51,14 +51,14 @@ final class JobPositionRepository extends Repository
     try {
       $stmt = $this->db->prepare(
         "INSERT INTO JOB_POSITIONS
-           (job_position_id, {$parentColumn}, job_position_type_id, job_position_number, description, created_at, created_by)
+           (job_position_id, {$parentColumn}, job_id, job_position_number, description, created_at, created_by)
          VALUES
            (:id, :parent_id, :type_id, :job_position_number, :description, CURRENT_TIMESTAMP, :created_by)"
       );
       $stmt->execute([
         ':id'                  => $newId,
         ':parent_id'           => $parentId,
-        ':type_id'             => $dto->jobPositionTypeId,
+        ':type_id'             => $dto->jobId,
         ':job_position_number' => trim($dto->jobPositionNumber),
         ':description' => $dto->description !== null ? trim($dto->description) : null,
         ':created_by'  => $createdBy,
@@ -89,9 +89,9 @@ final class JobPositionRepository extends Repository
       $fields[] = 'description = :description';
       $params[':description'] = trim($dto->description);
     }
-    if ($dto->jobPositionTypeId !== null) {
-      $fields[] = 'job_position_type_id = :type_id';
-      $params[':type_id'] = $dto->jobPositionTypeId;
+    if ($dto->jobId !== null) {
+      $fields[] = 'job_id = :type_id';
+      $params[':type_id'] = $dto->jobId;
     }
     if ($dto->hasParent()) {
       [$parentColumn, $parentId] = $dto->parent();
@@ -128,7 +128,7 @@ final class JobPositionRepository extends Repository
   {
     $stmt = $this->db->prepare(
       'SELECT job_position_id, area_id, department_id, section_id, unit_id,
-              job_position_type_id, job_position_number, description,
+              job_id, job_position_number, description,
               user_id, created_at, created_by, is_deleted, deleted_at
          FROM JOB_POSITIONS
         WHERE job_position_id = :id' . $this->statusCondition($status) . '
@@ -162,7 +162,7 @@ final class JobPositionRepository extends Repository
   {
     $stmt = $this->db->prepare(
       'SELECT job_position_id, area_id, department_id, section_id, unit_id,
-              job_position_type_id, job_position_number, description,
+              job_id, job_position_number, description,
               user_id, created_at, created_by, is_deleted, deleted_at
          FROM JOB_POSITIONS
         WHERE UPPER(job_position_number) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
@@ -209,7 +209,7 @@ final class JobPositionRepository extends Repository
   public function listTypes(): array
   {
     $stmt = $this->db->prepare(
-      'SELECT job_position_type_id, name FROM JOB_POSITION_TYPES ORDER BY name'
+      'SELECT job_id, name FROM JOBS ORDER BY name'
     );
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);

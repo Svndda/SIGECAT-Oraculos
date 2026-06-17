@@ -9,7 +9,7 @@ import type { Area } from '../../../services/areaService';
 import type { Unit } from '../../../services/unitService';
 import type {
   JobPosition,
-  JobPositionType,
+  Job,
   JobPositionParentType,
   CreateJobPositionPayload,
   UpdateJobPositionPayload,
@@ -27,7 +27,7 @@ const LIMIT = 10;
 const EMPTY_FORM = {
   job_position_number: '',
   description: '',
-  job_position_type_id: '',
+  job_id: '',
   parentType: '' as JobPositionParentType | '',
   parentId: '',
 };
@@ -45,7 +45,7 @@ export default function JobPositionsPage() {
   const [departments, setDepartments] = useState<OrgOption[]>([]);
   const [sections, setSections] = useState<OrgOption[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [types, setTypes] = useState<JobPositionType[]>([]);
+  const [types, setTypes] = useState<Job[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(true);
 
   // Estados de modales
@@ -78,7 +78,7 @@ export default function JobPositionsPage() {
           departmentService.getDepartments({ limit: 100 }),
           sectionService.getSections({ limit: 100 }),
           unitService.getUnits({ limit: 100 }),
-          jobPositionService.getJobPositionTypes(),
+          jobPositionService.getJobs(),
         ]);
         setAreas(areasData.data);
         setDepartments(departmentsData);
@@ -195,7 +195,7 @@ export default function JobPositionsPage() {
     setForm({
       job_position_number: jobPosition.job_position_number,
       description: jobPosition.description ?? '',
-      job_position_type_id: jobPosition.job_position_type_id,
+      job_id: jobPosition.job_id,
       parentType,
       parentId,
     });
@@ -211,7 +211,7 @@ export default function JobPositionsPage() {
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
     if (!form.job_position_number.trim()) errors.job_position_number = 'El número de plaza es requerido.';
-    if (!form.job_position_type_id) errors.job_position_type_id = 'El tipo de plaza es requerido.';
+    if (!form.job_id) errors.job_id = 'El tipo de plaza es requerido.';
     if (!form.parentType) errors.parentType = 'El tipo de entidad es requerido.';
     if (!form.parentId) errors.parentId = 'La entidad es requerida.';
     setFormErrors(errors);
@@ -226,7 +226,7 @@ export default function JobPositionsPage() {
         const payload: UpdateJobPositionPayload = {
           job_position_number: form.job_position_number.trim(),
           description: form.description.trim(),
-          job_position_type_id: form.job_position_type_id,
+          job_id: form.job_id,
         };
         if (form.parentType) {
           payload[`${form.parentType}_id`] = form.parentId;
@@ -237,7 +237,7 @@ export default function JobPositionsPage() {
         const payload: CreateJobPositionPayload = {
           job_position_number: form.job_position_number.trim(),
           description: form.description.trim() || undefined,
-          job_position_type_id: form.job_position_type_id,
+          job_id: form.job_id,
         };
         if (form.parentType) {
           payload[`${form.parentType}_id`] = form.parentId;
