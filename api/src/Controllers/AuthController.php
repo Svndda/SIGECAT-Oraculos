@@ -17,9 +17,9 @@ use PDO;
  * Handles authentication operations for the REST API.
  *
  * This controller is responsible for user login, token refresh,
- * and logout. It uses HTTP‑only cookies for access token storage
- * (web client convenience) while expecting the refresh token to be
- * sent in the JSON request body for rotation operations.
+ * and logout. Tokens are returned in the JSON response body: the client
+ * sends the access token as an `Authorization: Bearer` header and the
+ * refresh token in the request body for rotation operations.
  *
  * All methods return a standardised JSON response via the `Response`
  * helper and propagate business exceptions through `ApiException`.
@@ -55,22 +55,6 @@ final class AuthController
       $dto = LoginUserDTO::fromArray($data);
       $result = $this->authService->login($dto);
 
-      $accessToken = $result['data']['access_token'] ?? '';
-      $expiresIn = $result['meta']['expires_in'] ?? 3600;
-
-      setcookie(
-        'sigecat_session_token',
-        $accessToken,
-        [
-          'expires' => time() + $expiresIn,
-          'path' => '/',
-          'domain' => '',
-          'secure' => false,
-          'httponly' => true,
-          'samesite' => 'Lax'
-        ]
-      );
-
       $metaWithMsg = array_merge($result['meta'], ['message' => 'Sesión iniciada exitosamente']);
       Response::success($result['data'], $metaWithMsg, 200);
     } catch (ApiException $e) {
@@ -96,21 +80,6 @@ final class AuthController
 
       $result = $this->authService->refreshTokens($body['refresh_token']);
 
-      if (isset($result['data']['access_token'], $result['meta']['expires_in'])) {
-        setcookie(
-          'sigecat_session_token',
-          $result['data']['access_token'],
-          [
-            'expires' => time() + (int) $result['meta']['expires_in'],
-            'path' => '/',
-            'domain' => '',
-            'secure' => false,
-            'httponly' => true,
-            'samesite' => 'Lax'
-          ]
-        );
-      }
-
       $metaWithMsg = array_merge($result['meta'], ['message' => 'Tokens refrescados exitosamente']);
       Response::success($result['data'], $metaWithMsg, 200);
     } catch (ApiException $e) {
@@ -129,19 +98,6 @@ final class AuthController
   {
     try {
       $this->authService->logout();
-
-      setcookie(
-        'sigecat_session_token',
-        '',
-        [
-          'expires' => time() - 3600,
-          'path' => '/',
-          'domain' => '',
-          'secure' => false,
-          'httponly' => true,
-          'samesite' => 'Lax'
-        ]
-      );
 
       Response::success(['logged_out' => true], ['message' => 'Sesión cerrada exitosamente'], 200);
     } catch (ApiException $e) {

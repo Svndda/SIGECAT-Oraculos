@@ -6,8 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { employeeLicenseService, type LicenseType } from '../../services/employeeLicenseService';
 import type { ServiceError } from '../../services/common';
-import ModalSuccess from '../../components/modals/ModalSuccess';
-import ModalError from '../../components/modals/ModalError';
+import { useSnackbar } from '../../context/SnackbarContext';
 
 /** A permit/license the employee added to their declaration (maps to LICENSE_TIMES). */
 interface DeclaredLicense {
@@ -25,8 +24,7 @@ export default function DeclarationLicenses() {
   const [hours, setHours] = useState('');
   const [errors, setErrors] = useState<{ typeId?: string; hours?: string }>({});
 
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [errorState, setErrorState] = useState({ open: false, title: '', message: '' });
+  const snackbar = useSnackbar();
 
   useEffect(() => {
     employeeLicenseService
@@ -34,9 +32,9 @@ export default function DeclarationLicenses() {
       .then(setTypes)
       .catch((error) => {
         const e = error as ServiceError;
-        setErrorState({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       });
-  }, []);
+  }, [snackbar]);
 
   const validate = (): boolean => {
     const next: { typeId?: string; hours?: string } = {};
@@ -59,10 +57,10 @@ export default function DeclarationLicenses() {
       setTypeId('');
       setHours('');
       setErrors({});
-      setSuccessOpen(true);
+      snackbar.success('Permiso/licencia registrado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setErrorState({ open: true, title: 'Error al registrar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     }
   };
 
@@ -138,19 +136,6 @@ export default function DeclarationLicenses() {
           ))}
         </Stack>
       )}
-
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message="Permiso/licencia registrado correctamente."
-        onClose={() => setSuccessOpen(false)}
-      />
-      <ModalError
-        open={errorState.open}
-        title={errorState.title}
-        message={errorState.message}
-        onClose={() => setErrorState((p) => ({ ...p, open: false }))}
-      />
     </Paper>
   );
 }

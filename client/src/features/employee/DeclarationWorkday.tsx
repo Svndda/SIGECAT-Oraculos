@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Paper, Stack, Typography, TextField, MenuItem, Button } from '@mui/material';
 import { employeeWorkdayService, type WorkdayMagnitude } from '../../services/employeeWorkdayService';
 import type { ServiceError } from '../../services/common';
-import ModalError from '../../components/modals/ModalError';
-import ModalSuccess from '../../components/modals/ModalSuccess';
+import { useSnackbar } from '../../context/SnackbarContext';
 
 export default function DeclarationWorkday() {
   const [magnitudes, setMagnitudes] = useState<WorkdayMagnitude[]>([]);
@@ -11,8 +10,7 @@ export default function DeclarationWorkday() {
   const [fieldError, setFieldError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [errorState, setErrorState] = useState({ open: false, title: '', message: '' });
+  const snackbar = useSnackbar();
 
   useEffect(() => {
     employeeWorkdayService
@@ -20,9 +18,9 @@ export default function DeclarationWorkday() {
       .then(setMagnitudes)
       .catch((error) => {
         const e = error as ServiceError;
-        setErrorState({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       });
-  }, []);
+  }, [snackbar]);
 
   // Story 6: the chosen magnitude defines the weekly and overtime limits.
   const selected = useMemo(() => magnitudes.find((m) => m.id === magnitudeId) ?? null, [magnitudes, magnitudeId]);
@@ -36,10 +34,10 @@ export default function DeclarationWorkday() {
     setIsSubmitting(true);
     try {
       await employeeWorkdayService.assignWorkday({ magnitudeId });
-      setSuccessOpen(true);
+      snackbar.success('Jornada laboral asignada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setErrorState({ open: true, title: 'Error al asignar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -93,19 +91,6 @@ export default function DeclarationWorkday() {
           {isSubmitting ? 'Asignando...' : 'Asignar jornada'}
         </Button>
       </Box>
-
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message="Jornada laboral asignada correctamente."
-        onClose={() => setSuccessOpen(false)}
-      />
-      <ModalError
-        open={errorState.open}
-        title={errorState.title}
-        message={errorState.message}
-        onClose={() => setErrorState((p) => ({ ...p, open: false }))}
-      />
     </Paper>
   );
 }

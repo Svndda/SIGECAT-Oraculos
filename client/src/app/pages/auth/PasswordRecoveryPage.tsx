@@ -12,8 +12,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import type { ServiceError } from '../../../services/authService';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
+import { useSnackbar } from '../../../context/SnackbarContext';
 import Header from '../../../components/Header';
 import { validateInstitutionalEmail } from '../../../utils/validation';
 
@@ -21,8 +20,7 @@ export default function PasswordRecoveryPage() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
+  const snackbar = useSnackbar();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,14 +33,10 @@ export default function PasswordRecoveryPage() {
     setIsSubmitting(true);
     try {
       await authService.requestPasswordRecovery(email);
-      setSuccessOpen(true);
+      snackbar.success('Si su correo está registrado, recibirá un enlace para restablecer su contraseña. Revise su bandeja de entrada.');
     } catch (error) {
       const serviceError = error as ServiceError;
-      setModalError({
-        open: true,
-        title: 'Error al enviar solicitud',
-        message: serviceError.message ?? 'Error del servidor. Intente de nuevo más tarde.',
-      });
+      snackbar.error(serviceError.message ?? 'Error del servidor. Intente de nuevo más tarde.');
     } finally {
       setIsSubmitting(false);
     }
@@ -118,19 +112,6 @@ export default function PasswordRecoveryPage() {
           </Stack>
         </Paper>
       </Box>
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((prev) => ({ ...prev, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Correo enviado"
-        message="Si su correo está registrado, recibirá un enlace para restablecer su contraseña. Revise su bandeja de entrada."
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

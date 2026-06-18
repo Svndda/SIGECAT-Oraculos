@@ -6,9 +6,8 @@ import type { PageMeta, ServiceError } from '../../../services/common';
 import AreaToolbar from '../../../features/admin/area/AreaToolbar';
 import AreaList from '../../../features/admin/area/AreaList';
 import AreaFormModal from '../../../features/admin/area/AreaFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 const LIMIT = 10;
 const EMPTY_FORM = { name: '', description: '' };
@@ -26,9 +25,7 @@ export default function AreasPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<typeof EMPTY_FORM>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -47,10 +44,10 @@ export default function AreasPage() {
       })
       .catch((error) => {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoading(false));
-  }, [page, appliedFilter]);
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
     void loadAreas();
@@ -86,17 +83,15 @@ export default function AreasPage() {
       const payload = { name: form.name.trim(), description: form.description.trim() };
       if (editTarget) {
         await areaService.updateArea(editTarget.area_id, payload);
-        setSuccessMsg('Área actualizada correctamente.');
       } else {
         await areaService.createArea(payload);
-        setSuccessMsg('Área creada correctamente.');
       }
       await loadAreas();
       setFormOpen(false);
-      setSuccessOpen(true);
+      snackbar.success(editTarget ? 'Área actualizada correctamente.' : 'Área creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,11 +104,10 @@ export default function AreasPage() {
       await areaService.deleteArea(deleteTarget.area_id);
       setDeleteTarget(null);
       await loadAreas();
-      setSuccessMsg('Área eliminada correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Área eliminada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -168,18 +162,6 @@ export default function AreasPage() {
         onConfirm={handleDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

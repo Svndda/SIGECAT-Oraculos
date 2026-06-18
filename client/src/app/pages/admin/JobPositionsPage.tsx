@@ -18,9 +18,8 @@ import type { OrgOption, PageMeta, ServiceError } from '../../../services/common
 import JobPositionToolbar from '../../../features/admin/job_position/JobPositionToolbar';
 import JobPositionList from '../../../features/admin/job_position/JobPositionList';
 import JobPositionFormModal from '../../../features/admin/job_position/JobPositionFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 const LIMIT = 10;
 
@@ -56,9 +55,7 @@ export default function JobPositionsPage() {
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
   // Debounce search
   useEffect(() => {
@@ -87,13 +84,13 @@ export default function JobPositionsPage() {
         setTypes(typesData);
       } catch (error) {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       } finally {
         setLoadingEntities(false);
       }
     };
     loadEntities();
-  }, []);
+  }, [snackbar]);
 
   // Cargar plazas con paginación
   const loadJobPositions = useCallback(() => {
@@ -106,10 +103,10 @@ export default function JobPositionsPage() {
       })
       .catch((error) => {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoading(false));
-  }, [page, appliedFilter]);
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
     if (!loadingEntities) {
@@ -232,7 +229,6 @@ export default function JobPositionsPage() {
           payload[`${form.parentType}_id`] = form.parentId;
         }
         await jobPositionService.editJobPosition(editTarget.id, payload);
-        setSuccessMsg('Plaza actualizada correctamente.');
       } else {
         const payload: CreateJobPositionPayload = {
           job_position_number: form.job_position_number.trim(),
@@ -243,14 +239,13 @@ export default function JobPositionsPage() {
           payload[`${form.parentType}_id`] = form.parentId;
         }
         await jobPositionService.createJobPosition(payload);
-        setSuccessMsg('Plaza creada correctamente.');
       }
       setFormOpen(false);
       await loadJobPositions();
-      setSuccessOpen(true);
+      snackbar.success(editTarget ? 'Plaza actualizada correctamente.' : 'Plaza creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -263,12 +258,11 @@ export default function JobPositionsPage() {
       await jobPositionService.deleteJobPosition(deleteTarget.id);
       setDeleteTarget(null);
       await loadJobPositions();
-      setSuccessMsg('Plaza eliminada correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Plaza eliminada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
       setDeleteTarget(null);
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -321,18 +315,6 @@ export default function JobPositionsPage() {
         onConfirm={handleDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }
