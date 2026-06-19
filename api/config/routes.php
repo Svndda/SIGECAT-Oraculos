@@ -37,11 +37,17 @@ return [
     ['method' => 'DELETE', 'path' => '/sections/{id}', 'controller' => 'SectionController', 'action' => 'delete'],
     ['method' => 'POST',   'path' => '/sections/{id}/restore', 'controller' => 'SectionController', 'action' => 'restore'],
 
-    // Occupational class routes (read-only, for selection)
+    // Occupational class routes
     ['method' => 'GET',    'path' => '/job-classes', 'controller' => 'JobClassController', 'action' => 'index'],
 
+    // Job routes (Tipos de Puesto)
+    ['method' => 'POST',   'path' => '/jobs',      'controller' => 'JobController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/jobs',      'controller' => 'JobController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/jobs/{id}', 'controller' => 'JobController', 'action' => 'show'],
+    ['method' => 'PATCH',  'path' => '/jobs/{id}', 'controller' => 'JobController', 'action' => 'update'],
+    ['method' => 'DELETE', 'path' => '/jobs/{id}', 'controller' => 'JobController', 'action' => 'delete'],
+
     // Plaza (job position) routes
-    ['method' => 'GET',    'path' => '/jobs', 'controller' => 'JobPositionController', 'action' => 'types'],
     ['method' => 'POST',   'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'create'],
     ['method' => 'GET',    'path' => '/job-positions',      'controller' => 'JobPositionController', 'action' => 'index'],
     ['method' => 'PATCH',  'path' => '/job-positions/{id}', 'controller' => 'JobPositionController', 'action' => 'update'],

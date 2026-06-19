@@ -138,14 +138,4 @@ class JobPositionService
 
     $this->repository->deleteJobPosition($jobPositionId, $deletedBy);
   }
-
-  /**
-   * Lists the available job position types (for selection when creating a plaza).
-   *
-   * @return array<int, array<string, mixed>>
-   */
-  public function listTypes(): array
-  {
-    return $this->repository->listTypes();
-  }
 }

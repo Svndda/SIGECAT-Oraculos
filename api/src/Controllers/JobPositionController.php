@@ -108,21 +108,4 @@ class JobPositionController
       Response::error($e->getError(), $e->getHttpStatus());
     }
   }
-
-  /**
-   * GET /jobs
-   * Lists the available plaza types for selection. Admin only.
-   */
-  public function types(): void
-  {
-    try {
-      $this->authService->requireAdmin();
-
-      $types = $this->jobPositionService->listTypes();
-
-      Response::success($types, null, 200);
-    } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getHttpStatus());
-    }
-  }
 }

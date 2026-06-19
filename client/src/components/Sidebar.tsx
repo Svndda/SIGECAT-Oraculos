@@ -26,6 +26,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ModalAlert from './modals/ModalAlert';
+import {WorkOffOutlined} from "@mui/icons-material";
 
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
@@ -42,6 +43,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Departamentos', icon: <BusinessIcon fontSize="small" />, route: '/departamentos', adminOnly: true },
   { label: 'Secciones', icon: <ViewModuleIcon fontSize="small" />, route: '/secciones', adminOnly: true },
   { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades', adminOnly: true },
+  { label: 'Ocupaciones', icon: <WorkOffOutlined fontSize="small" />, route: '/ocupaciones', adminOnly: true },
   { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
 ];
 

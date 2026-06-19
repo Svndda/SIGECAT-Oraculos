@@ -205,16 +205,6 @@ final class JobPositionRepository extends Repository
     }
   }
 
-  /** @return array<int, array<string, mixed>> Job position types (id + name). */
-  public function listTypes(): array
-  {
-    $stmt = $this->db->prepare(
-      'SELECT job_id, name FROM JOBS ORDER BY name'
-    );
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
   /**
    * Finds an active (non-deleted) plaza by its number (its `name`).
    *
