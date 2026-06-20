@@ -102,14 +102,4 @@ export const jobPositionService = {
       throw extractApiError(e);
     }
   },
-
-  async updateJobPosition(jobPositionNumber: string): Promise<void> {
-    try {
-      await apiClient.patch(
-        '/users/me/job-position', { job_position_number: jobPositionNumber }
-      );
-    } catch (e) {
-      throw extractApiError(e);
-    }
-  },
 };

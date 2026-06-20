@@ -98,29 +98,6 @@ class UserController
   }
 
   /**
-   * PATCH /users/me/job-position
-   * Assigns the plaza (by its "número de plaza") to the authenticated user.
-   */
-  public function assignJobPosition(): void
-  {
-    try {
-      $auth = $this->authService->requireAuth();
-      $userId = (string) $auth['user_id'];
-
-      $data = Request::parseJsonRequest();
-      $jobPositionNumber = (string) ($data['job_position_number'] ?? '');
-
-      $this->userService->assignJobPosition($userId, $jobPositionNumber);
-
-      Response::success(
-        null, ['message' => 'Número de plaza actualizado exitosamente']
-      );
-    } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getHttpStatus());
-    }
-  }
-
-  /**
    * PATCH /users/me/password
    * Changes the authenticated user's own password (verifies the current one).
    */

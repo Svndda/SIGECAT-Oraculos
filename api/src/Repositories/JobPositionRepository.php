@@ -249,21 +249,4 @@ final class JobPositionRepository extends Repository
     }
   }
 
-  /**
-   * Finds an active (non-deleted) job position by its number.
-   *
-   * @return array<string, mixed>|null
-   */
-  public function findActiveByName(string $name): ?array
-  {
-    $stmt = $this->db->prepare(
-      'SELECT job_position_id, job_position_number, user_id
-         FROM JOB_POSITIONS
-        WHERE job_position_number = :job_position_number AND is_deleted = 0 AND ROWNUM = 1'
-    );
-    $stmt->execute([':job_position_number' => $name]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    return $row !== false ? $row : null;
-  }
 }
