@@ -1,21 +1,17 @@
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import {
-  Tooltip,
-  Typography,
-} from '@mui/material';
-
+import { Tooltip, Typography } from '@mui/material';
+import type { Job } from '../../../services/jobService';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
-import type { JobPosition } from '../../../services/jobPositionService';
 
-interface JobPositionListProps {
-  jobPositions: JobPosition[];
+interface JobListProps {
+  jobs: Job[];
   loading: boolean;
-  onEdit: (jobPosition: JobPosition) => void;
-  onDelete: (jobPosition: JobPosition) => void;
-  onView: (jobPosition: JobPosition) => void;
-  parentLabel: (jobPosition: JobPosition) => string;
+  jobClassMap: Map<string, string>;
+  onEdit: (job: Job) => void;
+  onDelete: (job: Job) => void;
+  onView: (job: Job) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -23,47 +19,51 @@ function formatDate(dateStr: string): string {
   return dateStr.split(' ')[0];
 }
 
-export default function JobPositionList({
-  jobPositions,
+export default function JobList({
+  jobs,
   loading,
+  jobClassMap,
   onEdit,
   onDelete,
-  onView,
-  parentLabel,
-}: JobPositionListProps) {
-  const columns: DataColumn<JobPosition>[] = [
+  onView
+}: JobListProps) {
+  const columns: DataColumn<Job>[] = [
     {
-      label: 'Número',
-      flex: '0 0 18%',
+      label: 'Código',
+      flex: '0 0 10%',
+      render: (j) => j.job_code.toString()
+    },
+    {
+      label: 'Nombre',
+      flex: '1',
       primary: true,
       truncate: true,
-      render: (p) => (
-        <Tooltip title={p.job_position_number} arrow>
+      render: (j) => (
+        <Tooltip title={j.name} arrow>
           <Typography variant="body2" noWrap>
-            {p.job_position_number}
+            {j.name}
           </Typography>
         </Tooltip>
       )
     },
     {
-      label: 'Entidad',
-      flex: '1',
-      truncate: true,
-      render: (p) => parentLabel(p)
+      label: 'Clase Ocupacional',
+      flex: '0 0 25%',
+      render: (j) => jobClassMap.get(j.job_class_id) ?? 'Cargando Cargo...'
     },
     {
       label: 'Fecha de creación',
-      flex: '0 0 18%',
+      flex: '0 0 15%',
       meta: true,
-      render: (p) => formatDate(p.created_at)
+      render: (j) => formatDate(j.created_at)
     }
   ];
 
   return (
     <DataTable
       columns={columns}
-      items={jobPositions}
-      getKey={(p) => p.job_position_id}
+      items={jobs}
+      getKey={(j) => j.job_id}
       loading={loading}
       actions={[
         {
@@ -81,11 +81,11 @@ export default function JobPositionList({
         {
           icon: <DeleteOutlineIcon fontSize="small" />,
           label: 'Eliminar',
-          color: '#9e9e9e',
-          onClick: onDelete
+          onClick: onDelete,
+          color: '#9e9e9e'
         }
       ]}
-      emptyMessage="No se encontraron plazas."
+      emptyMessage="No se encontraron cargos."
     />
   );
 }
