@@ -4,6 +4,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Tooltip, Typography } from '@mui/material';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Area } from '../../../services/areaService';
+import { truncateText } from '../../../utils/text';
 
 interface AreaListProps {
   areas: Area[];
@@ -28,7 +29,7 @@ export default function AreaList({ areas, loading, onEdit, onDelete, onView }: A
       render: (a) => (
         <Tooltip title={a.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {a.name}
+            {truncateText(a.name)}
           </Typography>
         </Tooltip>
       ),

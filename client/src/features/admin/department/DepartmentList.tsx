@@ -4,6 +4,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Tooltip, Typography } from '@mui/material';
 import type { Department } from '../../../services/departmentService';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
+import { truncateText } from '../../../utils/text';
 
 interface DepartmentListProps {
   departments: Department[];
@@ -31,7 +32,7 @@ export default function DepartmentList(
       render: (d) => (
         <Tooltip title={d.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {d.name}
+            {truncateText(d.name)}
           </Typography>
         </Tooltip>
       ),

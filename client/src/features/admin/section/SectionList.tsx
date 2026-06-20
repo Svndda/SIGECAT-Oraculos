@@ -4,6 +4,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Tooltip, Typography } from '@mui/material';
 import type { Section } from '../../../services/sectionService';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
+import { truncateText } from '../../../utils/text';
 
 interface SectionListProps {
   sections: Section[];
@@ -29,7 +30,7 @@ export default function SectionList({ sections, loading, areaMap, onEdit, onDele
       render: (s) => (
         <Tooltip title={s.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {s.name}
+            {truncateText(s.name)}
           </Typography>
         </Tooltip>
       ),

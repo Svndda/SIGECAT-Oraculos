@@ -4,6 +4,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { AdminUser } from '../../../services/userService';
+import { truncateText } from '../../../utils/text';
 
 interface UserListProps {
   users: AdminUser[];
@@ -29,7 +30,7 @@ export default function UserList({
       render: (u) => (
         <Tooltip title={`${u.first_name} ${u.last_name}`} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {u.first_name} {u.last_name}
+            {truncateText(`${u.first_name} ${u.last_name}`)}
           </Typography>
         </Tooltip>
       ),

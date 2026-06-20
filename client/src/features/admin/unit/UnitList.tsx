@@ -4,6 +4,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Tooltip, Typography } from '@mui/material';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Unit } from '../../../services/unitService';
+import { truncateText } from '../../../utils/text';
 
 interface UnitListProps {
   units: Unit[];
@@ -29,7 +30,7 @@ export default function UnitList({ units, loading, onEdit, onDelete, onView, bel
       render: (u) => (
         <Tooltip title={u.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {u.name}
+            {truncateText(u.name)}
           </Typography>
         </Tooltip>
       ),
