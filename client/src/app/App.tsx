@@ -50,7 +50,7 @@ function App() {
                   <Route path="unidades" element={<UnitsPage />} />
                   <Route path="secciones" element={<SectionsPage />} />
                   <Route path="departamentos" element={<DepartmentsPage />} />
-                  <Route path="ocupaciones" element={<JobsPage/> } />
+                  <Route path="cargos" element={<JobsPage/> } />
                   <Route path="plazas" element={<JobPositionsPage />} />
                   <Route path="usuarios" element={<UsersPage />} />
                 </Route>

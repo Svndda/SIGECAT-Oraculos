@@ -62,7 +62,7 @@ export default function JobToolbar(
             textTransform: 'none'
           }}
         >
-          Agregar Puesto
+          Añadir Cargo
         </Button>
       </Box>
     </>

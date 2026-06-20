@@ -1,5 +1,10 @@
 import apiClient from './apiClient';
-import { extractApiError, type ListParams, type OrgOption, type PageMeta, type Paginated } from './common';
+import {
+  extractApiError,
+  type ListParams,
+  type PageMeta,
+  type Paginated,
+} from './common';
 
 export interface Job {
   job_id: string;
@@ -28,19 +33,11 @@ export interface UpdateJobPayload {
 }
 
 export const jobService = {
-  /** Puestos como opciones seleccionables (normalizados a {id, name}). */
-  async getJobs(params: ListParams = {}): Promise<OrgOption[]> {
-    try {
-      const res = await apiClient.get<{ data: Array<{ id?: string; job_id?: string; name: string }> }>('/jobs', { params });
-      return (res.data.data ?? []).map((d) => ({ id: d.id ?? d.job_id ?? '', name: d.name }));
-    } catch (e) {
-      throw extractApiError(e);
-    }
-  },
-
   async getJobsPage(params: ListParams = {}): Promise<Paginated<Job>> {
     try {
-      const res = await apiClient.get<{ data: Job[]; meta: PageMeta }>('/jobs', { params });
+      const res = await apiClient.get<{
+        data: Job[]; meta: PageMeta
+      }>('/jobs', { params });
       return { data: res.data.data ?? [], meta: res.data.meta };
     } catch (e) {
       throw extractApiError(e);
