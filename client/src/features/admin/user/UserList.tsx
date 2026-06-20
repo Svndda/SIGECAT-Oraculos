@@ -1,6 +1,7 @@
-import { Typography } from '@mui/material';
+import { Tooltip, Typography } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { AdminUser } from '../../../services/userService';
 
@@ -9,20 +10,29 @@ interface UserListProps {
   loading: boolean;
   onChangeRole: (user: AdminUser) => void;
   onDelete: (user: AdminUser) => void;
+  onView: (user: AdminUser) => void;
 }
 
 export default function UserList({
   users,
   loading,
   onChangeRole,
-  onDelete
+  onDelete,
+  onView
 }: UserListProps) {
   const columns: DataColumn<AdminUser>[] = [
     {
       label: 'Nombre completo',
       flex: '0 0 24%',
       primary: true,
-      render: (u) => `${u.first_name} ${u.last_name}`,
+      truncate: true,
+      render: (u) => (
+        <Tooltip title={`${u.first_name} ${u.last_name}`} arrow>
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {u.first_name} {u.last_name}
+          </Typography>
+        </Tooltip>
+      ),
     },
     { label: 'Correo institucional', flex: '1', truncate: true, render: (u) => u.email },
     {
@@ -54,6 +64,12 @@ export default function UserList({
       getKey={(u) => u.id}
       loading={loading}
       actions={[
+        {
+          icon: <VisibilityIcon fontSize="small" />,
+          label: 'Ver',
+          color: 'info.main',
+          onClick: onView,
+        },
         {
           icon: <AdminPanelSettingsIcon fontSize="small" />,
           label: 'Cambiar rol',

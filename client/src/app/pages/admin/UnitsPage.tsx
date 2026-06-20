@@ -33,6 +33,7 @@ export default function UnitsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Unit | null>(null);
+  const [viewTarget, setViewTarget] = useState<Unit | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
@@ -95,6 +96,7 @@ export default function UnitsPage() {
 
   const openCreate = () => {
     setEditTarget(null);
+    setViewTarget(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
     setFormOpen(true);
@@ -102,6 +104,7 @@ export default function UnitsPage() {
 
   const openEdit = (unit: Unit) => {
     setEditTarget(unit);
+    setViewTarget(null);
     setForm({
       name: unit.name,
       description: unit.description ?? '',
@@ -110,6 +113,25 @@ export default function UnitsPage() {
     });
     setFormErrors({});
     setFormOpen(true);
+  };
+
+  const openView = (unit: Unit) => {
+    setViewTarget(unit);
+    setEditTarget(null);
+    setForm({
+      name: unit.name,
+      description: unit.description ?? '',
+      assignmentType: unit.section_id ? 'section' : 'department',
+      assignmentId: unit.section_id ?? unit.department_id ?? '',
+    });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setEditTarget(null);
   };
 
   const setField = (field: keyof typeof EMPTY_FORM, value: string) => {
@@ -148,7 +170,7 @@ export default function UnitsPage() {
         await unitService.createUnit(payload);
       }
       await loadUnits();
-      setFormOpen(false);
+      closeModal();
       snackbar.success(editTarget ? 'Unidad actualizada correctamente.' : 'Unidad creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -185,6 +207,7 @@ export default function UnitsPage() {
         loading={loading}
         onEdit={openEdit}
         onDelete={setDeleteTarget}
+        onView={openView}
         belongsTo={belongsTo}
       />
 
@@ -203,11 +226,12 @@ export default function UnitsPage() {
       <UnitFormModal
         open={formOpen}
         isEditing={!!editTarget}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         assignmentOptions={assignmentOptions}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onFieldChange={setField}
       />

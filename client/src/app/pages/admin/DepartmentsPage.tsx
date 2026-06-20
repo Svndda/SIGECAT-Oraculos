@@ -28,6 +28,7 @@ export default function DepartmentsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [viewTarget, setViewTarget] = useState<Department | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,6 +93,7 @@ export default function DepartmentsPage() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setIsEditing(null);
+    setViewTarget(null);
     setFormOpen(true);
   };
 
@@ -99,7 +101,22 @@ export default function DepartmentsPage() {
     setForm({ name: dept.name, description: dept.description ?? '', area_id: dept.area_id });
     setFormErrors({});
     setIsEditing(dept.department_id);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (dept: Department) => {
+    setForm({ name: dept.name, description: dept.description ?? '', area_id: dept.area_id });
+    setFormErrors({});
+    setIsEditing(null);
+    setViewTarget(dept);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setIsEditing(null);
   };
 
   const validateForm = (): boolean => {
@@ -119,7 +136,7 @@ export default function DepartmentsPage() {
       } else {
         await departmentService.createDepartment(form);
       }
-      setFormOpen(false);
+      closeModal();
       loadDepartments(true);
       snackbar.success(isEditing ? 'Los cambios se han guardado.' : 'El departamento fue creado correctamente.');
     } catch (error) {
@@ -171,6 +188,7 @@ export default function DepartmentsPage() {
             areaMap={areaMap}
             onEdit={openEdit}
             onDelete={handleDeleteRequest}
+            onView={openView}
         />
 
         {totalPages > 1 && (
@@ -186,11 +204,12 @@ export default function DepartmentsPage() {
         <DepartmentFormModal
             open={formOpen}
             isEditing={!!isEditing}
+            viewMode={!!viewTarget}
             form={form}
             formErrors={formErrors}
             areas={areas}
             isSubmitting={isSubmitting}
-            onClose={() => setFormOpen(false)}
+            onClose={closeModal}
             onConfirm={handleConfirm}
             onChange={handleChange}
         />

@@ -21,6 +21,7 @@ export default function AreasPage() {
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Area | null>(null);
+  const [viewTarget, setViewTarget] = useState<Area | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<typeof EMPTY_FORM>>({});
@@ -57,6 +58,7 @@ export default function AreasPage() {
 
   const openCreate = () => {
     setEditTarget(null);
+    setViewTarget(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
     setFormOpen(true);
@@ -64,6 +66,15 @@ export default function AreasPage() {
 
   const openEdit = (area: Area) => {
     setEditTarget(area);
+    setViewTarget(null);
+    setForm({ name: area.name, description: area.description ?? '' });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const openView = (area: Area) => {
+    setViewTarget(area);
+    setEditTarget(null);
     setForm({ name: area.name, description: area.description ?? '' });
     setFormErrors({});
     setFormOpen(true);
@@ -87,7 +98,7 @@ export default function AreasPage() {
         await areaService.createArea(payload);
       }
       await loadAreas();
-      setFormOpen(false);
+      closeModal();
       snackbar.success(editTarget ? 'Área actualizada correctamente.' : 'Área creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -118,6 +129,12 @@ export default function AreasPage() {
     if (formErrors[field]) setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setEditTarget(null);
+  };
+
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
       <AreaToolbar search={search} onSearchChange={setSearch} onAddClick={openCreate} />
@@ -127,6 +144,7 @@ export default function AreasPage() {
         loading={loading}
         onEdit={openEdit}
         onDelete={setDeleteTarget}
+        onView={openView}
       />
 
       {totalPages > 1 && (
@@ -144,10 +162,11 @@ export default function AreasPage() {
       <AreaFormModal
         open={formOpen}
         isEditing={!!editTarget}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onChange={handleFormChange}
       />
