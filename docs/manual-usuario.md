@@ -323,7 +323,7 @@ Las siguientes secciones solo están disponibles para usuarios con rol **Adminis
 
 ## 5. Ajustes de la cuenta
 
-**Ruta:** pulse su nombre/avatar en el menú lateral, o vaya a "Ajustes".
+**Ruta:** pulse en el menú lateral "Ajustes".
 
 Disponible para todos los usuarios (administradores y funcionarios).
 
