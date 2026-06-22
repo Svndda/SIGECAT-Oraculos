@@ -12,6 +12,7 @@ interface FormState {
 interface SectionFormModalProps {
   open: boolean;
   isEditing: boolean;
+  viewMode?: boolean;
   form: FormState;
   formErrors: Partial<Record<keyof FormState, string>>;
   areas: Area[];
@@ -22,19 +23,20 @@ interface SectionFormModalProps {
 }
 
 export default function SectionFormModal({
-  open, isEditing, form, formErrors, areas, isSubmitting,
+  open, isEditing, viewMode = false, form, formErrors, areas, isSubmitting,
   onClose, onConfirm, onChange
 }: SectionFormModalProps) {
   const selectedArea = areas.find((a) => a.area_id === form.area_id) ?? null;
+  const title = viewMode ? 'Ver Sección' : isEditing ? 'Editar Sección' : 'Registrar Sección';
 
   return (
     <ModalForm
       open={open}
-      title={isEditing ? 'Editar Sección' : 'Registrar Sección'}
+      title={title}
       onClose={onClose}
-      onConfirm={onConfirm}
-      confirmLabel={isEditing ? 'Guardar Cambios' : 'Confirmar'}
-      isSubmitting={isSubmitting}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar Cambios' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -46,6 +48,7 @@ export default function SectionFormModal({
           error={!!formErrors.name}
           helperText={formErrors.name}
           required
+          disabled={viewMode}
         />
         <Autocomplete
           options={areas}
@@ -58,6 +61,7 @@ export default function SectionFormModal({
           }}
           size="small"
           fullWidth
+          disabled={viewMode}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -78,6 +82,7 @@ export default function SectionFormModal({
           rows={3}
           error={!!formErrors.description}
           helperText={formErrors.description}
+          disabled={viewMode}
         />
       </Stack>
     </ModalForm>

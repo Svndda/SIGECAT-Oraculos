@@ -36,6 +36,7 @@ export default function UsersPage() {
   const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('employee');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [viewTarget, setViewTarget] = useState<AdminUser | null>(null);
 
   const snackbar = useSnackbar();
 
@@ -96,7 +97,26 @@ export default function UsersPage() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setShowPassword(false);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (user: AdminUser) => {
+    setForm({
+      ...EMPTY_FORM,
+      first_name: user.first_name,
+      first_last_name: user.last_name,
+      email: user.email,
+      role: user.role,
+    });
+    setFormErrors({});
+    setViewTarget(user);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
   };
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
@@ -124,7 +144,7 @@ export default function UsersPage() {
         password: form.password,
       });
       setUsers((prev) => [created, ...prev]);
-      setFormOpen(false);
+      closeModal();
       snackbar.success('Usuario creado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -148,17 +168,19 @@ export default function UsersPage() {
         loading={loading}
         onChangeRole={openRole}
         onDelete={setDeleteTarget}
+        onView={openView}
       />
 
       {/* Modales usando componentes específicos */}
       <UserFormModal
         open={formOpen}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         isSubmitting={isSubmitting}
         showPassword={showPassword}
         onTogglePasswordVisibility={() => setShowPassword((p) => !p)}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirmCreate}
         onChange={handleFormChange}
       />

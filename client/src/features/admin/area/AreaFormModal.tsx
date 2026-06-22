@@ -9,6 +9,7 @@ interface AreaFormState {
 interface AreaFormModalProps {
   open: boolean;
   isEditing: boolean;
+  viewMode?: boolean;
   form: AreaFormState;
   formErrors: Partial<Record<keyof AreaFormState, string>>;
   isSubmitting: boolean;
@@ -20,6 +21,7 @@ interface AreaFormModalProps {
 export default function AreaFormModal({
   open,
   isEditing,
+  viewMode = false,
   form,
   formErrors,
   isSubmitting,
@@ -27,14 +29,16 @@ export default function AreaFormModal({
   onConfirm,
   onChange,
 }: AreaFormModalProps) {
+  const title = viewMode ? 'Ver Área' : isEditing ? 'Editar Área' : 'Añadir Área';
+
   return (
     <ModalForm
       open={open}
-      title={isEditing ? 'Editar Área' : 'Añadir Área'}
+      title={title}
       onClose={onClose}
-      onConfirm={onConfirm}
-      confirmLabel={isEditing ? 'Guardar cambios' : 'Confirmar'}
-      isSubmitting={isSubmitting}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar cambios' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -46,6 +50,7 @@ export default function AreaFormModal({
           error={!!formErrors.name}
           helperText={formErrors.name}
           required
+          disabled={viewMode}
         />
         <TextField
           label="Descripción"
@@ -55,8 +60,9 @@ export default function AreaFormModal({
           fullWidth
           multiline
           rows={3}
+          disabled={viewMode}
         />
       </Stack>
     </ModalForm>
   );
-} 
+}

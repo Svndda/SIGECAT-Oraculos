@@ -26,6 +26,7 @@ export default function SectionsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [viewTarget, setViewTarget] = useState<Section | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +82,7 @@ export default function SectionsPage() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setIsEditing(null);
+    setViewTarget(null);
     setFormOpen(true);
   };
 
@@ -92,7 +94,26 @@ export default function SectionsPage() {
     });
     setFormErrors({});
     setIsEditing(section.section_id);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (section: Section) => {
+    setForm({
+      name: section.name,
+      description: section.description ?? '',
+      area_id: section.area_id || '',
+    });
+    setFormErrors({});
+    setIsEditing(null);
+    setViewTarget(section);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setIsEditing(null);
   };
 
   const validateForm = (): boolean => {
@@ -120,7 +141,7 @@ export default function SectionsPage() {
           area_id: form.area_id,
         });
       }
-      setFormOpen(false);
+      closeModal();
       loadSections();
       snackbar.success(isEditing ? 'Sección actualizada correctamente.' : 'Sección creada correctamente.');
     } catch (error) {
@@ -167,6 +188,7 @@ export default function SectionsPage() {
         areaMap={areaMap}
         onEdit={openEdit}
         onDelete={handleDeleteRequest}
+        onView={openView}
       />
 
       {totalPages > 1 && (
@@ -184,11 +206,12 @@ export default function SectionsPage() {
       <SectionFormModal
         open={formOpen}
         isEditing={!!isEditing}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         areas={areas}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onChange={handleChange}
       />
