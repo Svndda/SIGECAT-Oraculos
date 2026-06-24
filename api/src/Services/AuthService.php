@@ -249,6 +249,15 @@ final class AuthService
   }
 
   /**
+   * @return bool
+   */
+  public function isAdmin(): bool
+  {
+    $auth = $this->requireAuth();
+    return $auth['role'] === 'admin';
+  }
+
+  /**
    * Validates a raw access token and returns its associated token record.
    *
    * @param string $rawAccessToken The raw access token (not hashed).
