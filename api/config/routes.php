@@ -69,4 +69,11 @@ return [
     ['method' => 'GET',    'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'show'],
     ['method' => 'PATCH',  'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'delete'],
+
+    // Official functions routes (catalogue per job) — admin only
+    ['method' => 'POST',   'path' => '/official-functions',      'controller' => 'OfficialFunctionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/official-functions',      'controller' => 'OfficialFunctionController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'show'],
+    ['method' => 'PATCH',  'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'update'],
+    ['method' => 'DELETE', 'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'delete'],
 ];
