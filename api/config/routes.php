@@ -76,4 +76,9 @@ return [
     ['method' => 'GET',    'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'show'],
     ['method' => 'PATCH',  'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'delete'],
+
+    // Custom functions routes (employee-owned) — authenticated, self-scoped; create + read only
+    ['method' => 'POST',   'path' => '/custom-functions',      'controller' => 'CustomFunctionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/custom-functions',      'controller' => 'CustomFunctionController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/custom-functions/{id}', 'controller' => 'CustomFunctionController', 'action' => 'show'],
 ];
