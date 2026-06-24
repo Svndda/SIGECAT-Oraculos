@@ -152,7 +152,9 @@ class JobPositionService
 
   /**
    * Retrieves all job positions assigned to a specific user.
-   * * @return array<int, array<string, mixed>>
+   *
+   * @param string $userId
+   * @return array<int, array<string, mixed>>
    * @throws ApiException
    */
   public function getByUser(string $userId): array
