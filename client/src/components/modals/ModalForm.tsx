@@ -15,6 +15,7 @@ interface ModalFormProps {
   onConfirm: () => void;
   confirmLabel?: string;
   isSubmitting?: boolean;
+  confirmDisabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -26,6 +27,7 @@ export default function ModalForm({
   confirmLabel = 'Confirmar',
   isSubmitting = false,
   children,
+  confirmDisabled,
 }: ModalFormProps) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -49,7 +51,7 @@ export default function ModalForm({
         <Button
           variant="contained"
           onClick={onConfirm}
-          disabled={isSubmitting}
+          disabled={isSubmitting || confirmDisabled}
           sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' }, px: 3 }}
         >
           {isSubmitting ? <CircularProgress size={20} sx={{ color: 'white' }} /> : confirmLabel}

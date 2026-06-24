@@ -54,6 +54,8 @@ export default function UserFormModal({
       onConfirm={viewMode ? onClose : onConfirm}
       confirmLabel={viewMode ? 'Cerrar' : 'Confirmar'}
       isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.first_name || !form.first_last_name ||
+         !form.second_last_name || !form.email || !form.role || !form.password}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField

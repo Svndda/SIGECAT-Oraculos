@@ -39,6 +39,7 @@ export default function DepartmentFormModal({
       onConfirm={viewMode ? onClose : onConfirm}
       confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar Cambios' : 'Confirmar'}
       isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.area_id || !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
