@@ -47,7 +47,7 @@ return [
   ['method' => 'GET', 'path' => '/declarations', 'controller' => 'DeclarationsController', 'action' => 'index'],
   ['method' => 'GET', 'path' => '/declarations/{id}', 'controller' => 'DeclarationsController', 'action' => 'show'],
   ['method' => 'GET', 'path' => '/declarations/{id}/history', 'controller' => 'DeclarationsController', 'action' => 'getHistory'],
-  ['method' => 'PATCH', 'path' => '/declarations/{id}/status', 'controller' => 'DeclarationsController', 'action' => 'changeStatus'],
+  ['method' => 'POST', 'path' => '/declarations/{id}/status', 'controller' => 'DeclarationsController', 'action' => 'changeStatus'],
   ['method' => 'PUT', 'path' => '/declarations/{id}/justification', 'controller' => 'DeclarationsController', 'action' => 'updateJustification'],
 
   // Job routes (Tipos de Puesto)
