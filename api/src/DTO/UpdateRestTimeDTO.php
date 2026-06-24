@@ -15,52 +15,60 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Supports partial updates (all fields are optional).
- * - Validates each field only if it is present in the request.
+ * - Supports partial updates (rest_type, starts_at, ends_at are all optional).
+ * - Validates the format of each field only when it is present.
  * - At least one updatable field must be provided.
+ *
+ * The cross-field rules (ends_at after starts_at and the per-type maximum
+ * duration) depend on the effective values after the merge, so they are
+ * enforced by RestTimeService against the existing row.
  *
  * @package DTO
  */
 final class UpdateRestTimeDTO
 {
-  public ?float $coffeeHours;
-  public ?float $lunchHours;
-  public ?int $neededTime;
   public ?string $restType;
+  public bool $startsAtProvided;
+  public bool $endsAtProvided;
+
+  /** Normalized 'Y-m-d H:i:s' strings (null when missing or unparseable). */
+  public ?string $startsAt;
+  public ?string $endsAt;
 
   private function __construct(
-    ?float $coffeeHours,
-    ?float $lunchHours,
-    ?int $neededTime,
-    ?string $restType
+    ?string $restType,
+    ?string $startsAt,
+    ?string $endsAt,
+    bool $startsAtProvided,
+    bool $endsAtProvided
   ) {
-    $this->coffeeHours = $coffeeHours;
-    $this->lunchHours = $lunchHours;
-    $this->neededTime = $neededTime;
     $this->restType = $restType;
+    $this->startsAt = $startsAt;
+    $this->endsAt = $endsAt;
+    $this->startsAtProvided = $startsAtProvided;
+    $this->endsAtProvided = $endsAtProvided;
   }
 
   /**
    * @param array{
-   *     coffee_hours?: int|float|string,
-   *     lunch_hours?: int|float|string,
-   *     needed_time?: int|string,
-   *     rest_type?: string
+   *     rest_type?: string,
+   *     starts_at?: string,
+   *     ends_at?: string
    * } $data
    */
   public static function fromArray(array $data): self
   {
     return new self(
-      isset($data['coffee_hours']) ? (float) $data['coffee_hours'] : null,
-      isset($data['lunch_hours']) ? (float) $data['lunch_hours'] : null,
-      isset($data['needed_time']) ? (int) $data['needed_time'] : null,
-      isset($data['rest_type']) ? (string) $data['rest_type'] : null
+      isset($data['rest_type']) ? (string) $data['rest_type'] : null,
+      CreateRestTimeDTO::normalizeTimestamp($data['starts_at'] ?? null),
+      CreateRestTimeDTO::normalizeTimestamp($data['ends_at'] ?? null),
+      isset($data['starts_at']) && $data['starts_at'] !== '',
+      isset($data['ends_at']) && $data['ends_at'] !== ''
     );
   }
 
   public function validate(): void
   {
-    // rest_type optional: if provided, must be one of the allowed values.
     if ($this->restType !== null) {
       if ($this->restType === '') {
         throw new ApiException(ErrorType::invalidField('rest_type'));
@@ -76,34 +84,18 @@ final class UpdateRestTimeDTO
       }
     }
 
-    // coffee_hours optional: if provided, must not be negative.
-    if ($this->coffeeHours !== null && $this->coffeeHours < 0) {
+    if ($this->startsAtProvided && $this->startsAt === null) {
       throw new ApiException(
-        ErrorType::invalidField('coffee_hours', 'Las horas de café no pueden ser negativas')
+        ErrorType::invalidField('starts_at', 'El formato de fecha y hora no es válido')
+      );
+    }
+    if ($this->endsAtProvided && $this->endsAt === null) {
+      throw new ApiException(
+        ErrorType::invalidField('ends_at', 'El formato de fecha y hora no es válido')
       );
     }
 
-    // lunch_hours optional: if provided, must not be negative.
-    if ($this->lunchHours !== null && $this->lunchHours < 0) {
-      throw new ApiException(
-        ErrorType::invalidField('lunch_hours', 'Las horas de almuerzo no pueden ser negativas')
-      );
-    }
-
-    // needed_time optional: if provided, must be between 0 and 120 minutes.
-    if ($this->neededTime !== null && ($this->neededTime < 0 || $this->neededTime > 120)) {
-      throw new ApiException(
-        ErrorType::invalidField('needed_time', 'El tiempo necesario no puede exceder los 120 minutos')
-      );
-    }
-
-    // Ensure that at least one updatable field is provided.
-    if (
-      $this->coffeeHours === null
-      && $this->lunchHours === null
-      && $this->neededTime === null
-      && $this->restType === null
-    ) {
+    if ($this->restType === null && !$this->startsAtProvided && !$this->endsAtProvided) {
       throw new ApiException(
         ErrorType::invalidField('rest_time', 'Debe proporcionar al menos un campo para actualizar')
       );

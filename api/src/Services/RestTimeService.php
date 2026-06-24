@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Services;
 
+use DateTimeImmutable;
 use DTO\CreateRestTimeDTO;
 use DTO\UpdateRestTimeDTO;
 use Http\ApiException;
@@ -16,7 +17,8 @@ use Repositories\UserRepository;
  * RestTimeService
  *
  * Business logic for rest time entries. Coordinates validation, referential
- * checks against users and persistence through the repositories.
+ * checks against users and declarations, and persistence through the
+ * repositories.
  *
  * @package Services
  */
@@ -37,22 +39,6 @@ class RestTimeService
   }
 
   /**
-   * Normalizes and validates the read status filter.
-   *
-   * @param string $status The raw status string.
-   * @return string Normalized status.
-   * @throws ApiException when the value is not one of active|deleted|all.
-   */
-  private function normalizeStatus(string $status): string
-  {
-    $normalized = $status === '' ? 'active' : strtolower($status);
-    if (!in_array($normalized, ['active', 'deleted', 'all'], true)) {
-      throw new ApiException(ErrorType::invalidField('status'));
-    }
-    return $normalized;
-  }
-
-  /**
    * Creates a new rest time entry.
    *
    * @param CreateRestTimeDTO $dto The data transfer object containing the entry info.
@@ -69,13 +55,19 @@ class RestTimeService
       );
     }
 
+    if (!$this->restTimeRepository->declarationExists($dto->declarationId)) {
+      throw new ApiException(ErrorType::notFound('Declaración'));
+    }
+
     $restTimeId = $this->restTimeRepository->create($dto);
 
     return $this->getRestTimeById($restTimeId);
   }
 
   /**
-   * Applies a partial or full update to an existing rest time entry.
+   * Applies a partial update to an existing rest time entry. The effective
+   * (post-merge) range and rest type are revalidated so the entry keeps a
+   * coherent, within-limit duration.
    *
    * @param string $restTimeId The ULID of the entry to update.
    * @param UpdateRestTimeDTO $dto The data transfer object containing updated info.
@@ -94,75 +86,39 @@ class RestTimeService
       );
     }
 
+    $restType = $dto->restType ?? (string) $existing['rest_type'];
+    $startsAt = $dto->startsAtProvided ? (string) $dto->startsAt : (string) $existing['starts_at'];
+    $endsAt   = $dto->endsAtProvided ? (string) $dto->endsAt : (string) $existing['ends_at'];
+
+    $this->assertRange($restType, $startsAt, $endsAt);
+
     $this->restTimeRepository->update($restTimeId, $dto);
 
     return $this->getRestTimeById($restTimeId);
   }
 
   /**
-   * Soft-deletes a rest time entry.
+   * Deletes a rest time entry.
    *
    * @param string $restTimeId The ULID of the entry to delete.
-   * @param string $deletedBy The ULID of the user performing the deletion.
    * @return void
    * @throws ApiException
    */
-  public function deleteRestTime(string $restTimeId, string $deletedBy): void
+  public function deleteRestTime(string $restTimeId): void
   {
     if (empty($restTimeId)) {
       throw new ApiException(ErrorType::missingField('rest_time_id'));
     }
 
-    $existing = $this->restTimeRepository->findById($restTimeId);
-
-    if ($existing === null) {
+    if ($this->restTimeRepository->findById($restTimeId) === null) {
       throw new ApiException(
         ErrorType::from('REST_TIME_NOT_FOUND', 'El registro de descanso no existe')
       );
     }
 
-    $isDeleted = $this->restTimeRepository->delete($restTimeId, $deletedBy);
-
-    if (!$isDeleted) {
+    if (!$this->restTimeRepository->delete($restTimeId)) {
       throw new ApiException(
         ErrorType::from('DELETE_FAILED', 'No se pudo eliminar el registro de descanso')
-      );
-    }
-  }
-
-  /**
-   * Restores a soft-deleted rest time entry.
-   *
-   * @param string $restTimeId The ULID of the entry to restore.
-   * @return void
-   * @throws ApiException
-   */
-  public function restoreRestTime(string $restTimeId): void
-  {
-    if (empty($restTimeId)) {
-      throw new ApiException(ErrorType::missingField('rest_time_id'));
-    }
-
-    $existing = $this->restTimeRepository->findById($restTimeId, 'all');
-
-    if ($existing === null) {
-      throw new ApiException(
-        ErrorType::from('REST_TIME_NOT_FOUND', 'El registro de descanso no existe')
-      );
-    }
-
-    $isDeleted = (int) ($existing['is_deleted'] ?? 0);
-    if ($isDeleted === 0) {
-      throw new ApiException(
-        ErrorType::conflict('El registro de descanso no está eliminado')
-      );
-    }
-
-    $isRestored = $this->restTimeRepository->restore($restTimeId);
-
-    if (!$isRestored) {
-      throw new ApiException(
-        ErrorType::from('RESTORE_FAILED', 'No se pudo restaurar el registro de descanso')
       );
     }
   }
@@ -173,21 +129,18 @@ class RestTimeService
    * @param int $page The current page number.
    * @param int $limit The number of items per page.
    * @param string $filter Search filter for the rest type.
-   * @param string $status Deletion status filter.
+   * @param string|null $declarationId Optional declaration to scope the list.
    * @return array{data: array<int, array<string, mixed>>, meta: array{page: int, limit: int, total: int, total_pages: int}}
-   * @throws ApiException
    */
-  public function getAllRestTimes(int $page = 1, int $limit = 10, string $filter = '', string $status = 'active'): array
+  public function getAllRestTimes(int $page = 1, int $limit = 10, string $filter = '', ?string $declarationId = null): array
   {
     $page = max(1, $page);
     $limit = max(1, min(100, $limit));
-    $status = $this->normalizeStatus($status);
     $offset = ($page - 1) * $limit;
+    $declarationId = ($declarationId !== null && trim($declarationId) !== '') ? $declarationId : null;
 
-    $total = $this->restTimeRepository->countAll($filter, $status);
-    $restTimes = $this->restTimeRepository->findAllPaginated(
-      $limit, $offset, $filter, $status
-    );
+    $total = $this->restTimeRepository->countAll($filter, $declarationId);
+    $restTimes = $this->restTimeRepository->findAllPaginated($limit, $offset, $filter, $declarationId);
 
     return [
       'data' => $restTimes,
@@ -204,18 +157,16 @@ class RestTimeService
    * Retrieves a single rest time entry by its ID.
    *
    * @param string $restTimeId The ULID of the entry.
-   * @param string $status One of active|deleted|all.
    * @return array<string, mixed>|null Rest time data.
    * @throws ApiException
    */
-  public function getRestTimeById(string $restTimeId, string $status = 'active'): ?array
+  public function getRestTimeById(string $restTimeId): ?array
   {
     if (empty($restTimeId)) {
       throw new ApiException(ErrorType::missingField('rest_time_id'));
     }
 
-    $status = $this->normalizeStatus($status);
-    $restTime = $this->restTimeRepository->findById($restTimeId, $status);
+    $restTime = $this->restTimeRepository->findById($restTimeId);
 
     if ($restTime === null) {
       throw new ApiException(
@@ -224,5 +175,34 @@ class RestTimeService
     }
 
     return $restTime;
+  }
+
+  /**
+   * Ensures the [starts_at, ends_at] range is ordered and within the maximum
+   * duration allowed for the rest type (mirrors CHK_REST_TIMES_DURATION).
+   *
+   * @throws ApiException
+   */
+  private function assertRange(string $restType, string $startsAt, string $endsAt): void
+  {
+    $start = new DateTimeImmutable($startsAt);
+    $end   = new DateTimeImmutable($endsAt);
+
+    if ($end <= $start) {
+      throw new ApiException(
+        ErrorType::invalidField('ends_at', 'La hora de fin debe ser posterior a la de inicio')
+      );
+    }
+
+    $minutes = ($end->getTimestamp() - $start->getTimestamp()) / 60;
+    $maxMinutes = CreateRestTimeDTO::maxMinutesFor($restType);
+    if ($minutes > $maxMinutes) {
+      throw new ApiException(
+        ErrorType::invalidField(
+          'ends_at',
+          "La duración del descanso '{$restType}' no puede exceder los {$maxMinutes} minutos"
+        )
+      );
+    }
   }
 }

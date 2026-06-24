@@ -69,5 +69,4 @@ return [
     ['method' => 'GET',    'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'show'],
     ['method' => 'PATCH',  'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'update'],
     ['method' => 'DELETE', 'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'delete'],
-    ['method' => 'POST',   'path' => '/rest-time/{id}/restore', 'controller' => 'RestTimeController', 'action' => 'restore'],
 ];

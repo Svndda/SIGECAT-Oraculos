@@ -83,7 +83,7 @@ class RestTimeController
 
   /**
    * DELETE /rest-time/{id}
-   * Soft-deletes a rest time entry.
+   * Deletes a rest time entry.
    * Requires Admin privileges.
    *
    * @param string $restTimeId The ID of the rest time entry from the URL parameters.
@@ -92,9 +92,9 @@ class RestTimeController
   public function delete(string $restTimeId): void
   {
     try {
-      $auth = $this->authService->requireAdmin();
+      $this->authService->requireAdmin();
 
-      $this->restTimeService->deleteRestTime($restTimeId, (string) $auth['user_id']);
+      $this->restTimeService->deleteRestTime($restTimeId);
 
       Response::success(
         null, ['message' => 'Registro de descanso eliminado exitosamente']
@@ -105,32 +105,9 @@ class RestTimeController
   }
 
   /**
-   * POST /rest-time/{id}/restore
-   * Restores a soft-deleted rest time entry.
-   * Requires Admin privileges.
-   *
-   * @param string $restTimeId The ID of the rest time entry from the URL parameters.
-   * @return void
-   */
-  public function restore(string $restTimeId): void
-  {
-    try {
-      $this->authService->requireAdmin();
-
-      $this->restTimeService->restoreRestTime($restTimeId);
-
-      Response::success(
-        null, ['message' => 'Registro de descanso restaurado exitosamente']
-      );
-    } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getHttpStatus());
-    }
-  }
-
-  /**
    * GET /rest-time
    * Returns a paginated list of rest time entries.
-   * Query params: page (int), limit (int), filter (string), status (active|deleted|all)
+   * Query params: page (int), limit (int), filter (string), declaration_id (string)
    *
    * @return void
    */
@@ -139,13 +116,13 @@ class RestTimeController
     try {
       $this->authService->requireAdmin();
 
-      $status = trim((string) ($_GET['status'] ?? 'active'));
-      $page   = max(1, (int) ($_GET['page']   ?? 1));
-      $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
-      $filter = trim((string) ($_GET['filter'] ?? ''));
+      $page          = max(1, (int) ($_GET['page']   ?? 1));
+      $limit         = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
+      $filter        = trim((string) ($_GET['filter'] ?? ''));
+      $declarationId = trim((string) ($_GET['declaration_id'] ?? ''));
 
       $result = $this->restTimeService->getAllRestTimes(
-        $page, $limit, $filter, $status
+        $page, $limit, $filter, $declarationId
       );
 
       $metaWithMsg = array_merge(
@@ -162,7 +139,6 @@ class RestTimeController
   /**
    * GET /rest-time/{id}
    * Returns a specific rest time entry by its ID.
-   * Query params: status (active|deleted|all)
    *
    * @param string $restTimeId The ID of the rest time entry from the URL parameters.
    * @return void
@@ -171,9 +147,8 @@ class RestTimeController
   {
     try {
       $this->authService->requireAdmin();
-      $status = trim((string) ($_GET['status'] ?? 'active'));
 
-      $restTime = $this->restTimeService->getRestTimeById($restTimeId, $status);
+      $restTime = $this->restTimeService->getRestTimeById($restTimeId);
 
       Response::success(
         $restTime, ['message' => 'Registro de descanso obtenido exitosamente']
