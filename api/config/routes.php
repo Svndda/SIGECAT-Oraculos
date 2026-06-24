@@ -81,4 +81,11 @@ return [
     ['method' => 'POST',   'path' => '/custom-functions',      'controller' => 'CustomFunctionController', 'action' => 'create'],
     ['method' => 'GET',    'path' => '/custom-functions',      'controller' => 'CustomFunctionController', 'action' => 'index'],
     ['method' => 'GET',    'path' => '/custom-functions/{id}', 'controller' => 'CustomFunctionController', 'action' => 'show'],
+
+    // Job functions routes (declaration line items) — authenticated, self-scoped
+    ['method' => 'POST',   'path' => '/job-functions',      'controller' => 'JobFunctionController', 'action' => 'create'],
+    ['method' => 'GET',    'path' => '/job-functions',      'controller' => 'JobFunctionController', 'action' => 'index'],
+    ['method' => 'GET',    'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'show'],
+    ['method' => 'PATCH',  'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'update'],
+    ['method' => 'DELETE', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'delete'],
 ];
