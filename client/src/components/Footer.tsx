@@ -1,6 +1,7 @@
 import { Box, Typography, Link, IconButton } from '@mui/material';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import FacebookIcon from '@mui/icons-material/Facebook';
+import ucrLogo from '../img/ucr_logo2.svg';
 
 export default function Footer() {
   return (
@@ -13,23 +14,22 @@ export default function Footer() {
           display: 'flex',
           gap: { xs: 3, sm: 6 },
           flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
         }}
       >
         {/* Left: brand + social */}
         <Box sx={{ minWidth: 180 }}>
-          <Typography
+          <Box         
+            component="img"
+            src={ucrLogo}
+            alt="UCR"
             sx={{
-              color: 'white',
-              fontFamily: 'Cicero, serif',
-              fontWeight: 400,
-              fontSize: '1.1rem',
-              letterSpacing: '0.05em',
-              lineHeight: 1.3,
-              mb: 1.5,
+              height: { xs: 35, sm: 40 },
+              width: 'auto',
+              flexShrink: 0,
             }}
-          >
-            Universidad de Costa Rica
-          </Typography>
+          />
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <IconButton
               size="small"
@@ -57,45 +57,47 @@ export default function Footer() {
             </IconButton>
           </Box>
         </Box>
+        
+        <Box  sx={{ display: 'flex', gap: { xs: 3, sm: 6 }, flexWrap: 'wrap', marginLeft: 'auto' }}>
+          {/* Center: contact */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ color: 'white', fontWeight: 600, mb: 1.5, letterSpacing: 0.5 }}
+            >
+              Contacto
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>
+              Piso 7, Edificio Administrativo A,
+              <br />
+              Sede Rodrigo Facio
+            </Typography>
+          </Box>
 
-        {/* Center: contact */}
-        <Box>
-          <Typography
-            variant="subtitle2"
-            sx={{ color: 'white', fontWeight: 600, mb: 1.5, letterSpacing: 0.5 }}
-          >
-            Contacto
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>
-            Piso 7, Edificio Administrativo A,
-            <br />
-            Sede Rodrigo Facio
-          </Typography>
-        </Box>
-
-        {/* Right: quick links */}
-        <Box>
-          <Typography
-            variant="subtitle2"
-            sx={{ color: 'white', fontWeight: 600, mb: 1.5, letterSpacing: 0.5 }}
-          >
-            Enlaces rápidos
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {['Portal UCR', 'Matrícula Web', 'Soporte Técnico'].map((label) => (
-              <Link
-                key={label}
-                underline="hover"
-                sx={{
-                  color: 'rgba(255,255,255,0.65)',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  '&:hover': { color: 'white' },
-                }}
-              >
-                {label}
-              </Link>
-            ))}
+          {/* Right: quick links */}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ color: 'white', fontWeight: 600, mb: 1.5, letterSpacing: 0.5 }}
+            >
+              Enlaces rápidos
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              {['Portal UCR', 'Matrícula Web', 'Soporte Técnico'].map((label) => (
+                <Link
+                  key={label}
+                  underline="hover"
+                  sx={{
+                    color: 'rgba(255,255,255,0.65)',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    '&:hover': { color: 'white' },
+                  }}
+                >
+                  {label}
+                </Link>
+              ))}
+            </Box>
           </Box>
         </Box>
       </Box>
