@@ -31,6 +31,8 @@ export default function AreaFormModal({
 }: AreaFormModalProps) {
   const title = viewMode ? 'Ver Área' : isEditing ? 'Editar Área' : 'Añadir Área';
 
+  const MAX_NAME = 110;
+  const MAX_DESC = 255;
   return (
     <ModalForm
       open={open}
@@ -39,6 +41,7 @@ export default function AreaFormModal({
       onConfirm={viewMode ? onClose : onConfirm}
       confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar cambios' : 'Confirmar'}
       isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -48,7 +51,8 @@ export default function AreaFormModal({
           size="small"
           fullWidth
           error={!!formErrors.name}
-          helperText={formErrors.name}
+          helperText={formErrors.name || `${form.name.length}/${MAX_NAME} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_NAME, step: 1 }}
           required
           disabled={viewMode}
         />
@@ -61,6 +65,9 @@ export default function AreaFormModal({
           multiline
           rows={3}
           disabled={viewMode}
+          error={!!formErrors.description}
+          helperText={formErrors.description || `${form.description.length}/${MAX_DESC} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_DESC, step: 1 }}
         />
       </Stack>
     </ModalForm>

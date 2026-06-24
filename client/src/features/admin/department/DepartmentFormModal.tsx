@@ -28,6 +28,8 @@ export default function DepartmentFormModal({
 }: DepartmentFormModalProps) {
   const selectedArea = areas.find((a) => a.area_id === form.area_id) ?? null;
   const title = viewMode ? 'Ver Departamento' : isEditing ? 'Editar Departamento' : 'Registrar Departamento';
+  const MAX_NAME = 110;
+  const MAX_DESC = 255;
 
   return (
     <ModalForm
@@ -37,6 +39,7 @@ export default function DepartmentFormModal({
       onConfirm={viewMode ? onClose : onConfirm}
       confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar Cambios' : 'Confirmar'}
       isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.area_id || !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -46,7 +49,8 @@ export default function DepartmentFormModal({
           size="small"
           fullWidth
           error={!!formErrors.name}
-          helperText={formErrors.name}
+          helperText={formErrors.name || `${form.name.length}/${MAX_NAME} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_NAME, step: 1 }}
           required
           disabled={viewMode}
         />
@@ -81,8 +85,9 @@ export default function DepartmentFormModal({
           multiline
           rows={3}
           error={!!formErrors.description}
-          helperText={formErrors.description}
+          helperText={formErrors.description || `${form.description.length}/${MAX_DESC} caracteres`}
           disabled={viewMode}
+          inputProps={{ min: 0, maxLength: MAX_DESC, step: 1 }}
         />
       </Stack>
     </ModalForm>

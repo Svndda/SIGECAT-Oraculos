@@ -43,6 +43,9 @@ export default function UserFormModal({
   onConfirm,
   onChange,
 }: UserFormModalProps) {
+  const MAX_NAME = 25;
+  const MAX_EMAIL = 255;
+  const MAX_PASSWORD = 30;
   return (
     <ModalForm
       open={open}
@@ -51,6 +54,8 @@ export default function UserFormModal({
       onConfirm={viewMode ? onClose : onConfirm}
       confirmLabel={viewMode ? 'Cerrar' : 'Confirmar'}
       isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.first_name || !form.first_last_name ||
+         !form.second_last_name || !form.email || !form.role || !form.password}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -63,6 +68,7 @@ export default function UserFormModal({
           helperText={formErrors.first_name}
           required
           disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Segundo nombre (opcional)"
@@ -73,6 +79,7 @@ export default function UserFormModal({
           error={!!formErrors.second_name}
           helperText={formErrors.second_name}
           disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Primer apellido *"
@@ -84,6 +91,7 @@ export default function UserFormModal({
           helperText={formErrors.first_last_name}
           required
           disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Segundo apellido *"
@@ -95,6 +103,7 @@ export default function UserFormModal({
           helperText={formErrors.second_last_name}
           required
           disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Correo institucional *"
@@ -105,9 +114,10 @@ export default function UserFormModal({
           size="small"
           fullWidth
           error={!!formErrors.email}
-          helperText={formErrors.email}
           required
           disabled={viewMode}
+          helperText={formErrors.email || `${form.email.length}/${MAX_EMAIL} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_EMAIL, step: 1 }}
         />
         <Autocomplete
           options={ROLES}
@@ -140,7 +150,8 @@ export default function UserFormModal({
             size="small"
             fullWidth
             error={!!formErrors.password}
-            helperText={formErrors.password}
+            helperText={formErrors.password || `${form.password.length}/${MAX_PASSWORD} caracteres`}
+            inputProps={{ min: 0, maxLength: MAX_PASSWORD, step: 1 }}
             required
             slotProps={{
               input: {
