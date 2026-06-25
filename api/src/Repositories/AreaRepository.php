@@ -157,81 +157,33 @@ final class AreaRepository extends Repository {
     }
   }
 
+  /**
+   * Whether the area still has active departments or sections.
+   * Delegates to the FN_AREA_HAS_ACTIVE_CHILDREN database function
+   * (see SIGECAT-DB-ROUTINES-business-logic.sql).
+   */
   public function hasChildEntities(string $areaId): bool {
     $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS cnt FROM DEPARTMENTS WHERE area_id = :area_id AND is_deleted = 0 AND ROWNUM = 1'
+      'SELECT FN_AREA_HAS_ACTIVE_CHILDREN(:area_id) AS cnt FROM dual'
     );
     $stmt->execute([':area_id' => $areaId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ((int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0) {
-      return true;
-    }
-
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS cnt FROM SECTIONS WHERE area_id = :area_id AND is_deleted = 0 AND ROWNUM = 1'
-    );
-    $stmt->execute([':area_id' => $areaId]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
+    return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) === 1;
   }
 
   /**
-   * Soft-deletes an area and cascades to its children, all in one transaction:
-   *   - child units (under the area's departments or sections)
-   *   - child departments and sections
-   *   - the area's plazas (JOB_POSITIONS) — AREA_ID is NOT NULL so they cannot
-   *     be de-referenced; they are soft-deleted instead
-   *   - the area itself
+   * Soft-deletes an area and cascades the soft-delete to its whole subtree
+   * (departments, sections, units and the job positions anchored anywhere in
+   * that subtree). The cascade logic lives in the SP_DELETE_AREA_CASCADE
+   * database procedure (see SIGECAT-DB-ROUTINES-business-logic.sql); the
+   * procedure does not commit, so it runs inside this transaction and the
+   * repository keeps control of the unit of work.
    */
   public function deleteArea(string $areaId, string $deletedBy): void {
     $this->beginTransaction();
     try {
-      // 1. Units belonging to this area's departments or sections.
-      $stmt = $this->db->prepare(
-        'UPDATE UNITS
-            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
-          WHERE is_deleted = 0
-            AND (department_id IN (SELECT department_id FROM DEPARTMENTS WHERE area_id = :area_id_a)
-              OR section_id    IN (SELECT section_id    FROM SECTIONS    WHERE area_id = :area_id_b))'
-      );
-      $stmt->execute([
-        ':deleted_by' => $deletedBy,
-        ':area_id_a'  => $areaId,
-        ':area_id_b'  => $areaId,
-      ]);
-
-      // 2. Departments of the area.
-      $stmt = $this->db->prepare(
-        'UPDATE DEPARTMENTS
-            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
-          WHERE area_id = :area_id AND is_deleted = 0'
-      );
-      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
-
-      // 3. Sections of the area.
-      $stmt = $this->db->prepare(
-        'UPDATE SECTIONS
-            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
-          WHERE area_id = :area_id AND is_deleted = 0'
-      );
-      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
-
-      // 4. Plazas of the area (cascade soft-delete; cannot re-anchor).
-      $stmt = $this->db->prepare(
-        'UPDATE JOB_POSITIONS
-            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
-          WHERE area_id = :area_id AND is_deleted = 0'
-      );
-      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
-
-      // 5. The area itself.
-      $stmt = $this->db->prepare(
-        'UPDATE AREAS
-            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :deleted_by
-          WHERE area_id = :area_id AND is_deleted = 0'
-      );
-      $stmt->execute([':deleted_by' => $deletedBy, ':area_id' => $areaId]);
-
+      $stmt = $this->db->prepare('BEGIN SP_DELETE_AREA_CASCADE(:area_id, :deleted_by); END;');
+      $stmt->execute([':area_id' => $areaId, ':deleted_by' => $deletedBy]);
       $this->commit();
     } catch (PDOException $e) {
       $this->rollBack();

@@ -14,17 +14,20 @@ import UsersPage from './pages/admin/UsersPage';
 import SettingsPage from './pages/SettingsPage.tsx';
 import { RecordsProvider } from '../context/RecordsContext';
 import { AuthProvider } from '../context/AuthContext';
+import { SnackbarProvider } from '../context/SnackbarContext';
 import PrivateRoute from '../components/PrivateRoute';
 import DepartmentsPage from './pages/admin/DepartmentsPage';
 import RoleRoute from "../components/RoleRoute.tsx";
 import AccessDeniedPage from "./pages/AccessDeniedPage.tsx";
 import SectionsPage from './pages/admin/SectionsPage.tsx';
+import JobsPage from "./pages/admin/JobPage.tsx";
 
 function App() {
   return (
     <AuthProvider>
       <RecordsProvider>
-        <BrowserRouter>
+        <SnackbarProvider>
+          <BrowserRouter>
           <Routes>
 
             {/* Public routes */}
@@ -47,13 +50,15 @@ function App() {
                   <Route path="unidades" element={<UnitsPage />} />
                   <Route path="secciones" element={<SectionsPage />} />
                   <Route path="departamentos" element={<DepartmentsPage />} />
+                  <Route path="cargos" element={<JobsPage/> } />
                   <Route path="plazas" element={<JobPositionsPage />} />
                   <Route path="usuarios" element={<UsersPage />} />
                 </Route>
               </Route>
             </Route>
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </SnackbarProvider>
       </RecordsProvider>
     </AuthProvider>
   );

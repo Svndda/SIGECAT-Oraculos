@@ -1,33 +1,56 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Pagination } from '@mui/material';
-import { areaService } from '../../../services/areaService';
-import { departmentService } from '../../../services/departmentService';
-import { sectionService } from '../../../services/sectionService';
-import { unitService } from '../../../services/unitService';
-import { jobPositionService } from '../../../services/jobPositionService';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import {
+  Box,
+  Pagination,
+} from '@mui/material';
+
+import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
+import JobPositionFormModal
+  from '../../../features/admin/job_position/JobPositionFormModal';
+import JobPositionList
+  from '../../../features/admin/job_position/JobPositionList';
+import JobPositionToolbar
+  from '../../../features/admin/job_position/JobPositionToolbar';
 import type { Area } from '../../../services/areaService';
-import type { Unit } from '../../../services/unitService';
+import { areaService } from '../../../services/areaService';
 import type {
-  JobPosition,
-  Job,
-  JobPositionParentType,
+  OrgOption,
+  PageMeta,
+  ServiceError,
+} from '../../../services/common';
+import { departmentService } from '../../../services/departmentService';
+import type {
   CreateJobPositionPayload,
+  Job,
+  JobPosition,
+  JobPositionParentType,
   UpdateJobPositionPayload,
 } from '../../../services/jobPositionService';
-import type { OrgOption, PageMeta, ServiceError } from '../../../services/common';
-import JobPositionToolbar from '../../../features/admin/job_position/JobPositionToolbar';
-import JobPositionList from '../../../features/admin/job_position/JobPositionList';
-import JobPositionFormModal from '../../../features/admin/job_position/JobPositionFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
-import ModalAlert from '../../../components/modals/ModalAlert';
+import { jobPositionService } from '../../../services/jobPositionService';
+import { sectionService } from '../../../services/sectionService';
+import type { Unit } from '../../../services/unitService';
+import { unitService } from '../../../services/unitService';
+import type { AdminUser } from '../../../services/userService';
+import { userService } from '../../../services/userService';
 
 const LIMIT = 10;
+const SHIFT_OPTIONS = [
+  'Diurna', 'Media Diurna', 'Mixta', 'Nocturna', 'Media Nocturna'
+];
 
 const EMPTY_FORM = {
   job_position_number: '',
   description: '',
   job_id: '',
+  user_id: '',
+  job_shift: '',
   parentType: '' as JobPositionParentType | '',
   parentId: '',
 };
@@ -40,27 +63,24 @@ export default function JobPositionsPage() {
   const [appliedFilter, setAppliedFilter] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Datos para selects y lookups
   const [areas, setAreas] = useState<Area[]>([]);
   const [departments, setDepartments] = useState<OrgOption[]>([]);
   const [sections, setSections] = useState<OrgOption[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [types, setTypes] = useState<Job[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingEntities, setLoadingEntities] = useState(true);
 
-  // Estados de modales
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<JobPosition | null>(null);
+  const [viewTarget, setViewTarget] = useState<JobPosition | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JobPosition | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => {
       setAppliedFilter(search.trim());
@@ -69,33 +89,37 @@ export default function JobPositionsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Cargar entidades (solo una vez)
   useEffect(() => {
     const loadEntities = async () => {
       try {
-        const [areasData, departmentsData, sectionsData, unitsData, typesData] = await Promise.all([
-          areaService.getAreas({ limit: 100 }),
-          departmentService.getDepartments({ limit: 100 }),
-          sectionService.getSections({ limit: 100 }),
-          unitService.getUnits({ limit: 100 }),
-          jobPositionService.getJobs(),
-        ]);
+        const [
+          areasData, departmentsData,
+          sectionsData, unitsData,
+          typesData, usersData
+        ] = await Promise.all([
+            areaService.getAreas({ limit: 100 }),
+            departmentService.getDepartments({ limit: 100 }),
+            sectionService.getSections({ limit: 100 }),
+            unitService.getUnits({ limit: 100 }),
+            jobPositionService.getJobs(),
+            userService.getUsers(),
+          ]);
         setAreas(areasData.data);
         setDepartments(departmentsData);
         setSections(sectionsData);
         setUnits(unitsData.data);
         setTypes(typesData);
+        setUsers(usersData);
       } catch (error) {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       } finally {
         setLoadingEntities(false);
       }
     };
     loadEntities();
-  }, []);
+  }, [snackbar]);
 
-  // Cargar plazas con paginación
   const loadJobPositions = useCallback(() => {
     setLoading(true);
     jobPositionService
@@ -106,10 +130,10 @@ export default function JobPositionsPage() {
       })
       .catch((error) => {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoading(false));
-  }, [page, appliedFilter]);
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
     if (!loadingEntities) {
@@ -119,7 +143,6 @@ export default function JobPositionsPage() {
 
   const totalPages = meta?.total_pages ?? 1;
 
-  // Lookups para nombres de entidades
   const lookups = useMemo(
     () => ({
       area: new Map(areas.map((a) => [a.area_id, a.name])),
@@ -154,7 +177,6 @@ export default function JobPositionsPage() {
     [lookups, loadingEntities]
   );
 
-  // Opciones para el selector de entidad en el formulario
   const parentOptions: OrgOption[] = useMemo(() => {
     switch (form.parentType) {
       case 'area':
@@ -170,9 +192,16 @@ export default function JobPositionsPage() {
     }
   }, [form.parentType, areas, departments, sections, units]);
 
-  // Manejadores del formulario
+  const userOptions = useMemo(() => {
+    return users.map((u) => ({
+      id: u.id,
+      label: `${u.first_name} ${u.last_name} (${u.email})`,
+    }));
+  }, [users]);
+
   const openCreate = () => {
     setEditTarget(null);
+    setViewTarget(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
     setFormOpen(true);
@@ -180,27 +209,72 @@ export default function JobPositionsPage() {
 
   const openEdit = (jobPosition: JobPosition) => {
     setEditTarget(jobPosition);
+    setViewTarget(null);
     const parentType: JobPositionParentType | '' =
       jobPosition.area_id
         ? 'area'
         : jobPosition.department_id
-        ? 'department'
-        : jobPosition.section_id
-        ? 'section'
-        : jobPosition.unit_id
-        ? 'unit'
-        : '';
+          ? 'department'
+          : jobPosition.section_id
+            ? 'section'
+            : jobPosition.unit_id
+              ? 'unit'
+              : '';
     const parentId =
-      jobPosition.area_id ?? jobPosition.department_id ?? jobPosition.section_id ?? jobPosition.unit_id ?? '';
+      jobPosition.area_id ??
+      jobPosition.department_id ??
+      jobPosition.section_id ??
+      jobPosition.unit_id ??
+      '';
     setForm({
       job_position_number: jobPosition.job_position_number,
       description: jobPosition.description ?? '',
       job_id: jobPosition.job_id,
+      user_id: jobPosition.user_id ?? '',
+      job_shift: jobPosition.job_shift ?? '',
       parentType,
       parentId,
     });
     setFormErrors({});
     setFormOpen(true);
+  };
+
+  const openView = (jobPosition: JobPosition) => {
+    setViewTarget(jobPosition);
+    setEditTarget(null);
+    const parentType: JobPositionParentType | '' =
+      jobPosition.area_id
+        ? 'area'
+        : jobPosition.department_id
+          ? 'department'
+          : jobPosition.section_id
+            ? 'section'
+            : jobPosition.unit_id
+              ? 'unit'
+              : '';
+    const parentId =
+      jobPosition.area_id ??
+      jobPosition.department_id ??
+      jobPosition.section_id ??
+      jobPosition.unit_id ??
+      '';
+    setForm({
+      job_position_number: jobPosition.job_position_number,
+      description: jobPosition.description ?? '',
+      job_id: jobPosition.job_id,
+      user_id: jobPosition.user_id ?? '',
+      job_shift: jobPosition.job_shift ?? '',
+      parentType,
+      parentId,
+    });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setEditTarget(null);
   };
 
   const setField = (field: keyof typeof EMPTY_FORM, value: string) => {
@@ -210,10 +284,19 @@ export default function JobPositionsPage() {
 
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
-    if (!form.job_position_number.trim()) errors.job_position_number = 'El número de plaza es requerido.';
+    const num = form.job_position_number.trim();
+    if (!num) errors.job_position_number = 'El número de plaza es requerido.';
+    else if (num.length > 10) errors.job_position_number = 'No puede exceder 10 dígitos.';
+    else if (!/^\d+$/.test(num)) errors.job_position_number = 'Solo números.';
     if (!form.job_id) errors.job_id = 'El tipo de plaza es requerido.';
+    if (!form.user_id) errors.user_id = 'El usuario asignado es requerido.';
+    if (!form.job_shift) errors.job_shift = 'El turno es requerido.';
+    if (form.job_shift && !SHIFT_OPTIONS.includes(form.job_shift))
+      errors.job_shift = 'Turno no válido.';
     if (!form.parentType) errors.parentType = 'El tipo de entidad es requerido.';
     if (!form.parentId) errors.parentId = 'La entidad es requerida.';
+    if (form.description && form.description.length > 255)
+      errors.description = 'No puede exceder 255 caracteres.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -225,32 +308,34 @@ export default function JobPositionsPage() {
       if (editTarget) {
         const payload: UpdateJobPositionPayload = {
           job_position_number: form.job_position_number.trim(),
-          description: form.description.trim(),
+          description: form.description.trim() || undefined,
           job_id: form.job_id,
+          user_id: form.user_id || undefined,
+          job_shift: form.job_shift || undefined,
         };
         if (form.parentType) {
           payload[`${form.parentType}_id`] = form.parentId;
         }
-        await jobPositionService.editJobPosition(editTarget.id, payload);
-        setSuccessMsg('Plaza actualizada correctamente.');
+        await jobPositionService.editJobPosition(editTarget.job_position_id, payload);
       } else {
         const payload: CreateJobPositionPayload = {
           job_position_number: form.job_position_number.trim(),
           description: form.description.trim() || undefined,
           job_id: form.job_id,
+          user_id: form.user_id,
+          job_shift: form.job_shift,
         };
         if (form.parentType) {
           payload[`${form.parentType}_id`] = form.parentId;
         }
         await jobPositionService.createJobPosition(payload);
-        setSuccessMsg('Plaza creada correctamente.');
       }
-      setFormOpen(false);
+      closeModal();
       await loadJobPositions();
-      setSuccessOpen(true);
+      snackbar.success(editTarget ? 'Plaza actualizada correctamente.' : 'Plaza creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -260,19 +345,20 @@ export default function JobPositionsPage() {
     if (!deleteTarget) return;
     setIsSubmitting(true);
     try {
-      await jobPositionService.deleteJobPosition(deleteTarget.id);
+      await jobPositionService.deleteJobPosition(deleteTarget.job_position_id);
       setDeleteTarget(null);
       await loadJobPositions();
-      setSuccessMsg('Plaza eliminada correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Plaza eliminada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
       setDeleteTarget(null);
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const viewMode = !!viewTarget;
 
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
@@ -283,6 +369,7 @@ export default function JobPositionsPage() {
         loading={loading || loadingEntities}
         onEdit={openEdit}
         onDelete={setDeleteTarget}
+        onView={openView}
         parentLabel={parentLabel}
       />
 
@@ -301,12 +388,15 @@ export default function JobPositionsPage() {
       <JobPositionFormModal
         open={formOpen}
         isEditing={!!editTarget}
+        viewMode={viewMode}
         form={form}
         formErrors={formErrors}
         types={types}
+        userOptions={userOptions}
+        shiftOptions={SHIFT_OPTIONS}
         parentOptions={parentOptions}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onFieldChange={setField}
       />
@@ -319,19 +409,6 @@ export default function JobPositionsPage() {
         cancelLabel="Cancelar"
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-      />
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
       />
     </Box>
   );

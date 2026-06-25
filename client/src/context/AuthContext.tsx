@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { AuthUser } from '../services/authService';
 import { authService } from '../services/authService';
+import { tokenStorage } from '../services/tokenStorage';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -17,15 +18,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const cleanAuthStorage = () => {
-    localStorage.removeItem('sigecat_refresh_token');
-    localStorage.removeItem('sigecat_user_id');
+    tokenStorage.clear();
     setUser(null);
   };
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const refreshToken = localStorage.getItem('sigecat_refresh_token');
-      const userId = localStorage.getItem('sigecat_user_id');
+      const refreshToken = tokenStorage.getRefreshToken();
+      const userId = tokenStorage.getUserId();
 
       if (!refreshToken || !userId) {
         cleanAuthStorage();
@@ -39,7 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         try {
           const tokens = await authService.refreshTokens(refreshToken);
-          localStorage.setItem('sigecat_refresh_token', tokens.refresh_token);
+          tokenStorage.setAccessToken(tokens.access_token);
+          tokenStorage.setRefreshToken(tokens.refresh_token);
           const userData = await authService.getMe();
           setUser(userData);
         } catch (refreshError) {
@@ -54,9 +55,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<AuthUser> => {
-    const { user: loggedUser, refresh_token } = await authService.login(email, password);
-    localStorage.setItem('sigecat_refresh_token', refresh_token);
-    localStorage.setItem('sigecat_user_id', loggedUser.id);
+    const { user: loggedUser, access_token, refresh_token } = await authService.login(email, password);
+    tokenStorage.setSession({
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      userId: loggedUser.id,
+    });
     setUser(loggedUser);
     return loggedUser;
   };

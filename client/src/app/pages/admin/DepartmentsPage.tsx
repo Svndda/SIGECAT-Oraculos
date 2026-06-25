@@ -10,9 +10,8 @@ import type { PageMeta } from '../../../services/common';
 import DepartmentToolbar from '../../../features/admin/department/DepartmentToolbar';
 import DepartmentList from '../../../features/admin/department/DepartmentList';
 import DepartmentFormModal from '../../../features/admin/department/DepartmentFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 const LIMIT = 10;
 const EMPTY_FORM = { name: '', description: '', area_id: '' };
@@ -29,16 +28,12 @@ export default function DepartmentsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [viewTarget, setViewTarget] = useState<Department | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [modalError, setModalError] = useState(
-    { open: false, title: '', message: '' }
-  );
-  const [successOpen, setSuccessOpen] = useState(
-    { open: false, title: '', message: '' }
-  );
+  const snackbar = useSnackbar();
   const [deleteAlert, setDeleteAlert] = useState<{
     open: boolean; id: string
   }>({ open: false, id: '' });
@@ -73,11 +68,7 @@ export default function DepartmentsPage() {
         .catch((error) => {
           if (!isSubscribed) return;
           const e = error as ServiceError;
-          setModalError({
-            open: true,
-            title: 'Error al cargar',
-            message: e.message ?? 'Error del servidor.'
-          });
+          snackbar.error(e.message ?? 'Error del servidor.');
         })
         .finally(() => {
           if (isSubscribed) setLoading(false);
@@ -88,6 +79,7 @@ export default function DepartmentsPage() {
     let isSubscribed = true;
     loadDepartments(isSubscribed);
     return () => { isSubscribed = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, appliedFilter]);
 
   const totalPages = meta?.total_pages ?? 1;
@@ -101,6 +93,7 @@ export default function DepartmentsPage() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setIsEditing(null);
+    setViewTarget(null);
     setFormOpen(true);
   };
 
@@ -108,7 +101,22 @@ export default function DepartmentsPage() {
     setForm({ name: dept.name, description: dept.description ?? '', area_id: dept.area_id });
     setFormErrors({});
     setIsEditing(dept.department_id);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (dept: Department) => {
+    setForm({ name: dept.name, description: dept.description ?? '', area_id: dept.area_id });
+    setFormErrors({});
+    setIsEditing(null);
+    setViewTarget(dept);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setIsEditing(null);
   };
 
   const validateForm = (): boolean => {
@@ -125,28 +133,15 @@ export default function DepartmentsPage() {
     try {
       if (isEditing) {
         await departmentService.updateDepartment(isEditing, form);
-        setSuccessOpen({
-          open: true,
-          title: 'Departamento actualizado',
-          message: 'Los cambios se han guardado.'
-        });
       } else {
         await departmentService.createDepartment(form);
-        setSuccessOpen({
-          open: true,
-          title: 'Departamento registrado',
-          message: 'El departamento fue creado correctamente.'
-        });
       }
-      setFormOpen(false);
+      closeModal();
       loadDepartments(true);
+      snackbar.success(isEditing ? 'Los cambios se han guardado.' : 'El departamento fue creado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({
-        open: true,
-        title: 'Error al procesar',
-        message: e.message ?? 'Error del servidor.'
-      });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -161,19 +156,11 @@ export default function DepartmentsPage() {
     
     try {
       await departmentService.deleteDepartment(deleteAlert.id);
-      setSuccessOpen({
-        open: true,
-        title: 'Departamento eliminado',
-        message: 'El registro se movió a la papelera.'
-      });
+      snackbar.success('El registro se movió a la papelera.');
       loadDepartments(true);
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({
-        open: true,
-        title: 'Error al eliminar',
-        message: e.message ?? 'Error del servidor.'
-      });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setDeleteAlert({ open: false, id: '' });
     }
@@ -201,6 +188,7 @@ export default function DepartmentsPage() {
             areaMap={areaMap}
             onEdit={openEdit}
             onDelete={handleDeleteRequest}
+            onView={openView}
         />
 
         {totalPages > 1 && (
@@ -216,11 +204,12 @@ export default function DepartmentsPage() {
         <DepartmentFormModal
             open={formOpen}
             isEditing={!!isEditing}
+            viewMode={!!viewTarget}
             form={form}
             formErrors={formErrors}
             areas={areas}
             isSubmitting={isSubmitting}
-            onClose={() => setFormOpen(false)}
+            onClose={closeModal}
             onConfirm={handleConfirm}
             onChange={handleChange}
         />
@@ -235,18 +224,6 @@ export default function DepartmentsPage() {
           cancelLabel="Cancelar"
         />
 
-        <ModalError
-          open={modalError.open}
-          title={modalError.title}
-          message={modalError.message}
-          onClose={() => setModalError((p) => ({ ...p, open: false }))}
-          />
-        <ModalSuccess
-          open={successOpen.open}
-          title={successOpen.title}
-          message={successOpen.message}
-          onClose={() => setSuccessOpen((p) => ({ ...p, open: false }))}
-        />
       </Box>
   );
 }

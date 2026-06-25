@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import type { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { authService } from './authService';
+import { tokenStorage } from './tokenStorage';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -26,14 +27,20 @@ const processQueue = (error: unknown = null) => {
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8000/api/public',
-  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// Attach the access token (when present) as an Authorization: Bearer header.
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => config,
+  (config: InternalAxiosRequestConfig) => {
+    const accessToken = tokenStorage.getAccessToken();
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
   (error: AxiosError) => Promise.reject(error)
 );
 
@@ -71,18 +78,19 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('sigecat_refresh_token');
+      const refreshToken = tokenStorage.getRefreshToken();
       if (!refreshToken) {
         isRefreshing = false;
-        localStorage.removeItem('sigecat_user_id');
+        tokenStorage.clear();
         window.location.href = '/login';
         return Promise.reject(error);
       }
 
       try {
         const tokens = await authService.refreshTokens(refreshToken);
-        // Store the new refresh token (the access token is in the cookie)
-        localStorage.setItem('sigecat_refresh_token', tokens.refresh_token);
+        // Persist the rotated access and refresh tokens for the next requests.
+        tokenStorage.setAccessToken(tokens.access_token);
+        tokenStorage.setRefreshToken(tokens.refresh_token);
 
         // Process all queued requests
         processQueue();
@@ -90,8 +98,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        localStorage.removeItem('sigecat_refresh_token');
-        localStorage.removeItem('sigecat_user_id');
+        tokenStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

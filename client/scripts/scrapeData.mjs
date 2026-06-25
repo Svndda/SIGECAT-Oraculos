@@ -80,7 +80,7 @@ async function scrapeCargos() {
     });
 
     // Save to file
-    const outputPath = path.join(process.cwd(), 'src', 'data', 'jobs.json');
+    const outputPath = path.join(process.cwd(), 'src', 'data', 'job.json');
     const outputDir = path.dirname(outputPath);
 
     if (!fs.existsSync(outputDir)) {
@@ -92,7 +92,7 @@ async function scrapeCargos() {
 
     return cargos;
   } catch (error) {
-    console.error('Error extracting jobs:', error);
+    console.error('Error extracting job:', error);
     return [];
   }
 }

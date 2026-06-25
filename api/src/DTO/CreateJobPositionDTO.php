@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace DTO;
@@ -16,17 +17,23 @@ use Http\ErrorType;
  *
  * @package DTO
  */
-final class CreateJobPositionDTO {
+final class CreateJobPositionDTO
+{
   public readonly string $jobPositionNumber;
-  public readonly ?string $description;
+  public readonly string $userId;
+  public readonly string $shift;
   public readonly string $jobId;
   public readonly ?string $areaId;
   public readonly ?string $departmentId;
   public readonly ?string $sectionId;
   public readonly ?string $unitId;
+  public readonly ?string $description;
+
 
   private function __construct(
     string $jobPositionNumber,
+    string $userId,
+    string $shift,
     ?string $description,
     string $jobId,
     ?string $areaId,
@@ -35,6 +42,8 @@ final class CreateJobPositionDTO {
     ?string $unitId
   ) {
     $this->jobPositionNumber = $jobPositionNumber;
+    $this->userId = $userId;
+    $this->shift = $shift;
     $this->description = $description;
     $this->jobId = $jobId;
     $this->areaId = $areaId;
@@ -44,7 +53,8 @@ final class CreateJobPositionDTO {
   }
 
   /** @param array<string, mixed> $data */
-  public static function fromArray(array $data): self {
+  public static function fromArray(array $data): self
+  {
     $opt = static function (string $key) use ($data): ?string {
       if (!isset($data[$key])) {
         return null;
@@ -55,6 +65,8 @@ final class CreateJobPositionDTO {
 
     return new self(
       (string) ($data['job_position_number'] ?? ''),
+      (string) ($data['user_id'] ?? ''),
+      (string) ($data['job_shift'] ?? ''),
       isset($data['description']) ? (string) $data['description'] : null,
       (string) ($data['job_id'] ?? ''),
       $opt('area_id'),
@@ -70,33 +82,68 @@ final class CreateJobPositionDTO {
    *
    * @return array{0: string, 1: string}
    */
-  public function parent(): array {
-    foreach ([
-      'area_id'       => $this->areaId,
-      'department_id' => $this->departmentId,
-      'section_id'    => $this->sectionId,
-      'unit_id'       => $this->unitId,
-    ] as $column => $id) {
+  public function parent(): array
+  {
+    foreach (
+      [
+        'area_id' => $this->areaId,
+        'department_id' => $this->departmentId,
+        'section_id' => $this->sectionId,
+        'unit_id' => $this->unitId,
+      ] as $column => $id
+    ) {
       if ($id !== null) {
         return [$column, $id];
       }
     }
 
-    throw new \LogicException('CreateJobPositionDTO::parent() called without a parent set');
+    throw new ApiException(ErrorType::invalidJson());
   }
 
-  public function validate(): void {
+  public function validate(): void
+  {
     if (trim($this->jobPositionNumber) === '') {
       throw new ApiException(ErrorType::missingField('job_position_number'));
     }
+
+    if (trim($this->userId) === '') {
+      throw new ApiException(ErrorType::missingField('user_id'));
+    }
+
+    if (trim($this->shift) === '') {
+      throw new ApiException(ErrorType::missingField('job_shift'));
+    }
+
+    $validShifts = [
+      'Diurna',
+      'Media Diurna',
+      'Mixta',
+      'Nocturna',
+      'Media Nocturna'
+    ];
+    if (!in_array($this->shift, $validShifts, true)) {
+      throw new ApiException(
+        ErrorType::from('INVALID_SHIFT', 'El turno asignado no es válido.'),
+        400
+      );
+    }
+
     if (strlen($this->jobPositionNumber) > 110) {
       throw new ApiException(
-        ErrorType::from('INVALID_JOB_POSITION_NUMBER', 'El número de plaza no puede exceder los 110 caracteres'), 400
+        ErrorType::from(
+          'INVALID_JOB_POSITION_NUMBER',
+          'El número de plaza no puede exceder los 110 caracteres'
+        ),
+        400
       );
     }
     if ($this->description !== null && strlen($this->description) > 255) {
       throw new ApiException(
-        ErrorType::from('INVALID_JOB_POSITION_DESC', 'La descripción no puede exceder los 255 caracteres'), 400
+        ErrorType::from(
+          'INVALID_JOB_POSITION_DESC',
+          'La descripción no puede exceder los 255 caracteres'
+        ),
+        400
       );
     }
     if (trim($this->jobId) === '') {
@@ -111,8 +158,11 @@ final class CreateJobPositionDTO {
       throw new ApiException(
         ErrorType::from(
           'INVALID_JOB_POSITION_PARENT',
-          'La plaza debe pertenecer exactamente a una entidad (área, departamento, sección o unidad).'
-        ), 400
+          'La plaza debe pertenecer exactamente a una entidad (
+            área, departamento, sección o unidad
+          ).'
+        ),
+        400
       );
     }
   }

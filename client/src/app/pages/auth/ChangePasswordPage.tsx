@@ -14,8 +14,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { authService } from '../../../services/authService';
 import type { ServiceError } from '../../../services/authService';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
+import { useSnackbar } from '../../../context/SnackbarContext';
 import { validatePassword } from '../../../utils/validation';
 import PasswordStrengthFeedback from '../../../components/PasswordStrengthFeedback';
 
@@ -32,8 +31,7 @@ export default function ChangePasswordPage() {
     confirmPassword?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
+  const snackbar = useSnackbar();
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
@@ -53,24 +51,20 @@ export default function ChangePasswordPage() {
     setIsSubmitting(true);
     try {
       await authService.changePassword(currentPassword, newPassword);
-      setSuccessOpen(true);
+      snackbar.success('Su contraseña ha sido cambiada exitosamente.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (error) {
       const serviceError = error as ServiceError;
       const message =
         serviceError.code === 'INVALID_CREDENTIALS'
           ? 'La contraseña actual es incorrecta.'
           : 'Error del servidor. Intente de nuevo más tarde.';
-      setModalError({ open: true, title: 'Error al cambiar contraseña', message });
+      snackbar.error(message);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleSuccessClose = () => {
-    setSuccessOpen(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
   };
 
   return (
@@ -215,19 +209,6 @@ export default function ChangePasswordPage() {
           </Box>
         </Paper>
       </Box>
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((prev) => ({ ...prev, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Contraseña actualizada"
-        message="Su contraseña ha sido cambiada exitosamente."
-        onClose={handleSuccessClose}
-      />
     </Container>
   );
 }

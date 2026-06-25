@@ -12,6 +12,7 @@ interface FormState {
 interface DepartmentFormModalProps {
   open: boolean;
   isEditing: boolean;
+  viewMode?: boolean;
   form: FormState;
   formErrors: Partial<Record<keyof FormState, string>>;
   areas: Area[];
@@ -22,19 +23,23 @@ interface DepartmentFormModalProps {
 }
 
 export default function DepartmentFormModal({
-  open, isEditing, form, formErrors, areas, isSubmitting,
+  open, isEditing, viewMode = false, form, formErrors, areas, isSubmitting,
   onClose, onConfirm, onChange
 }: DepartmentFormModalProps) {
   const selectedArea = areas.find((a) => a.area_id === form.area_id) ?? null;
+  const title = viewMode ? 'Ver Departamento' : isEditing ? 'Editar Departamento' : 'Registrar Departamento';
+  const MAX_NAME = 110;
+  const MAX_DESC = 255;
 
   return (
     <ModalForm
       open={open}
-      title={isEditing ? "Editar Departamento" : "Registrar Departamento"}
+      title={title}
       onClose={onClose}
-      onConfirm={onConfirm}
-      confirmLabel={isEditing ? "Guardar Cambios" : "Confirmar"}
-      isSubmitting={isSubmitting}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar Cambios' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.area_id || !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -44,8 +49,10 @@ export default function DepartmentFormModal({
           size="small"
           fullWidth
           error={!!formErrors.name}
-          helperText={formErrors.name}
+          helperText={formErrors.name || `${form.name.length}/${MAX_NAME} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_NAME, step: 1 }}
           required
+          disabled={viewMode}
         />
         <Autocomplete
           options={areas}
@@ -58,6 +65,7 @@ export default function DepartmentFormModal({
           }}
           size="small"
           fullWidth
+          disabled={viewMode}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -77,7 +85,9 @@ export default function DepartmentFormModal({
           multiline
           rows={3}
           error={!!formErrors.description}
-          helperText={formErrors.description}
+          helperText={formErrors.description || `${form.description.length}/${MAX_DESC} caracteres`}
+          disabled={viewMode}
+          inputProps={{ min: 0, maxLength: MAX_DESC, step: 1 }}
         />
       </Stack>
     </ModalForm>

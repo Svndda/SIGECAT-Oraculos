@@ -15,6 +15,7 @@ interface UserFormState {
 
 interface UserFormModalProps {
   open: boolean;
+  viewMode?: boolean;
   form: UserFormState;
   formErrors: Partial<Record<keyof UserFormState, string>>;
   isSubmitting: boolean;
@@ -32,6 +33,7 @@ const ROLES = [
 
 export default function UserFormModal({
   open,
+  viewMode = false,
   form,
   formErrors,
   isSubmitting,
@@ -41,14 +43,19 @@ export default function UserFormModal({
   onConfirm,
   onChange,
 }: UserFormModalProps) {
+  const MAX_NAME = 25;
+  const MAX_EMAIL = 255;
+  const MAX_PASSWORD = 30;
   return (
     <ModalForm
       open={open}
-      title="Registrar Usuario"
+      title={viewMode ? 'Ver Usuario' : 'Registrar Usuario'}
       onClose={onClose}
-      onConfirm={onConfirm}
-      confirmLabel="Confirmar"
-      isSubmitting={isSubmitting}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.first_name || !form.first_last_name ||
+         !form.second_last_name || !form.email || !form.role || !form.password}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -60,6 +67,8 @@ export default function UserFormModal({
           error={!!formErrors.first_name}
           helperText={formErrors.first_name}
           required
+          disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Segundo nombre (opcional)"
@@ -69,6 +78,8 @@ export default function UserFormModal({
           fullWidth
           error={!!formErrors.second_name}
           helperText={formErrors.second_name}
+          disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Primer apellido *"
@@ -79,6 +90,8 @@ export default function UserFormModal({
           error={!!formErrors.first_last_name}
           helperText={formErrors.first_last_name}
           required
+          disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Segundo apellido *"
@@ -89,6 +102,8 @@ export default function UserFormModal({
           error={!!formErrors.second_last_name}
           helperText={formErrors.second_last_name}
           required
+          disabled={viewMode}
+          inputProps={{maxLength: MAX_NAME}}
         />
         <TextField
           label="Correo institucional *"
@@ -99,8 +114,10 @@ export default function UserFormModal({
           size="small"
           fullWidth
           error={!!formErrors.email}
-          helperText={formErrors.email}
           required
+          disabled={viewMode}
+          helperText={formErrors.email || `${form.email.length}/${MAX_EMAIL} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_EMAIL, step: 1 }}
         />
         <Autocomplete
           options={ROLES}
@@ -113,6 +130,7 @@ export default function UserFormModal({
           }}
           size="small"
           fullWidth
+          disabled={viewMode}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -123,28 +141,31 @@ export default function UserFormModal({
             />
           )}
         />
-        <TextField
-          label="Contraseña temporal *"
-          type={showPassword ? 'text' : 'password'}
-          value={form.password}
-          onChange={onChange('password')}
-          size="small"
-          fullWidth
-          error={!!formErrors.password}
-          helperText={formErrors.password}
-          required
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={onTogglePasswordVisibility} edge="end">
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+        {!viewMode && (
+          <TextField
+            label="Contraseña temporal *"
+            type={showPassword ? 'text' : 'password'}
+            value={form.password}
+            onChange={onChange('password')}
+            size="small"
+            fullWidth
+            error={!!formErrors.password}
+            helperText={formErrors.password || `${form.password.length}/${MAX_PASSWORD} caracteres`}
+            inputProps={{ min: 0, maxLength: MAX_PASSWORD, step: 1 }}
+            required
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={onTogglePasswordVisibility} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        )}
       </Stack>
     </ModalForm>
   );

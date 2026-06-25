@@ -216,7 +216,7 @@ final class AuthService
    * Ensures that the current request is authenticated and returns the user info.
    *
    * The method checks the request context (static `Request::getUser()`), then
-   * looks for a Bearer token in the `Authorization` header or a session cookie.
+   * looks for a Bearer token in the `Authorization` header.
    *
    * @return array<mixed> The authenticated user's information (user_id, email, role).
    *
@@ -246,6 +246,15 @@ final class AuthService
       throw new ApiException(ErrorType::forbidden(), 403);
     }
     return $auth;
+  }
+
+  /**
+   * @return bool
+   */
+  public function isAdmin(): bool
+  {
+    $auth = $this->requireAuth();
+    return $auth['role'] === 'admin';
   }
 
   /**
@@ -282,7 +291,7 @@ final class AuthService
   }
 
   /**
-   * Extracts a raw token from the request (Authorization header or cookie).
+   * Extracts a raw token from the request's `Authorization: Bearer` header.
    *
    * @return string|null The raw token, or null if none was found.
    */
@@ -294,11 +303,6 @@ final class AuthService
 
     if (str_starts_with($authorization, 'Bearer ')) {
       return trim(substr($authorization, 7));
-    }
-
-    $sessionCookie = $_COOKIE['sigecat_session_token'] ?? null;
-    if ($sessionCookie !== null && is_string($sessionCookie)) {
-      return $sessionCookie;
     }
 
     return null;

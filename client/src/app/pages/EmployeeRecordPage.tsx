@@ -21,15 +21,17 @@ export default function EmployeeRecordPage() {
   const instructions = [
     {
       title: 'Información General',
-      content: 'En este apartado debe registrar la información general relacionada al puesto que ocupa actualmente en la Unidad de Trabajo.'
+      content: `En este apartado debe de registrar la información general relacionada con el puesto que ocupa actualmente en la Unidad de trabajo.`
     },
     {
       title: 'Diagnóstico de carga',
-      content: 'Proporcione el análisis detallado de volumen, distribución y organización del trabajo.'
+      content: `Para el diagnóstico de la carga de trabajo debe indicar el objetivo del puesto (Puede tomar como referencia la información del “Formulario para el Análisis de Puestos General”, utilizado por la Oficina de Recursos Humanos durante el estudio integral puestos; asimismo puede consultar el Manual Descriptivo de Clases y Cargos de dicha Oficina, en el que se detalla la Estructura del Cargo del puesto que ocupa en su Unidad de trabajo), las funciones que desempeña actualmente, la descripción de cada una de las funciones, la cantidad de veces que realiza la función y el tiempo aproximado que tarda en realizar cada una de ellas.
+      
+      Considere los ejemplos que se presentan en el apartado correspondiente (se le recuerda que es una aproximación del tiempo con base en su experiencia). Ambos ejemplos incluyen la interpretación.`
     },
     {
       title: 'Información Adicional',
-      content: 'Complete cualquier información adicional que considere relevante para el análisis.'
+      content: `Considere los ejemplos que se presentan en el apartado correspondiente (se le recuerda que es una aproximación del tiempo con base en su experiencia). Ambos ejemplos incluyen la interpretación.`
     },
   ];
 
@@ -75,7 +77,7 @@ export default function EmployeeRecordPage() {
                 </Typography>
               </AccordionSummary>
               <AccordionDetails sx={{ backgroundColor: '#fafafa', borderTop: '1px solid #e0e0e0' }}>
-                <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6 }}>
+                <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.6 , whiteSpace: 'pre-line'}}>
                   {item.content}
                 </Typography>
               </AccordionDetails>

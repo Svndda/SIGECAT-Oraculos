@@ -9,9 +9,8 @@ import type { PageMeta, ServiceError } from '../../../services/common';
 import SectionToolbar from '../../../features/admin/section/SectionToolbar';
 import SectionList from '../../../features/admin/section/SectionList';
 import SectionFormModal from '../../../features/admin/section/SectionFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 const LIMIT = 10;
 const EMPTY_FORM = { name: '', description: '', area_id: '' };
@@ -27,13 +26,12 @@ export default function SectionsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [viewTarget, setViewTarget] = useState<Section | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
   const [deleteTarget, setDeleteTarget] = useState<Section | null>(null);
 
   // Debounce search
@@ -55,10 +53,10 @@ export default function SectionsPage() {
       })
       .catch((error) => {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoading(false));
-  }, [page, appliedFilter]);
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
     loadSections();
@@ -84,6 +82,7 @@ export default function SectionsPage() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setIsEditing(null);
+    setViewTarget(null);
     setFormOpen(true);
   };
 
@@ -95,7 +94,26 @@ export default function SectionsPage() {
     });
     setFormErrors({});
     setIsEditing(section.section_id);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (section: Section) => {
+    setForm({
+      name: section.name,
+      description: section.description ?? '',
+      area_id: section.area_id || '',
+    });
+    setFormErrors({});
+    setIsEditing(null);
+    setViewTarget(section);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setIsEditing(null);
   };
 
   const validateForm = (): boolean => {
@@ -116,21 +134,19 @@ export default function SectionsPage() {
           description: form.description.trim(),
           area_id: form.area_id,
         });
-        setSuccessMsg('Sección actualizada correctamente.');
       } else {
         await sectionService.createSection({
           name: form.name.trim(),
           description: form.description.trim() || undefined,
           area_id: form.area_id,
         });
-        setSuccessMsg('Sección creada correctamente.');
       }
-      setFormOpen(false);
+      closeModal();
       loadSections();
-      setSuccessOpen(true);
+      snackbar.success(isEditing ? 'Sección actualizada correctamente.' : 'Sección creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: isEditing ? 'Error al actualizar' : 'Error al crear', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,11 +163,10 @@ export default function SectionsPage() {
       await sectionService.deleteSection(deleteTarget.section_id);
       setDeleteTarget(null);
       loadSections();
-      setSuccessMsg('Sección eliminada correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Sección eliminada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
       setDeleteTarget(null);
     } finally {
       setIsSubmitting(false);
@@ -173,6 +188,7 @@ export default function SectionsPage() {
         areaMap={areaMap}
         onEdit={openEdit}
         onDelete={handleDeleteRequest}
+        onView={openView}
       />
 
       {totalPages > 1 && (
@@ -190,11 +206,12 @@ export default function SectionsPage() {
       <SectionFormModal
         open={formOpen}
         isEditing={!!isEditing}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         areas={areas}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onChange={handleChange}
       />
@@ -209,18 +226,6 @@ export default function SectionsPage() {
         onConfirm={confirmDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

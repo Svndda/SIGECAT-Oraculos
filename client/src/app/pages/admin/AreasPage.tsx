@@ -6,9 +6,8 @@ import type { PageMeta, ServiceError } from '../../../services/common';
 import AreaToolbar from '../../../features/admin/area/AreaToolbar';
 import AreaList from '../../../features/admin/area/AreaList';
 import AreaFormModal from '../../../features/admin/area/AreaFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 const LIMIT = 10;
 const EMPTY_FORM = { name: '', description: '' };
@@ -22,13 +21,12 @@ export default function AreasPage() {
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Area | null>(null);
+  const [viewTarget, setViewTarget] = useState<Area | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<typeof EMPTY_FORM>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -47,10 +45,10 @@ export default function AreasPage() {
       })
       .catch((error) => {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoading(false));
-  }, [page, appliedFilter]);
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
     void loadAreas();
@@ -60,6 +58,7 @@ export default function AreasPage() {
 
   const openCreate = () => {
     setEditTarget(null);
+    setViewTarget(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
     setFormOpen(true);
@@ -67,6 +66,15 @@ export default function AreasPage() {
 
   const openEdit = (area: Area) => {
     setEditTarget(area);
+    setViewTarget(null);
+    setForm({ name: area.name, description: area.description ?? '' });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const openView = (area: Area) => {
+    setViewTarget(area);
+    setEditTarget(null);
     setForm({ name: area.name, description: area.description ?? '' });
     setFormErrors({});
     setFormOpen(true);
@@ -86,17 +94,15 @@ export default function AreasPage() {
       const payload = { name: form.name.trim(), description: form.description.trim() };
       if (editTarget) {
         await areaService.updateArea(editTarget.area_id, payload);
-        setSuccessMsg('Área actualizada correctamente.');
       } else {
         await areaService.createArea(payload);
-        setSuccessMsg('Área creada correctamente.');
       }
       await loadAreas();
-      setFormOpen(false);
-      setSuccessOpen(true);
+      closeModal();
+      snackbar.success(editTarget ? 'Área actualizada correctamente.' : 'Área creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,11 +115,10 @@ export default function AreasPage() {
       await areaService.deleteArea(deleteTarget.area_id);
       setDeleteTarget(null);
       await loadAreas();
-      setSuccessMsg('Área eliminada correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Área eliminada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -122,6 +127,12 @@ export default function AreasPage() {
   const handleFormChange = (field: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     if (formErrors[field]) setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setEditTarget(null);
   };
 
   return (
@@ -133,6 +144,7 @@ export default function AreasPage() {
         loading={loading}
         onEdit={openEdit}
         onDelete={setDeleteTarget}
+        onView={openView}
       />
 
       {totalPages > 1 && (
@@ -150,10 +162,11 @@ export default function AreasPage() {
       <AreaFormModal
         open={formOpen}
         isEditing={!!editTarget}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onChange={handleFormChange}
       />
@@ -168,18 +181,6 @@ export default function AreasPage() {
         onConfirm={handleDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

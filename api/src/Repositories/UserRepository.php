@@ -35,20 +35,56 @@ final class UserRepository extends Repository {
   }
 
   /** @return array<string, mixed>|null */
-  public function findById(string $userId, string $status = 'active'): ?array{
-    $stmt = $this->db->prepare(
-      'SELECT user_id, role, email,
-              first_name, second_name, first_last_name, second_last_name,
-              password_hash, is_active, is_password_temp,
-              failed_logging_attempts, created_at, created_by,
-              is_deleted, deleted_at, deleted_by
-       FROM USERS
-       WHERE user_id = :user_id' . $this->statusCondition($status) . '
-       AND ROWNUM = 1'
+  public function findById(
+    string $userId,
+    string $status = 'active',
+    bool $includeSensitiveInfo = true
+  ): ?array {
+
+    $columns = [
+      'user_id',
+      'role',
+      'email',
+      'first_name',
+      'second_name',
+      'first_last_name',
+      'second_last_name',
+      'created_at',
+      'created_by'
+    ];
+
+    if ($includeSensitiveInfo) {
+      $columns = array_merge(
+        $columns,
+        [
+          'password_hash',
+          'is_active',
+          'is_password_temp',
+          'failed_logging_attempts',
+          'is_deleted',
+          'deleted_at',
+          'deleted_by'
+        ]
+      );
+    }
+
+    $sql = sprintf(
+      'SELECT %s
+     FROM USERS
+     WHERE user_id = :user_id%s
+     AND ROWNUM = 1',
+      implode(', ', $columns),
+      $this->statusCondition($status)
     );
-    $stmt->execute([':user_id' => $userId]);
+
+    $stmt = $this->db->prepare($sql);
+
+    $stmt->execute([
+      ':user_id' => $userId
+    ]);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
     return $row !== false ? $row : null;
   }
 

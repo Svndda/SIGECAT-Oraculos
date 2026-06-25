@@ -15,6 +15,7 @@ interface UnitFormState {
 interface UnitFormModalProps {
   open: boolean;
   isEditing: boolean;
+  viewMode?: boolean;
   form: UnitFormState;
   formErrors: Partial<Record<keyof UnitFormState, string>>;
   assignmentOptions: OrgOption[];
@@ -32,6 +33,7 @@ const ASSIGNMENT_TYPES: { value: AssignmentType; label: string }[] = [
 export default function UnitFormModal({
   open,
   isEditing,
+  viewMode = false,
   form,
   formErrors,
   assignmentOptions,
@@ -42,15 +44,20 @@ export default function UnitFormModal({
 }: UnitFormModalProps) {
   const selectedAssignmentType = ASSIGNMENT_TYPES.find((t) => t.value === form.assignmentType) ?? null;
   const selectedAssignment = assignmentOptions.find((o) => o.id === form.assignmentId) ?? null;
+  const title = viewMode ? 'Ver Unidad' : isEditing ? 'Editar Unidad' : 'Añadir Unidad';
+  const MAX_NAME = 110;
+  const MAX_DESC = 255;
 
   return (
     <ModalForm
       open={open}
-      title={isEditing ? 'Editar Unidad' : 'Añadir Unidad'}
+      title={title}
       onClose={onClose}
-      onConfirm={onConfirm}
-      confirmLabel={isEditing ? 'Guardar cambios' : 'Confirmar'}
-      isSubmitting={isSubmitting}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar cambios' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.assignmentType || !form.assignmentId ||
+        !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -60,14 +67,16 @@ export default function UnitFormModal({
           size="small"
           fullWidth
           error={!!formErrors.name}
-          helperText={formErrors.name}
+          helperText={formErrors.name || `${form.name.length}/${MAX_NAME} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_NAME, step: 1 }}
           required
+          disabled={viewMode}
         />
         <Autocomplete
           options={ASSIGNMENT_TYPES}
           getOptionLabel={(t) => t.label}
           value={selectedAssignmentType}
-          disabled={isEditing}
+          disabled={isEditing || viewMode}
           onChange={(_, selected) => {
             onFieldChange('assignmentType', selected?.value ?? '');
             onFieldChange('assignmentId', '');
@@ -88,7 +97,7 @@ export default function UnitFormModal({
           options={assignmentOptions}
           getOptionLabel={(o) => o.name}
           value={selectedAssignment}
-          disabled={!form.assignmentType}
+          disabled={!form.assignmentType || viewMode}
           onChange={(_, selected) => onFieldChange('assignmentId', selected?.id ?? '')}
           size="small"
           fullWidth
@@ -115,6 +124,10 @@ export default function UnitFormModal({
           fullWidth
           multiline
           rows={3}
+          disabled={viewMode}
+          error={!!formErrors.description}
+          helperText={formErrors.description || `${form.description.length}/${MAX_DESC} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_DESC, step: 1 }}
         />
       </Stack>
     </ModalForm>

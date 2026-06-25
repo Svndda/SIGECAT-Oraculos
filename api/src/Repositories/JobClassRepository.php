@@ -34,7 +34,7 @@ final class JobClassRepository extends Repository
   public function getJobClasses(int $offset, int $limit, string $filter = ''): array
   {
     $stmt = $this->db->prepare(
-      'SELECT job_class_id AS id, name, description, created_at, created_by
+      'SELECT job_class_id, job_class_code, name, description, created_at, created_by
          FROM JOB_CLASSES
         WHERE UPPER(name) LIKE UPPER(:filter)
         ORDER BY name

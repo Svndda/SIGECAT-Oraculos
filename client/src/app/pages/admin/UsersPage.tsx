@@ -7,8 +7,7 @@ import UserToolbar from '../../../features/admin/user/UserToolbar';
 import UserList from '../../../features/admin/user/UserList';
 import UserFormModal from '../../../features/admin/user/UserFormModal';
 import ChangeRoleModal from '../../../features/admin/user/ChangeRoleModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
+import { useSnackbar } from '../../../context/SnackbarContext';
 import { validateInstitutionalEmail } from '../../../utils/validation';
 import ModalAlert from '../../../components/modals/ModalAlert';
 
@@ -37,10 +36,9 @@ export default function UsersPage() {
   const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('employee');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [viewTarget, setViewTarget] = useState<AdminUser | null>(null);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
   // Carga inicial
   useEffect(() => {
@@ -68,11 +66,10 @@ export default function UsersPage() {
       await userService.changeRole(roleTarget.id, selectedRole);
       setUsers((prev) => prev.map((u) => (u.id === roleTarget.id ? { ...u, role: selectedRole } : u)));
       setRoleTarget(null);
-      setSuccessMsg('Rol actualizado correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Rol actualizado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al cambiar rol', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,11 +83,10 @@ export default function UsersPage() {
       await userService.deleteUser(deleteTarget.id);
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
-      setSuccessMsg('Usuario eliminado correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Usuario eliminado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -101,7 +97,26 @@ export default function UsersPage() {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setShowPassword(false);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (user: AdminUser) => {
+    setForm({
+      ...EMPTY_FORM,
+      first_name: user.first_name,
+      first_last_name: user.last_name,
+      email: user.email,
+      role: user.role,
+    });
+    setFormErrors({});
+    setViewTarget(user);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
   };
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
@@ -129,12 +144,11 @@ export default function UsersPage() {
         password: form.password,
       });
       setUsers((prev) => [created, ...prev]);
-      setFormOpen(false);
-      setSuccessMsg('Usuario creado correctamente.');
-      setSuccessOpen(true);
+      closeModal();
+      snackbar.success('Usuario creado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al registrar usuario', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -154,17 +168,19 @@ export default function UsersPage() {
         loading={loading}
         onChangeRole={openRole}
         onDelete={setDeleteTarget}
+        onView={openView}
       />
 
       {/* Modales usando componentes específicos */}
       <UserFormModal
         open={formOpen}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         isSubmitting={isSubmitting}
         showPassword={showPassword}
         onTogglePasswordVisibility={() => setShowPassword((p) => !p)}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirmCreate}
         onChange={handleFormChange}
       />
@@ -190,18 +206,6 @@ export default function UsersPage() {
         onConfirm={handleDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

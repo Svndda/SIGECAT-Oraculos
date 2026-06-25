@@ -8,9 +8,8 @@ import type { OrgOption, PageMeta, ServiceError } from '../../../services/common
 import UnitToolbar from '../../../features/admin/unit/UnitToolbar';
 import UnitList from '../../../features/admin/unit/UnitList';
 import UnitFormModal from '../../../features/admin/unit/UnitFormModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
 import ModalAlert from '../../../components/modals/ModalAlert';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 const LIMIT = 10;
 type AssignmentType = 'department' | 'section';
@@ -34,14 +33,13 @@ export default function UnitsPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Unit | null>(null);
+  const [viewTarget, setViewTarget] = useState<Unit | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Unit | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
   // Debounce search
   useEffect(() => {
@@ -62,10 +60,10 @@ export default function UnitsPage() {
       })
       .catch((error) => {
         const e = error as ServiceError;
-        setModalError({ open: true, title: 'Error al cargar', message: e.message ?? 'Error del servidor.' });
+        snackbar.error(e.message ?? 'Error del servidor.');
       })
       .finally(() => setLoading(false));
-  }, [page, appliedFilter]);
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
     void loadUnits();
@@ -98,6 +96,7 @@ export default function UnitsPage() {
 
   const openCreate = () => {
     setEditTarget(null);
+    setViewTarget(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
     setFormOpen(true);
@@ -105,6 +104,7 @@ export default function UnitsPage() {
 
   const openEdit = (unit: Unit) => {
     setEditTarget(unit);
+    setViewTarget(null);
     setForm({
       name: unit.name,
       description: unit.description ?? '',
@@ -113,6 +113,25 @@ export default function UnitsPage() {
     });
     setFormErrors({});
     setFormOpen(true);
+  };
+
+  const openView = (unit: Unit) => {
+    setViewTarget(unit);
+    setEditTarget(null);
+    setForm({
+      name: unit.name,
+      description: unit.description ?? '',
+      assignmentType: unit.section_id ? 'section' : 'department',
+      assignmentId: unit.section_id ?? unit.department_id ?? '',
+    });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
+    setEditTarget(null);
   };
 
   const setField = (field: keyof typeof EMPTY_FORM, value: string) => {
@@ -141,7 +160,6 @@ export default function UnitsPage() {
         if (form.assignmentType === 'department') payload.department_id = form.assignmentId;
         else if (form.assignmentType === 'section') payload.section_id = form.assignmentId;
         await unitService.updateUnit(editTarget.id, payload);
-        setSuccessMsg('Unidad actualizada correctamente.');
       } else {
         const payload: CreateUnitPayload = {
           name: form.name.trim(),
@@ -150,14 +168,13 @@ export default function UnitsPage() {
         if (form.assignmentType === 'department') payload.department_id = form.assignmentId;
         else if (form.assignmentType === 'section') payload.section_id = form.assignmentId;
         await unitService.createUnit(payload);
-        setSuccessMsg('Unidad creada correctamente.');
       }
       await loadUnits();
-      setFormOpen(false);
-      setSuccessOpen(true);
+      closeModal();
+      snackbar.success(editTarget ? 'Unidad actualizada correctamente.' : 'Unidad creada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -170,11 +187,10 @@ export default function UnitsPage() {
       await unitService.deleteUnit(deleteTarget.id);
       setDeleteTarget(null);
       await loadUnits();
-      setSuccessMsg('Unidad eliminada correctamente.');
-      setSuccessOpen(true);
+      snackbar.success('Unidad eliminada correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +207,7 @@ export default function UnitsPage() {
         loading={loading}
         onEdit={openEdit}
         onDelete={setDeleteTarget}
+        onView={openView}
         belongsTo={belongsTo}
       />
 
@@ -209,11 +226,12 @@ export default function UnitsPage() {
       <UnitFormModal
         open={formOpen}
         isEditing={!!editTarget}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         assignmentOptions={assignmentOptions}
         isSubmitting={isSubmitting}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
         onFieldChange={setField}
       />
@@ -228,18 +246,6 @@ export default function UnitsPage() {
         onConfirm={handleDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

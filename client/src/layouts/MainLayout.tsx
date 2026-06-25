@@ -4,6 +4,7 @@ import { Box } from '@mui/material';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Sidebar from '../components/Sidebar';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 export default function MainLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -17,6 +18,7 @@ export default function MainLayout() {
           component="main"
           sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}
         >
+          <Breadcrumbs />
           <Outlet />
         </Box>
       </Box>
