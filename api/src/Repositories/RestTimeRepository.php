@@ -13,41 +13,20 @@ use PDOException;
 /**
  * Repository handling persistence operations for the REST_TIMES table.
  *
- * This class encapsulates all CRUD operations for rest time entries,
- * ensuring seamless data handling and DTO-driven persistence.
- *
- * Soft delete: rows are never physically removed. `is_deleted` marks the
- * logical state; reads default to active rows only and accept a status
- * filter ('active' | 'deleted' | 'all').
+ * Each rest time is a line of a declaration: it belongs to a user and a
+ * declaration and spans a [starts_at, ends_at] range for a given rest type.
+ * Rows are deleted physically (the table has no soft-delete columns).
  *
  * @package Repositories
  */
 final class RestTimeRepository extends Repository
 {
-  /**
-   * Constructs the RestTimeRepository with an active database connection.
-   *
-   * @param PDO $db The active PDO database connection.
-   */
+  /** SQL expression turning a canonical 'Y-m-d H:i:s' bind into a TIMESTAMP. */
+  private const TS = "TO_TIMESTAMP(:%s, 'YYYY-MM-DD HH24:MI:SS')";
+
   public function __construct(PDO $db)
   {
     parent::__construct($db);
-  }
-
-  /**
-   * Builds the SQL fragment that filters by logical-deletion state.
-   * The value is an internal enum (never user input), so inlining is safe.
-   *
-   * @param string $status Logical state filter.
-   * @return string SQL condition string.
-   */
-  private function statusCondition(string $status): string
-  {
-    return match ($status) {
-      'deleted' => ' AND is_deleted = 1',
-      'all'     => '',
-      default   => ' AND is_deleted = 0',
-    };
   }
 
   /**
@@ -60,58 +39,52 @@ final class RestTimeRepository extends Repository
   private function mapRow(array $row): array
   {
     return [
-      'rest_time_id' => $row['rest_time_id'] ?? $row['REST_TIME_ID'],
-      'user_id'      => $row['user_id'] ?? $row['USER_ID'],
-      'coffee_hours' => isset($row['coffee_hours']) || isset($row['COFFEE_HOURS'])
-        ? (($row['coffee_hours'] ?? $row['COFFEE_HOURS']) !== null
-          ? (float) ($row['coffee_hours'] ?? $row['COFFEE_HOURS'])
-          : null)
-        : null,
-      'lunch_hours'  => isset($row['lunch_hours']) || isset($row['LUNCH_HOURS'])
-        ? (($row['lunch_hours'] ?? $row['LUNCH_HOURS']) !== null
-          ? (float) ($row['lunch_hours'] ?? $row['LUNCH_HOURS'])
-          : null)
-        : null,
-      'needed_time'  => isset($row['needed_time']) || isset($row['NEEDED_TIME'])
-        ? (($row['needed_time'] ?? $row['NEEDED_TIME']) !== null
-          ? (int) ($row['needed_time'] ?? $row['NEEDED_TIME'])
-          : null)
-        : null,
-      'rest_type'    => $row['rest_type'] ?? $row['REST_TYPE'] ?? null,
-      'created_at'   => $row['created_at'] ?? $row['CREATED_AT'] ?? null,
-      'is_deleted'   => $row['is_deleted'] ?? $row['IS_DELETED'] ?? 0,
-      'deleted_at'   => $row['deleted_at'] ?? $row['DELETED_AT'] ?? null,
+      'rest_time_id'   => $row['rest_time_id'] ?? $row['REST_TIME_ID'],
+      'user_id'        => $row['user_id'] ?? $row['USER_ID'],
+      'declaration_id' => $row['declaration_id'] ?? $row['DECLARATION_ID'],
+      'rest_type'      => $row['rest_type'] ?? $row['REST_TYPE'],
+      'starts_at'      => $row['starts_at'] ?? $row['STARTS_AT'],
+      'ends_at'        => $row['ends_at'] ?? $row['ENDS_AT'],
     ];
   }
 
   /**
    * Persists a new rest time record into the database.
    *
+   * @param string $userId The owner (taken from the authenticated request).
    * @param CreateRestTimeDTO $dto Validated data container for creation.
    * @return string The generated rest_time_id (ULID) of the new record.
    */
-  public function create(CreateRestTimeDTO $dto): string
+  public function create(string $userId, CreateRestTimeDTO $dto): string
   {
     $restTimeId = UlidGenerator::generate();
 
-    $sql = '
-        INSERT INTO rest_times (
-          rest_time_id, user_id, coffee_hours, lunch_hours, needed_time, rest_type
-        )
-        VALUES (
-          :v_rest_time_id, :v_user_id, :v_coffee_hours, :v_lunch_hours, :v_needed_time, :v_rest_type
-        )
-    ';
+    $sql = sprintf(
+      'INSERT INTO rest_times (
+          rest_time_id, user_id, declaration_id, rest_type, starts_at, ends_at
+        ) VALUES (
+          :v_rest_time_id, :v_user_id, :v_declaration_id, :v_rest_type, %s, %s
+        )',
+      sprintf(self::TS, 'v_starts_at'),
+      sprintf(self::TS, 'v_ends_at')
+    );
 
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([
-      ':v_rest_time_id' => $restTimeId,
-      ':v_user_id'      => $dto->userId,
-      ':v_coffee_hours' => $dto->coffeeHours,
-      ':v_lunch_hours'  => $dto->lunchHours,
-      ':v_needed_time'  => $dto->neededTime,
-      ':v_rest_type'    => $dto->restType,
-    ]);
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute([
+        ':v_rest_time_id'   => $restTimeId,
+        ':v_user_id'        => $userId,
+        ':v_declaration_id' => $dto->declarationId,
+        ':v_rest_type'      => $dto->restType,
+        ':v_starts_at'      => $dto->startsAt,
+        ':v_ends_at'        => $dto->endsAt,
+      ]);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
 
     return $restTimeId;
   }
@@ -120,52 +93,60 @@ final class RestTimeRepository extends Repository
    * Retrieves a single rest time record by its unique identifier.
    *
    * @param string $restTimeId The ULID identifier.
-   * @param string $status Filter status (active, deleted, all).
    * @return array<string, mixed>|null Associative array or null if not found.
    */
-  public function findById(string $restTimeId, string $status = 'active'): ?array
+  public function findById(string $restTimeId): ?array
   {
-    $sql = '
-        SELECT rest_time_id, user_id, coffee_hours, lunch_hours, needed_time,
-               rest_type, created_at, is_deleted, deleted_at
+    $sql = "
+        SELECT rest_time_id, user_id, declaration_id, rest_type,
+               TO_CHAR(starts_at, 'YYYY-MM-DD HH24:MI:SS') AS starts_at,
+               TO_CHAR(ends_at,   'YYYY-MM-DD HH24:MI:SS') AS ends_at
         FROM rest_times
-        WHERE rest_time_id = :v_rest_time_id' . $this->statusCondition($status) . '
+        WHERE rest_time_id = :v_rest_time_id
           AND ROWNUM = 1
-    ';
+    ";
 
     $stmt = $this->db->prepare($sql);
     $stmt->execute([':v_rest_time_id' => $restTimeId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRow($row);
+    return $row ? $this->mapRow($row) : null;
   }
 
   /**
-   * Fetches a paginated list of records from the rest_times table.
+   * Fetches a paginated list of rest time entries, optionally filtered by rest
+   * type and/or declaration.
    *
    * @param int $limit The maximum number of records to return.
    * @param int $offset The number of records to skip.
    * @param string $filter Optional string to filter by rest type.
-   * @param string $status One of active|deleted|all (default active).
+   * @param string|null $declarationId Optional declaration to scope the list.
+   * @param string|null $userId Optional owner to scope the list (self-scoping).
    * @return array<int, array<string, mixed>> List of rest time entries.
    */
-  public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
+  public function findAllPaginated(int $limit, int $offset, string $filter = '', ?string $declarationId = null, ?string $userId = null): array
   {
-    $sql = '
-        SELECT rest_time_id, user_id, coffee_hours, lunch_hours, needed_time,
-               rest_type, created_at, is_deleted, deleted_at
+    $declCondition = $declarationId !== null ? ' AND declaration_id = :v_declaration_id' : '';
+    $userCondition = $userId !== null ? ' AND user_id = :v_user_id' : '';
+
+    $sql = "
+        SELECT rest_time_id, user_id, declaration_id, rest_type,
+               TO_CHAR(starts_at, 'YYYY-MM-DD HH24:MI:SS') AS starts_at,
+               TO_CHAR(ends_at,   'YYYY-MM-DD HH24:MI:SS') AS ends_at
         FROM rest_times
-        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)' . $this->statusCondition($status) . '
-        ORDER BY created_at DESC
+        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)" . $declCondition . $userCondition . "
+        ORDER BY starts_at DESC
         OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
-    ';
+    ";
 
     $stmt = $this->db->prepare($sql);
     $stmt->bindValue(':v_filter', '%' . $filter . '%');
+    if ($declarationId !== null) {
+      $stmt->bindValue(':v_declaration_id', $declarationId);
+    }
+    if ($userId !== null) {
+      $stmt->bindValue(':v_user_id', $userId);
+    }
     $stmt->bindValue(':v_offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
@@ -174,21 +155,31 @@ final class RestTimeRepository extends Repository
   }
 
   /**
-   * Counts the total number of rest time entries matching the filter and status.
+   * Counts the total number of rest time entries matching the filters.
    *
    * @param string $filter Optional string to filter by rest type.
-   * @param string $status One of active|deleted|all (default active).
+   * @param string|null $declarationId Optional declaration to scope the count.
+   * @param string|null $userId Optional owner to scope the count (self-scoping).
    * @return int The total count of rest time records.
    */
-  public function countAll(string $filter = '', string $status = 'active'): int
+  public function countAll(string $filter = '', ?string $declarationId = null, ?string $userId = null): int
   {
+    $declCondition = $declarationId !== null ? ' AND declaration_id = :v_declaration_id' : '';
+    $userCondition = $userId !== null ? ' AND user_id = :v_user_id' : '';
+
     $sql = '
         SELECT COUNT(*) as total
         FROM rest_times
-        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)' . $this->statusCondition($status);
+        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)' . $declCondition . $userCondition;
 
     $stmt = $this->db->prepare($sql);
     $stmt->bindValue(':v_filter', '%' . $filter . '%');
+    if ($declarationId !== null) {
+      $stmt->bindValue(':v_declaration_id', $declarationId);
+    }
+    if ($userId !== null) {
+      $stmt->bindValue(':v_user_id', $userId);
+    }
     $stmt->execute();
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -197,7 +188,7 @@ final class RestTimeRepository extends Repository
   }
 
   /**
-   * Performs a partial or full update on an existing rest time entry.
+   * Performs a partial update on an existing rest time entry.
    *
    * @param string $restTimeId Rest time UID to update.
    * @param UpdateRestTimeDTO $dto Validated data container for updates.
@@ -208,24 +199,19 @@ final class RestTimeRepository extends Repository
     $fields = [];
     $params = [':v_rest_time_id' => $restTimeId];
 
-    if ($dto->coffeeHours !== null) {
-      $fields[] = 'coffee_hours = :v_coffee_hours';
-      $params[':v_coffee_hours'] = $dto->coffeeHours;
-    }
-
-    if ($dto->lunchHours !== null) {
-      $fields[] = 'lunch_hours = :v_lunch_hours';
-      $params[':v_lunch_hours'] = $dto->lunchHours;
-    }
-
-    if ($dto->neededTime !== null) {
-      $fields[] = 'needed_time = :v_needed_time';
-      $params[':v_needed_time'] = $dto->neededTime;
-    }
-
     if ($dto->restType !== null) {
       $fields[] = 'rest_type = :v_rest_type';
       $params[':v_rest_type'] = $dto->restType;
+    }
+
+    if ($dto->startsAtProvided) {
+      $fields[] = 'starts_at = ' . sprintf(self::TS, 'v_starts_at');
+      $params[':v_starts_at'] = $dto->startsAt;
+    }
+
+    if ($dto->endsAtProvided) {
+      $fields[] = 'ends_at = ' . sprintf(self::TS, 'v_ends_at');
+      $params[':v_ends_at'] = $dto->endsAt;
     }
 
     if (empty($fields)) {
@@ -233,32 +219,14 @@ final class RestTimeRepository extends Repository
     }
 
     $sql = 'UPDATE rest_times SET ' . implode(', ', $fields)
-      . ' WHERE rest_time_id = :v_rest_time_id AND is_deleted = 0';
+      . ' WHERE rest_time_id = :v_rest_time_id';
 
-    return $this->db->prepare($sql)->execute($params);
-  }
-
-  /**
-   * Soft-deletes a rest time entry.
-   *
-   * @param string $restTimeId The ULID identifier.
-   * @param string $deletedBy ULID of the user performing the deletion.
-   * @return bool True if the rest time row was soft-deleted.
-   */
-  public function delete(string $restTimeId, string $deletedBy): bool
-  {
     $this->beginTransaction();
     try {
-      $stmt = $this->db->prepare(
-        'UPDATE rest_times
-            SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP, deleted_by = :v_deleted_by
-          WHERE rest_time_id = :v_rest_time_id AND is_deleted = 0'
-      );
-      $stmt->execute([':v_deleted_by' => $deletedBy, ':v_rest_time_id' => $restTimeId]);
-      $affected = $stmt->rowCount() > 0;
-
+      $stmt = $this->db->prepare($sql);
+      $ok = $stmt->execute($params);
       $this->commit();
-      return $affected;
+      return $ok;
     } catch (PDOException $e) {
       $this->rollBack();
       throw $e;
@@ -266,19 +234,17 @@ final class RestTimeRepository extends Repository
   }
 
   /**
-   * Restores a soft-deleted rest time entry.
+   * Physically deletes a rest time entry.
    *
    * @param string $restTimeId The ULID identifier.
-   * @return bool True if a deleted rest time row was restored.
+   * @return bool True if a row was deleted.
    */
-  public function restore(string $restTimeId): bool
+  public function delete(string $restTimeId): bool
   {
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare(
-        'UPDATE rest_times
-            SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL
-          WHERE rest_time_id = :v_rest_time_id AND is_deleted = 1'
+        'DELETE FROM rest_times WHERE rest_time_id = :v_rest_time_id'
       );
       $stmt->execute([':v_rest_time_id' => $restTimeId]);
       $affected = $stmt->rowCount() > 0;

@@ -1,0 +1,23 @@
+-- ============================================================
+-- Migration: RECOMPILE SP_DELETE_AREA_CASCADE
+-- Purpose  : The SP_DELETE_AREA_CASCADE procedure was left in an
+--            INVALID state after the schema DDL changes
+--            (CLIENT_SCHEMA_DDL-SIGECAT, 24-06). Oracle invalidates a
+--            stored procedure whenever a table it depends on is altered.
+--
+--            The procedure BODY is still correct against the current
+--            schema (it only touches JOB_POSITIONS / UNITS / DEPARTMENTS
+--            / SECTIONS / AREAS, whose soft-delete columns are unchanged),
+--            so no code fix is required: an explicit recompile is enough
+--            to bring it back to VALID instead of relying on Oracle's
+--            lazy recompile on next invocation.
+--
+-- Re-runnable: ALTER ... COMPILE is idempotent.
+--
+-- Verify:
+--   SELECT status FROM user_objects
+--    WHERE object_name = 'SP_DELETE_AREA_CASCADE'
+--      AND object_type = 'PROCEDURE';   -- expected: VALID
+-- ============================================================
+
+ALTER PROCEDURE SP_DELETE_AREA_CASCADE COMPILE;

@@ -85,5 +85,23 @@ return [
   ['method' => 'GET', 'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'show'],
   ['method' => 'PATCH', 'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'update'],
   ['method' => 'DELETE', 'path' => '/rest-time/{id}', 'controller' => 'RestTimeController', 'action' => 'delete'],
-  ['method' => 'POST', 'path' => '/rest-time/{id}/restore', 'controller' => 'RestTimeController', 'action' => 'restore'],
+
+  // Official functions routes (catalogue per job) — admin only
+  ['method' => 'POST', 'path' => '/official-functions', 'controller' => 'OfficialFunctionController', 'action' => 'create'],
+  ['method' => 'GET', 'path' => '/official-functions', 'controller' => 'OfficialFunctionController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'show'],
+  ['method' => 'PATCH', 'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'update'],
+  ['method' => 'DELETE', 'path' => '/official-functions/{id}', 'controller' => 'OfficialFunctionController', 'action' => 'delete'],
+
+  // Custom functions routes (employee-owned) — authenticated, self-scoped; create + read only
+  ['method' => 'POST', 'path' => '/custom-functions', 'controller' => 'CustomFunctionController', 'action' => 'create'],
+  ['method' => 'GET', 'path' => '/custom-functions', 'controller' => 'CustomFunctionController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/custom-functions/{id}', 'controller' => 'CustomFunctionController', 'action' => 'show'],
+
+  // Job functions routes (declaration line items) — authenticated, self-scoped
+  ['method' => 'POST', 'path' => '/job-functions', 'controller' => 'JobFunctionController', 'action' => 'create'],
+  ['method' => 'GET', 'path' => '/job-functions', 'controller' => 'JobFunctionController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'show'],
+  ['method' => 'PATCH', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'update'],
+  ['method' => 'DELETE', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'delete'],
 ];
