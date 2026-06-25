@@ -1,7 +1,11 @@
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { Tooltip, Typography } from '@mui/material';
+import {
+  Tooltip,
+  Typography,
+} from '@mui/material';
+
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Unit } from '../../../services/unitService';
 import { truncateText } from '../../../utils/text';
@@ -24,7 +28,7 @@ export default function UnitList({ units, loading, onEdit, onDelete, onView, bel
   const columns: DataColumn<Unit>[] = [
     {
       label: 'Nombre',
-      flex: '0 0 26%',
+      flex: '1',
       primary: true,
       truncate: true,
       render: (u) => (
@@ -35,9 +39,8 @@ export default function UnitList({ units, loading, onEdit, onDelete, onView, bel
         </Tooltip>
       ),
     },
-    { label: 'Descripción', flex: '1', truncate: true, render: (u) => u.description ?? '—' },
-    { label: 'Pertenece a', flex: '0 0 22%', truncate: true, render: (u) => belongsTo(u) },
-    { label: 'Fecha de creación', flex: '0 0 18%', meta: true, render: (u) => formatDate(u.created_at) },
+    { label: 'Pertenece a', flex: '1', truncate: true, render: (u) => belongsTo(u) },
+    { label: 'Fecha de creación', flex: '1', meta: true, render: (u) => formatDate(u.created_at) },
   ];
 
   return (

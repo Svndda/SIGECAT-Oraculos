@@ -1,9 +1,13 @@
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { Tooltip, Typography } from '@mui/material';
-import type { Department } from '../../../services/departmentService';
+import {
+  Tooltip,
+  Typography,
+} from '@mui/material';
+
 import DataTable, { type DataColumn } from '../../../components/DataTable';
+import type { Department } from '../../../services/departmentService';
 import { truncateText } from '../../../utils/text';
 
 interface DepartmentListProps {
@@ -26,7 +30,7 @@ export default function DepartmentList(
   const columns: DataColumn<Department>[] = [
     {
       label: 'Nombre',
-      flex: '0 0 25%',
+      flex: '1',
       primary: true,
       truncate: true,
       render: (d) => (
@@ -37,9 +41,8 @@ export default function DepartmentList(
         </Tooltip>
       ),
     },
-    { label: 'Descripción', flex: '1', truncate: true, render: (d) => d.description ?? '—' },
-    { label: 'Área', flex: '0 0 20%', render: (d) => areaMap.get(d.area_id) ?? 'Cargando Área...' },
-    { label: 'Fecha de creación', flex: '0 0 15%', meta: true, render: (d) => formatDate(d.created_at) },
+    { label: 'Área', flex: '1', render: (d) => areaMap.get(d.area_id) ?? 'Cargando Área...' },
+    { label: 'Fecha de creación', flex: '1', meta: true, render: (d) => formatDate(d.created_at) },
   ];
 
   return (

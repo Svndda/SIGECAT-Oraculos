@@ -1,9 +1,13 @@
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { Tooltip, Typography } from '@mui/material';
-import type { Section } from '../../../services/sectionService';
+import {
+  Tooltip,
+  Typography,
+} from '@mui/material';
+
 import DataTable, { type DataColumn } from '../../../components/DataTable';
+import type { Section } from '../../../services/sectionService';
 import { truncateText } from '../../../utils/text';
 
 interface SectionListProps {
@@ -24,7 +28,7 @@ export default function SectionList({ sections, loading, areaMap, onEdit, onDele
   const columns: DataColumn<Section>[] = [
     {
       label: 'Nombre',
-      flex: '0 0 24%',
+      flex: '1',
       primary: true,
       truncate: true,
       render: (s) => (
@@ -35,9 +39,8 @@ export default function SectionList({ sections, loading, areaMap, onEdit, onDele
         </Tooltip>
       ),
     },
-    { label: 'Descripción', flex: '1', truncate: true, render: (s) => s.description ?? '—' },
-    { label: 'Área', flex: '0 0 18%', render: (s) => areaMap.get(s.area_id) ?? '—' },
-    { label: 'Fecha de creación', flex: '0 0 18%', meta: true, render: (s) => formatDate(s.created_at) },
+    { label: 'Área', flex: '1', render: (s) => areaMap.get(s.area_id) ?? '—' },
+    { label: 'Fecha de creación', flex: '1', meta: true, render: (s) => formatDate(s.created_at) },
   ];
 
   return (
