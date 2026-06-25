@@ -11,7 +11,7 @@ use Http\ApiException;
 use Http\ErrorType;
 use PDO;
 use Repositories\CustomFunctionRepository;
-use Repositories\DeclarationRepository;
+use Repositories\DeclarationsRepository;
 use Repositories\JobFunctionRepository;
 use Repositories\OfficialFunctionRepository;
 
@@ -36,14 +36,14 @@ class JobFunctionService
   private JobFunctionRepository $repository;
   private OfficialFunctionRepository $officialRepository;
   private CustomFunctionRepository $customRepository;
-  private DeclarationRepository $declarationRepository;
+  private DeclarationsRepository $declarationRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->repository = new JobFunctionRepository($this->pdo);
     $this->officialRepository = new OfficialFunctionRepository($this->pdo);
     $this->customRepository = new CustomFunctionRepository($this->pdo);
-    $this->declarationRepository = new DeclarationRepository($this->pdo);
+    $this->declarationRepository = new DeclarationsRepository($this->pdo);
   }
 
   /**
@@ -255,7 +255,7 @@ class JobFunctionService
       throw new ApiException(ErrorType::notFound('Declaración'));
     }
 
-    if (!$this->declarationRepository->isIncomplete($declarationId)) {
+    if ($this->declarationRepository->getCurrentStatus($declarationId) !== 'Incomplete') {
       throw new ApiException(
         ErrorType::conflict(
           'Solo se pueden gestionar funciones mientras la declaración está incompleta'
@@ -304,15 +304,39 @@ class JobFunctionService
    */
   private function overtimeHours(string $shiftStart, string $shiftEnd, string $start, string $end): float
   {
-    $s  = (new DateTimeImmutable($start))->getTimestamp();
-    $e  = (new DateTimeImmutable($end))->getTimestamp();
-    $ss = (new DateTimeImmutable($shiftStart))->getTimestamp();
-    $se = (new DateTimeImmutable($shiftEnd))->getTimestamp();
+    $s  = $this->toDateTime($start)->getTimestamp();
+    $e  = $this->toDateTime($end)->getTimestamp();
+    $ss = $this->toDateTime($shiftStart)->getTimestamp();
+    $se = $this->toDateTime($shiftEnd)->getTimestamp();
 
     $before = max(0, min($e, $ss) - $s);   // part before the shift starts
     $after  = max(0, $e - max($s, $se));   // part after the shift ends
     $seconds = $before + $after;
 
     return round($seconds / 3600, 2);
+  }
+
+  /**
+   * Parses a timestamp coming either as the canonical 'Y-m-d H:i:s' (the
+   * function range, already normalized) or as Oracle's default TIMESTAMP
+   * rendering (the declaration shift window read through DeclarationsRepository,
+   * e.g. "24-JUN-26 08.00.00.000000 AM").
+   *
+   * @throws ApiException when the value cannot be parsed.
+   */
+  private function toDateTime(string $value): DateTimeImmutable
+  {
+    try {
+      return new DateTimeImmutable($value);
+    } catch (\Exception) {
+      $parsed = DateTimeImmutable::createFromFormat('d-M-y h.i.s.u A', $value)
+        ?: DateTimeImmutable::createFromFormat('d-M-y h.i.s A', $value);
+      if ($parsed === false) {
+        throw new ApiException(
+          ErrorType::internal('No se pudo interpretar la jornada de la declaración')
+        );
+      }
+      return $parsed;
+    }
   }
 }

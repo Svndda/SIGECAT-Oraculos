@@ -10,7 +10,7 @@ use DTO\UpdateRestTimeDTO;
 use Http\ApiException;
 use Http\ErrorType;
 use PDO;
-use Repositories\DeclarationRepository;
+use Repositories\DeclarationsRepository;
 use Repositories\RestTimeRepository;
 
 /**
@@ -26,7 +26,7 @@ use Repositories\RestTimeRepository;
 class RestTimeService
 {
   private RestTimeRepository $restTimeRepository;
-  private DeclarationRepository $declarationRepository;
+  private DeclarationsRepository $declarationRepository;
 
   /**
    * Constructs the RestTimeService.
@@ -36,7 +36,7 @@ class RestTimeService
   public function __construct(private PDO $pdo)
   {
     $this->restTimeRepository = new RestTimeRepository($this->pdo);
-    $this->declarationRepository = new DeclarationRepository($this->pdo);
+    $this->declarationRepository = new DeclarationsRepository($this->pdo);
   }
 
   /**
@@ -200,7 +200,7 @@ class RestTimeService
   /** @throws ApiException when the declaration is not in 'Incomplete' state. */
   private function assertIncomplete(string $declarationId): void
   {
-    if (!$this->declarationRepository->isIncomplete($declarationId)) {
+    if ($this->declarationRepository->getCurrentStatus($declarationId) !== 'Incomplete') {
       throw new ApiException(
         ErrorType::conflict(
           'Solo se pueden gestionar tiempos de descanso mientras la declaración está incompleta'
