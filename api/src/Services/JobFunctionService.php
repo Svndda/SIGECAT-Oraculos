@@ -11,6 +11,7 @@ use Http\ApiException;
 use Http\ErrorType;
 use PDO;
 use Repositories\CustomFunctionRepository;
+use Repositories\DeclarationRepository;
 use Repositories\JobFunctionRepository;
 use Repositories\OfficialFunctionRepository;
 
@@ -35,12 +36,14 @@ class JobFunctionService
   private JobFunctionRepository $repository;
   private OfficialFunctionRepository $officialRepository;
   private CustomFunctionRepository $customRepository;
+  private DeclarationRepository $declarationRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->repository = new JobFunctionRepository($this->pdo);
     $this->officialRepository = new OfficialFunctionRepository($this->pdo);
     $this->customRepository = new CustomFunctionRepository($this->pdo);
+    $this->declarationRepository = new DeclarationRepository($this->pdo);
   }
 
   /**
@@ -211,7 +214,7 @@ class JobFunctionService
 
     if ($declarationId !== null) {
       // Only the owner of the declaration may list its functions.
-      $declaration = $this->repository->getDeclaration($declarationId);
+      $declaration = $this->declarationRepository->findById($declarationId);
       if ($declaration === null || (string) $declaration['user_id'] !== $userId) {
         throw new ApiException(ErrorType::notFound('Declaración'));
       }
@@ -247,13 +250,12 @@ class JobFunctionService
    */
   private function requireIncompleteOwnedDeclaration(string $userId, string $declarationId): array
   {
-    $declaration = $this->repository->getDeclaration($declarationId);
+    $declaration = $this->declarationRepository->findById($declarationId);
     if ($declaration === null || (string) $declaration['user_id'] !== $userId) {
       throw new ApiException(ErrorType::notFound('Declaración'));
     }
 
-    $status = $this->repository->getDeclarationStatus($declarationId);
-    if ($status !== 'Incomplete') {
+    if (!$this->declarationRepository->isIncomplete($declarationId)) {
       throw new ApiException(
         ErrorType::conflict(
           'Solo se pueden gestionar funciones mientras la declaración está incompleta'

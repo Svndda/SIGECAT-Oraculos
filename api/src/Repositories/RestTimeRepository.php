@@ -51,10 +51,11 @@ final class RestTimeRepository extends Repository
   /**
    * Persists a new rest time record into the database.
    *
+   * @param string $userId The owner (taken from the authenticated request).
    * @param CreateRestTimeDTO $dto Validated data container for creation.
    * @return string The generated rest_time_id (ULID) of the new record.
    */
-  public function create(CreateRestTimeDTO $dto): string
+  public function create(string $userId, CreateRestTimeDTO $dto): string
   {
     $restTimeId = UlidGenerator::generate();
 
@@ -73,7 +74,7 @@ final class RestTimeRepository extends Repository
       $stmt = $this->db->prepare($sql);
       $stmt->execute([
         ':v_rest_time_id'   => $restTimeId,
-        ':v_user_id'        => $dto->userId,
+        ':v_user_id'        => $userId,
         ':v_declaration_id' => $dto->declarationId,
         ':v_rest_type'      => $dto->restType,
         ':v_starts_at'      => $dto->startsAt,
@@ -120,18 +121,20 @@ final class RestTimeRepository extends Repository
    * @param int $offset The number of records to skip.
    * @param string $filter Optional string to filter by rest type.
    * @param string|null $declarationId Optional declaration to scope the list.
+   * @param string|null $userId Optional owner to scope the list (self-scoping).
    * @return array<int, array<string, mixed>> List of rest time entries.
    */
-  public function findAllPaginated(int $limit, int $offset, string $filter = '', ?string $declarationId = null): array
+  public function findAllPaginated(int $limit, int $offset, string $filter = '', ?string $declarationId = null, ?string $userId = null): array
   {
     $declCondition = $declarationId !== null ? ' AND declaration_id = :v_declaration_id' : '';
+    $userCondition = $userId !== null ? ' AND user_id = :v_user_id' : '';
 
     $sql = "
         SELECT rest_time_id, user_id, declaration_id, rest_type,
                TO_CHAR(starts_at, 'YYYY-MM-DD HH24:MI:SS') AS starts_at,
                TO_CHAR(ends_at,   'YYYY-MM-DD HH24:MI:SS') AS ends_at
         FROM rest_times
-        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)" . $declCondition . "
+        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)" . $declCondition . $userCondition . "
         ORDER BY starts_at DESC
         OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
     ";
@@ -140,6 +143,9 @@ final class RestTimeRepository extends Repository
     $stmt->bindValue(':v_filter', '%' . $filter . '%');
     if ($declarationId !== null) {
       $stmt->bindValue(':v_declaration_id', $declarationId);
+    }
+    if ($userId !== null) {
+      $stmt->bindValue(':v_user_id', $userId);
     }
     $stmt->bindValue(':v_offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
@@ -153,21 +159,26 @@ final class RestTimeRepository extends Repository
    *
    * @param string $filter Optional string to filter by rest type.
    * @param string|null $declarationId Optional declaration to scope the count.
+   * @param string|null $userId Optional owner to scope the count (self-scoping).
    * @return int The total count of rest time records.
    */
-  public function countAll(string $filter = '', ?string $declarationId = null): int
+  public function countAll(string $filter = '', ?string $declarationId = null, ?string $userId = null): int
   {
     $declCondition = $declarationId !== null ? ' AND declaration_id = :v_declaration_id' : '';
+    $userCondition = $userId !== null ? ' AND user_id = :v_user_id' : '';
 
     $sql = '
         SELECT COUNT(*) as total
         FROM rest_times
-        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)' . $declCondition;
+        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)' . $declCondition . $userCondition;
 
     $stmt = $this->db->prepare($sql);
     $stmt->bindValue(':v_filter', '%' . $filter . '%');
     if ($declarationId !== null) {
       $stmt->bindValue(':v_declaration_id', $declarationId);
+    }
+    if ($userId !== null) {
+      $stmt->bindValue(':v_user_id', $userId);
     }
     $stmt->execute();
 
@@ -244,16 +255,5 @@ final class RestTimeRepository extends Repository
       $this->rollBack();
       throw $e;
     }
-  }
-
-  /** Whether the given declaration exists. */
-  public function declarationExists(string $declarationId): bool
-  {
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS cnt FROM declarations WHERE declaration_id = :id'
-    );
-    $stmt->execute([':id' => $declarationId]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
   }
 }

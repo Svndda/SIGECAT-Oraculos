@@ -14,9 +14,12 @@ use Http\ErrorType;
  * Encapsulates and validates the data required to register a new rest time
  * entry within a declaration.
  *
+ * The owner (user_id) is taken from the authenticated request, never from the
+ * payload.
+ *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Validates required fields: user_id, declaration_id, rest_type, starts_at, ends_at.
+ * - Validates required fields: declaration_id, rest_type, starts_at, ends_at.
  * - Ensures rest_type is one of the allowed values.
  * - Ensures the [starts_at, ends_at] range is coherent and within the maximum
  *   duration allowed for the rest type (mirrors the CHK_REST_TIMES_DURATION
@@ -35,7 +38,6 @@ final class CreateRestTimeDTO
   /** Canonical timestamp format used to bind against Oracle TIMESTAMP columns. */
   public const DB_TIMESTAMP_FORMAT = 'Y-m-d H:i:s';
 
-  public string $userId;
   public string $declarationId;
   public ?string $restType;
 
@@ -47,7 +49,6 @@ final class CreateRestTimeDTO
   private bool $endsAtProvided;
 
   private function __construct(
-    string $userId,
     string $declarationId,
     ?string $restType,
     ?string $startsAt,
@@ -55,7 +56,6 @@ final class CreateRestTimeDTO
     bool $startsAtProvided,
     bool $endsAtProvided
   ) {
-    $this->userId = $userId;
     $this->declarationId = $declarationId;
     $this->restType = $restType;
     $this->startsAt = $startsAt;
@@ -66,7 +66,6 @@ final class CreateRestTimeDTO
 
   /**
    * @param array{
-   *     user_id?: string,
    *     declaration_id?: string,
    *     rest_type?: string,
    *     starts_at?: string,
@@ -76,7 +75,6 @@ final class CreateRestTimeDTO
   public static function fromArray(array $data): self
   {
     return new self(
-      (string) ($data['user_id'] ?? ''),
       (string) ($data['declaration_id'] ?? ''),
       isset($data['rest_type']) ? (string) $data['rest_type'] : null,
       self::normalizeTimestamp($data['starts_at'] ?? null),
@@ -110,10 +108,6 @@ final class CreateRestTimeDTO
 
   public function validate(): void
   {
-    if ($this->userId === '') {
-      throw new ApiException(ErrorType::missingField('user_id'));
-    }
-
     if ($this->declarationId === '') {
       throw new ApiException(ErrorType::missingField('declaration_id'));
     }
