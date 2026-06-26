@@ -12,8 +12,12 @@ use Http\ApiException;
 use Http\ErrorType;
 use PDO;
 use PDOException;
+use Repositories\CustomFunctionRepository;
 use Repositories\DeclarationsRepository;
+use Repositories\JobFunctionRepository;
 use Repositories\JobPositionRepository;
+use Repositories\JobRepository;
+use Repositories\OfficialFunctionRepository;
 use Repositories\UserRepository;
 
 /**
@@ -39,6 +43,24 @@ final class DeclarationsService
   private JobPositionRepository $jobPositionRepository;
 
   /**
+   * @var JobRepository
+   */
+  private JobRepository $jobRepository;
+
+  /**
+   * @var JobFunctionRepository
+   */
+  private JobFunctionRepository $jobFunctionRepository;
+  /**
+   * @var OfficialFunctionRepository
+   */
+  private OfficialFunctionRepository $officialFunctionRepository;
+  /**
+   * @var CustomFunctionRepository
+   */
+  private CustomFunctionRepository $customFunctionRepository;
+
+  /**
    * @var UserRepository
    */
   private UserRepository $userRepository;
@@ -58,6 +80,10 @@ final class DeclarationsService
     $this->pdo = $pdo;
     $this->declarationRepository = new DeclarationsRepository($this->pdo);
     $this->jobPositionRepository = new JobPositionRepository($this->pdo);
+    $this->jobRepository = new JobRepository($this->pdo);
+    $this->jobFunctionRepository = new JobFunctionRepository($this->pdo);
+    $this->officialFunctionRepository = new OfficialFunctionRepository($this->pdo);
+    $this->customFunctionRepository = new CustomFunctionRepository($this->pdo);
     $this->userRepository = new UserRepository($this->pdo);
   }
 
@@ -177,8 +203,47 @@ final class DeclarationsService
     $jobPosition = $this->jobPositionRepository->findById(
       $declaration['job_position_id']
     );
+
     if ($jobPosition !== null) {
       $result['job_position'] = $jobPosition;
+    }
+
+    $job = $this->jobRepository->findById(
+      $jobPosition['job_id']
+    );
+
+    if ($job !== null) {
+      $result['job'] = $job;
+    }
+
+    $jobFunctions = $this->jobFunctionRepository->getByDeclaration(
+      $declarationId, 0, 50
+    );
+
+    if ($jobFunctions !== null) {
+      foreach ($jobFunctions as &$jf) {
+        if (!empty($jf['official_function_id'])) {
+          $official = $this->officialFunctionRepository->findById(
+            $jf['official_function_id']
+          );
+          if ($official) {
+            $jf['function_name'] = $official['name'];
+            $jf['function_description'] = $official['description'];
+            $jf['function_type'] = 'official';
+            $jf['expected_time'] = $official['expected_time'] ?? null;
+          }
+        } elseif (!empty($jf['custom_function_id'])) {
+          $custom = $this->customFunctionRepository->findById(
+            $jf['custom_function_id']
+          );
+          if ($custom) {
+            $jf['function_name'] = $custom['name'];
+            $jf['function_description'] = $custom['description'];
+            $jf['function_type'] = 'custom';
+          }
+        }
+      }
+      $result['job_functions'] = $jobFunctions;
     }
 
     $user = $this->userRepository->findById(
@@ -458,8 +523,17 @@ final class DeclarationsService
       $jobPosition = $this->jobPositionRepository->findById(
         $declaration['job_position_id']
       );
+
       if ($jobPosition !== null) {
         $item['job_position'] = $jobPosition;
+      }
+
+      $job = $this->jobRepository->findById(
+        $jobPosition['job_id']
+      );
+
+      if ($job !== null) {
+        $item['job'] = $job;
       }
 
       if ($isAdminView) {

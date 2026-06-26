@@ -1,26 +1,32 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+} from 'react-router-dom';
+
+import PrivateRoute from '../components/PrivateRoute';
+import RoleRoute from '../components/RoleRoute.tsx';
+import { AuthProvider } from '../context/AuthContext';
+import { RecordsProvider } from '../context/RecordsContext';
+import { SnackbarProvider } from '../context/SnackbarContext';
 import MainLayout from '../layouts/MainLayout';
-import EmployeeRecordPage from './pages/EmployeeRecordPage';
-import EmployeeFormPage from './pages/EmployeeFormPage';
-import WorkHoursPage from './pages/WorkHoursPage';
+import AccessDeniedPage from './pages/AccessDeniedPage.tsx';
+import AreasPage from './pages/admin/AreasPage.tsx';
+import DepartmentsPage from './pages/admin/DepartmentsPage';
+import JobsPage from './pages/admin/JobPage.tsx';
+import JobPositionsPage from './pages/admin/JobPositionsPage';
+import SectionsPage from './pages/admin/SectionsPage.tsx';
+import UnitsPage from './pages/admin/UnitsPage';
+import UsersPage from './pages/admin/UsersPage';
+import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import ChangePasswordPage from './pages/auth/ChangePasswordPage';
-import AreasPage from './pages/admin/AreasPage.tsx';
-import UnitsPage from './pages/admin/UnitsPage';
-import JobPositionsPage from './pages/admin/JobPositionsPage';
-import UsersPage from './pages/admin/UsersPage';
+import EmployeeDeclarationsPage from './pages/EmployeeDeclarationsPage.tsx';
+import EmployeeFormPage from './pages/EmployeeFormPage';
 import SettingsPage from './pages/SettingsPage.tsx';
-import { RecordsProvider } from '../context/RecordsContext';
-import { AuthProvider } from '../context/AuthContext';
-import { SnackbarProvider } from '../context/SnackbarContext';
-import PrivateRoute from '../components/PrivateRoute';
-import DepartmentsPage from './pages/admin/DepartmentsPage';
-import RoleRoute from "../components/RoleRoute.tsx";
-import AccessDeniedPage from "./pages/AccessDeniedPage.tsx";
-import SectionsPage from './pages/admin/SectionsPage.tsx';
-import JobsPage from "./pages/admin/JobPage.tsx";
+import WorkHoursPage from './pages/WorkHoursPage';
+import EmployeeRecordPage from "./pages/EmployeeRecordPage.tsx";
 
 function App() {
   return (
@@ -39,7 +45,8 @@ function App() {
             {/* Protected routes */}
             <Route element={<PrivateRoute />}>
               <Route path="/" element={<MainLayout />}>
-                <Route index element={<EmployeeRecordPage />} />
+                <Route index element={<EmployeeDeclarationsPage />} />
+                <Route path="declaracion-registro" element={<EmployeeRecordPage />} />
                 <Route path="employee-form" element={<EmployeeFormPage />} />
                 <Route path="work-hours" element={<WorkHoursPage />} />
                 <Route path="cambiar-contrasena" element={<ChangePasswordPage />} />

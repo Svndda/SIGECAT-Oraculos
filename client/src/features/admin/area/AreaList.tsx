@@ -1,7 +1,11 @@
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { Tooltip, Typography } from '@mui/material';
+import {
+  Tooltip,
+  Typography,
+} from '@mui/material';
+
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Area } from '../../../services/areaService';
 import { truncateText } from '../../../utils/text';
@@ -23,7 +27,7 @@ export default function AreaList({ areas, loading, onEdit, onDelete, onView }: A
   const columns: DataColumn<Area>[] = [
     {
       label: 'Nombre',
-      flex: '0 0 26%',
+      flex: '1',
       primary: true,
       truncate: true,
       render: (a) => (
@@ -34,8 +38,7 @@ export default function AreaList({ areas, loading, onEdit, onDelete, onView }: A
         </Tooltip>
       ),
     },
-    { label: 'Descripción', flex: '1', truncate: true, render: (a) => a.description ?? '—' },
-    { label: 'Fecha de creación', flex: '0 0 20%', meta: true, render: (a) => formatDate(a.created_at) },
+    { label: 'Fecha de creación', flex: '1', meta: true, render: (a) => formatDate(a.created_at) },
   ];
 
   return (
