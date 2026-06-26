@@ -71,12 +71,38 @@ class CustomFunctionService
   }
 
   /**
-   * Returns a paginated list of the user's own custom functions.
+   * Returns a single custom function for a viewer: admins may read any, other
+   * users only their own.
+   *
+   * @return array<string, mixed>
+   * @throws ApiException when missing or not visible to the viewer.
+   */
+  public function getCustomFunctionByIdForViewer(string $viewerId, bool $isAdmin, string $customFunctionId): array
+  {
+    if (trim($customFunctionId) === '') {
+      throw new ApiException(ErrorType::missingField('custom_function_id'));
+    }
+
+    $row = $this->repository->findById($customFunctionId);
+    if ($row === null) {
+      throw new ApiException(ErrorType::notFound('Función personalizada'));
+    }
+    if (!$isAdmin && (string) ($row['user_id'] ?? $row['USER_ID'] ?? '') !== $viewerId) {
+      throw new ApiException(ErrorType::notFound('Función personalizada'));
+    }
+
+    return CustomFunctionResponseDTO::fromArray($row)->toArray();
+  }
+
+  /**
+   * Returns a paginated list of custom functions. A null $userId lists every
+   * user's custom functions (admin read-only view); otherwise it is scoped to
+   * that owner.
    *
    * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
    * @throws ApiException
    */
-  public function getCustomFunctions(string $userId, int $page, int $limit, string $filter = ''): array
+  public function getCustomFunctions(int $page, int $limit, string $filter = '', ?string $userId = null): array
   {
     if ($page < 1) {
       throw new ApiException(ErrorType::invalidField('page'));

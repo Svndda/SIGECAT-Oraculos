@@ -78,17 +78,24 @@ final class CustomFunctionRepository extends Repository
     return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
   }
 
-  /** @return array<int, array<string, mixed>> */
-  public function getCustomFunctions(int $offset, int $limit, string $filter, string $userId): array
+  /**
+   * @param string|null $userId Optional owner to scope the list. Null lists every
+   *   user's custom functions (admin read-only view).
+   * @return array<int, array<string, mixed>>
+   */
+  public function getCustomFunctions(int $offset, int $limit, string $filter, ?string $userId = null): array
   {
+    $userCondition = $userId !== null ? ' AND user_id = :user_id' : '';
     $stmt = $this->db->prepare(
       'SELECT custom_function_id, user_id, name, description
          FROM CUSTOM_FUNCTIONS
-        WHERE user_id = :user_id AND UPPER(name) LIKE UPPER(:filter)
+        WHERE UPPER(name) LIKE UPPER(:filter)' . $userCondition . '
         ORDER BY name ASC
         OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
     );
-    $stmt->bindValue(':user_id', $userId);
+    if ($userId !== null) {
+      $stmt->bindValue(':user_id', $userId);
+    }
     $stmt->bindValue(':filter', '%' . $filter . '%');
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -96,13 +103,19 @@ final class CustomFunctionRepository extends Repository
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
-  public function countCustomFunctions(string $filter, string $userId): int
+  /** @param string|null $userId Optional owner to scope the count (null = all). */
+  public function countCustomFunctions(string $filter, ?string $userId = null): int
   {
+    $userCondition = $userId !== null ? ' AND user_id = :user_id' : '';
     $stmt = $this->db->prepare(
       'SELECT COUNT(*) AS total FROM CUSTOM_FUNCTIONS
-        WHERE user_id = :user_id AND UPPER(name) LIKE UPPER(:filter)'
+        WHERE UPPER(name) LIKE UPPER(:filter)' . $userCondition
     );
-    $stmt->execute([':user_id' => $userId, ':filter' => '%' . $filter . '%']);
+    $params = [':filter' => '%' . $filter . '%'];
+    if ($userId !== null) {
+      $params[':user_id'] = $userId;
+    }
+    $stmt->execute($params);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
   }
