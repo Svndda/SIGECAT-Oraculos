@@ -53,18 +53,22 @@ class CustomFunctionController
 
   /**
    * GET /custom-functions
-   * Lists the caller's own custom functions. Query params: page, limit, filter.
+   * Admins list every user's custom functions (read-only view); other users
+   * only their own. Query params: page, limit, filter.
    */
   public function index(): void
   {
     try {
       $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
       $page   = max(1, (int) ($_GET['page'] ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit'] ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
 
-      $result = $this->customFunctionService->getCustomFunctions((string) $auth['user_id'], $page, $limit, $filter);
+      $result = $this->customFunctionService->getCustomFunctions(
+        $page, $limit, $filter, $isAdmin ? null : (string) $auth['user_id']
+      );
 
       Response::success($result['data'], $result['meta'], 200);
     } catch (ApiException $e) {
@@ -74,14 +78,17 @@ class CustomFunctionController
 
   /**
    * GET /custom-functions/{id}
-   * Returns one of the caller's own custom functions.
+   * Admins may view any custom function; other users only their own.
    */
   public function show(string $customFunctionId): void
   {
     try {
       $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
-      $data = $this->customFunctionService->getOwnedCustomFunctionById((string) $auth['user_id'], $customFunctionId);
+      $data = $this->customFunctionService->getCustomFunctionByIdForViewer(
+        (string) $auth['user_id'], $isAdmin, $customFunctionId
+      );
 
       Response::success($data, ['message' => 'Función personalizada obtenida exitosamente'], 200);
     } catch (ApiException $e) {

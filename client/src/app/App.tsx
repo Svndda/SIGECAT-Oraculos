@@ -15,6 +15,8 @@ import AreasPage from './pages/admin/AreasPage.tsx';
 import DepartmentsPage from './pages/admin/DepartmentsPage';
 import JobsPage from './pages/admin/JobPage.tsx';
 import JobPositionsPage from './pages/admin/JobPositionsPage';
+import FunctionsPage from './pages/admin/FunctionsPage.tsx';
+import CustomFunctionsPage from './pages/admin/CustomFunctionsPage.tsx';
 import SectionsPage from './pages/admin/SectionsPage.tsx';
 import UnitsPage from './pages/admin/UnitsPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -58,6 +60,8 @@ function App() {
                   <Route path="secciones" element={<SectionsPage />} />
                   <Route path="departamentos" element={<DepartmentsPage />} />
                   <Route path="cargos" element={<JobsPage/> } />
+                  <Route path="funciones" element={<FunctionsPage />} />
+                  <Route path="funciones-personalizadas" element={<CustomFunctionsPage />} />
                   <Route path="plazas" element={<JobPositionsPage />} />
                   <Route path="usuarios" element={<UsersPage />} />
                 </Route>
