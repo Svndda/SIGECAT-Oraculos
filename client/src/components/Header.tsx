@@ -1,4 +1,4 @@
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ucrLogo from '../img/ucr_logo.svg';
 import vraLogo from '../img/VRA_logo.svg';

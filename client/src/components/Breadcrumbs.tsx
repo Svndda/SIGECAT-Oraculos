@@ -27,7 +27,7 @@ function buildTrail(pathname: string): Array<{ path: string; label: string }> {
   let current: string | undefined = pathname;
 
   while (current && ROUTES[current]) {
-    const node = ROUTES[current];
+    const node: RouteNode = ROUTES[current];
     trail.unshift({ path: current, label: node.label });
     current = node.parent;
   }
