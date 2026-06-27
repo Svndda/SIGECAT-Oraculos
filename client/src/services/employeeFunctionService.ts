@@ -1,23 +1,27 @@
 import { extractApiError } from './common';
+import { officialFunctionService } from './officialFunctionService';
+import { customFunctionService } from './customFunctionService';
 
 /**
  * Employee-side functions for the workday declaration (the screens after
- * "Comenzar"): searching the unit's function catalogue and registering a new
+ * "Comenzar"): searching the official function catalogue and registering a new
  * ("inexistente") custom function.
  *
- * NOTE: the backend for the employee declaration (OFFICIAL_FUNCTIONS read for
- * employees, CUSTOM_FUNCTIONS, JOB_FUNCTIONS) is not implemented yet — that work
- * belongs to the API team. The calls below are STUBBED with local data but keep
- * the shape they will have against the real endpoints, so wiring them up later
- * is a one-function swap (see each TODO(backend)).
+ * Wired to the real API:
+ *  - searchCatalog  → GET  /official-functions  (read open to any authenticated user)
+ *  - createCustomFunction → POST /custom-functions
+ *
+ * Scope note: persisting the *declared* functions of a declaration (JOB_FUNCTIONS,
+ * with their time ranges) is NOT done here yet — that belongs to the declaration
+ * submission flow, which still needs to be wired off the mock RecordsContext.
  */
 
-/** A function offered by the unit's catalogue (maps to OFFICIAL_FUNCTIONS). */
+/** A function offered by the catalogue (maps to OFFICIAL_FUNCTIONS). */
 export interface CatalogFunction {
   id: string;
   name: string;
   description: string | null;
-  /** Expected execution time, in minutes. */
+  /** Suggested time, in minutes (derived from the catalogue's expected_time in hours). */
   expected_time: number | null;
   /** Whether the employee created it ad-hoc (CUSTOM_FUNCTIONS) vs the official catalogue. */
   is_custom: boolean;
@@ -26,44 +30,48 @@ export interface CatalogFunction {
 export interface CreateCustomFunctionPayload {
   name: string;
   description: string;
-  /** Execution time, in minutes. */
+  /** Execution time, in minutes. NOTE: not persisted — CUSTOM_FUNCTIONS has no such column. */
   execution_time: number;
 }
 
-// STUB catalogue. Replace with the real GET when the backend exposes it to employees.
-const MOCK_CATALOG: CatalogFunction[] = [
-  { id: 'off-1', name: 'Atención al público', description: 'Atender consultas presenciales y telefónicas.', expected_time: 120, is_custom: false },
-  { id: 'off-2', name: 'Elaboración de informes', description: 'Redacción de informes técnicos mensuales.', expected_time: 180, is_custom: false },
-  { id: 'off-3', name: 'Mantenimiento de equipos', description: 'Revisión y calibración de equipo de laboratorio.', expected_time: 90, is_custom: false },
-  { id: 'off-4', name: 'Gestión de inventario', description: 'Control y registro de insumos de la unidad.', expected_time: 60, is_custom: false },
-  { id: 'off-5', name: 'Supervisión de prácticas', description: 'Acompañamiento a estudiantes en laboratorio.', expected_time: 150, is_custom: false },
-];
+/** OFFICIAL_FUNCTIONS.expected_time is stored in hours; the UI works in minutes. */
+function hoursToMinutes(hours: number | null): number | null {
+  return hours == null ? null : Math.round(hours * 60);
+}
 
 export const employeeFunctionService = {
-  /**
-   * Searches the unit's function catalogue by name.
-   * TODO(backend): GET /official-functions?filter=<query> (currently admin-only).
-   */
+  /** Searches the official function catalogue by name. */
   async searchCatalog(query: string): Promise<CatalogFunction[]> {
     try {
-      const q = query.trim().toLowerCase();
-      if (q === '') return [...MOCK_CATALOG];
-      return MOCK_CATALOG.filter((f) => f.name.toLowerCase().includes(q));
+      const res = await officialFunctionService.getOfficialFunctions({
+        filter: query.trim(),
+        limit: 50,
+        status: 'active',
+      });
+      return res.data.map((f) => ({
+        id: f.id,
+        name: f.name,
+        description: f.description,
+        expected_time: hoursToMinutes(f.expected_time),
+        is_custom: false,
+      }));
     } catch (e) {
       throw extractApiError(e);
     }
   },
 
-  /**
-   * Registers a new custom function that is not present in the catalogue.
-   * TODO(backend): POST /custom-functions { name, description, expected_time }.
-   */
+  /** Registers a new custom function that is not present in the catalogue. */
   async createCustomFunction(payload: CreateCustomFunctionPayload): Promise<CatalogFunction> {
     try {
-      return {
-        id: `custom-${Date.now()}`,
+      const created = await customFunctionService.createCustomFunction({
         name: payload.name.trim(),
         description: payload.description.trim(),
+      });
+      return {
+        id: created.id,
+        name: created.name,
+        description: created.description,
+        // Kept client-side for the declaration prefill; the backend does not store it.
         expected_time: payload.execution_time,
         is_custom: true,
       };
