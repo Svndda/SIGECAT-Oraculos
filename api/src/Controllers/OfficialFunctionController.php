@@ -16,8 +16,9 @@ use Services\OfficialFunctionService;
  * OfficialFunctionController
  *
  * HTTP layer for the official functions catalogue (OFFICIAL_FUNCTIONS). Each
- * official function belongs to a JOB ("tipo de puesto"). All endpoints require
- * admin.
+ * official function belongs to a JOB ("tipo de puesto"). Reads (index/show) are
+ * available to any authenticated user so employees can browse the catalogue
+ * while filling a declaration; writes (create/update/delete) require admin.
  *
  * @package Controllers
  */
@@ -94,17 +95,19 @@ class OfficialFunctionController
 
   /**
    * GET /official-functions
-   * Query params: page, limit, filter, status, job_id. Admin only.
+   * Query params: page, limit, filter, status, job_id. Any authenticated user
+   * (employees always get the active catalogue; only admins may filter status).
    */
   public function index(): void
   {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
       $page   = max(1, (int) ($_GET['page'] ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit'] ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
       $jobId  = trim((string) ($_GET['job_id'] ?? ''));
 
       $result = $this->officialFunctionService->getOfficialFunctions($page, $limit, $filter, $status, $jobId);
@@ -117,14 +120,15 @@ class OfficialFunctionController
 
   /**
    * GET /official-functions/{id}
-   * Query params: status. Admin only.
+   * Query params: status. Any authenticated user (employees only see active).
    */
   public function show(string $officialFunctionId): void
   {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
       $data = $this->officialFunctionService->getOfficialFunctionById($officialFunctionId, $status);
 
       Response::success($data, ['message' => 'Función obtenida exitosamente'], 200);
