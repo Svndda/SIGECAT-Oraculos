@@ -65,7 +65,8 @@ export default function EmployeeDeclarationsList({
       label: 'Fecha de creación',
       flex: '0.8',
       meta: true,
-      render: (d) => formatOracleDate(d.created_at),
+      render:
+        (d) => formatOracleDate(d.created_at, true),
     },
   ];
 

@@ -23,7 +23,9 @@ export interface UserProfile {
   id: string;
   email: string;
   first_name: string;
-  last_name: string;
+  second_name: string;
+  first_last_name: string;
+  second_last_name: string;
   role: string;
 }
 
@@ -95,7 +97,6 @@ export const userService = {
 
   async getProfile(): Promise<UserProfile> {
     try {
-      // Consume el endpoint GET /users/me del UserController
       const res = await apiClient.get<{ data: UserProfile }>('/users/me');
       return res.data.data;
     } catch (e) {
@@ -103,12 +104,4 @@ export const userService = {
     }
   },
 
-  async updateProfile(payload: UpdateProfilePayload): Promise<void> {
-    try {
-      // Consume el endpoint PATCH /users/me mapeado al UpdateUserDTO
-      await apiClient.patch('/users/me', payload);
-    } catch (e) {
-      throw extractApiError(e);
-    }
-  },
 };

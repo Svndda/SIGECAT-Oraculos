@@ -4,12 +4,12 @@ import {
   useState,
 } from 'react';
 
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 
-import { Box } from '@mui/material';
+import {Box} from '@mui/material';
 import Pagination from '@mui/material/Pagination';
 
-import { useSnackbar } from '../../context/SnackbarContext';
+import {useSnackbar} from '../../context/SnackbarContext';
 import EmployeeDeclarationsToolbar
   from '../../features/employee/EmployeeDeclarationsToolbar';
 import EmployeeDeclarationsList
@@ -20,8 +20,8 @@ import type {
   PageMeta,
   ServiceError,
 } from '../../services/common';
-import type { Declaration } from '../../services/declarationsService';
-import { declarationService } from '../../services/declarationsService';
+import type {Declaration} from '../../services/declarationsService';
+import {declarationService} from '../../services/declarationsService';
 
 const LIMIT = 10;
 
@@ -78,7 +78,7 @@ export default function EmployeeDeclarationsPage() {
     try {
       const fullDeclaration = await declarationService.getDeclarationById(
         declaration.declaration_id,
-        true // includeHistory
+        true
       );
       setSelectedDeclaration(fullDeclaration);
       setDetailOpen(true);
@@ -100,7 +100,7 @@ export default function EmployeeDeclarationsPage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 4 }, minHeight: '100%' }}>
+    <Box sx={{p: {xs: 2, sm: 4}, minHeight: '100%'}}>
       <EmployeeDeclarationsToolbar
         search={search}
         onSearchChange={setSearch}
@@ -114,7 +114,7 @@ export default function EmployeeDeclarationsPage() {
       />
 
       {totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+        <Box sx={{display: 'flex', justifyContent: 'center', mt: 3}}>
           <Pagination
             count={totalPages}
             page={page}
