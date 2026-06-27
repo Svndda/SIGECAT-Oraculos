@@ -18,6 +18,11 @@ export interface CustomFunction {
   description: string | null;
 }
 
+export interface CreateCustomFunctionPayload {
+  name: string;
+  description?: string;
+}
+
 export const customFunctionService = {
   async getCustomFunctions(params: ListParams = {}): Promise<Paginated<CustomFunction>> {
     try {
@@ -34,6 +39,20 @@ export const customFunctionService = {
   async getCustomFunctionById(id: string): Promise<CustomFunction> {
     try {
       const res = await apiClient.get<{ data: CustomFunction }>(`/custom-functions/${id}`);
+      return res.data.data;
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
+  /**
+   * Creates a custom function owned by the authenticated employee. The backend
+   * only stores name + description (CUSTOM_FUNCTIONS has no execution-time
+   * column), so any duration captured in the UI is not persisted here.
+   */
+  async createCustomFunction(payload: CreateCustomFunctionPayload): Promise<CustomFunction> {
+    try {
+      const res = await apiClient.post<{ data: CustomFunction }>('/custom-functions', payload);
       return res.data.data;
     } catch (e) {
       throw extractApiError(e);
