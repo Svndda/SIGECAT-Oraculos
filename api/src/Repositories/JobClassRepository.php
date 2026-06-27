@@ -20,6 +20,25 @@ final class JobClassRepository extends Repository
     parent::__construct($db);
   }
 
+  /**
+   * Finds a specific job class by its ID.
+   *
+   * @param string $jobClassId
+   * @return array<string, mixed>|null
+   */
+  public function findById(string $jobClassId): ?array
+  {
+    $stmt = $this->db->prepare(
+      'SELECT job_class_id, job_class_code, name, description, created_at, created_by
+         FROM JOB_CLASSES
+        WHERE job_class_id = :id
+          AND ROWNUM = 1'
+    );
+    $stmt->execute([':id' => $jobClassId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row !== false ? $row : null;
+  }
+
   public function existsById(string $jobClassId): bool
   {
     $stmt = $this->db->prepare(
@@ -27,12 +46,12 @@ final class JobClassRepository extends Repository
     );
     $stmt->execute([':id' => $jobClassId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
+    return (int)($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
   }
 
   /** @return array<int, array<string, mixed>> */
-  public function getJobClasses(int $offset, int $limit, string $filter = ''): array
-  {
+  public function getJobClasses(int $offset, int $limit, string $filter = ''
+  ): array {
     $stmt = $this->db->prepare(
       'SELECT job_class_id, job_class_code, name, description, created_at, created_by
          FROM JOB_CLASSES
@@ -54,6 +73,6 @@ final class JobClassRepository extends Repository
     );
     $stmt->execute([':filter' => '%' . $filter . '%']);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
+    return (int)($row['total'] ?? $row['TOTAL'] ?? 0);
   }
 }

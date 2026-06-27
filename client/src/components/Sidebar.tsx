@@ -29,7 +29,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ModalAlert from './modals/ModalAlert';
-import {Engineering} from "@mui/icons-material";
+import {DocumentScannerRounded, Engineering} from "@mui/icons-material";
 
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
@@ -42,6 +42,7 @@ const ROLE_LABELS: Record<string, string> = {
 const ALL_NAV_ITEMS = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/', adminOnly: false },
   { label: 'Usuarios', icon: <PeopleIcon fontSize="small" />, route: '/usuarios', adminOnly: true },
+  { label: 'Declaraciones', icon: <DocumentScannerRounded fontSize="small" />, route: '/declaraciones', adminOnly: true },
   { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/areas', adminOnly: true },
   { label: 'Departamentos', icon: <BusinessIcon fontSize="small" />, route: '/departamentos', adminOnly: true },
   { label: 'Secciones', icon: <ViewModuleIcon fontSize="small" />, route: '/secciones', adminOnly: true },

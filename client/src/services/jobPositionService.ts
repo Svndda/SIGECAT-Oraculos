@@ -6,6 +6,25 @@ import {
   type Paginated,
 } from './common';
 
+export interface JobClass {
+  job_class_id: string;
+  job_class_code: string;
+  name: string;
+  description: string | null;
+  created_at?: string;
+  created_by?: string;
+}
+
+export interface Job {
+  job_id: string;
+  job_class_id?: string;
+  name: string;
+  job_code?: string;
+  description?: string | null;
+  created_at?: string;
+  created_by?: string;
+}
+
 export interface JobPosition {
   job_position_id: string;
   job_position_number: string;
@@ -20,11 +39,8 @@ export interface JobPosition {
   created_at: string;
   is_deleted: number;
   deleted_at: string | null;
-}
-
-export interface Job {
-  job_id: string;
-  name: string;
+  job?: Job | null;
+  job_class?: JobClass | null;
 }
 
 export type JobPositionParentType = 'area' | 'department' | 'section' | 'unit';
@@ -62,7 +78,16 @@ export const jobPositionService = {
         data: JobPosition[]; meta: PageMeta
       }>('/job-positions', { params });
 
-      return { data : res.data.data ?? [], meta: res.data.meta };
+      return { data: res.data.data ?? [], meta: res.data.meta };
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
+  async getMyJobPositions(): Promise<JobPosition[]> {
+    try {
+      const res = await apiClient.get<{ data: JobPosition[] }>('/users/me/job-positions');
+      return res.data.data ?? [];
     } catch (e) {
       throw extractApiError(e);
     }

@@ -9,7 +9,9 @@ use DTO\UpdateJobPositionDTO;
 use Http\ApiException;
 use Http\ErrorType;
 use PDO;
+use Repositories\JobClassRepository;
 use Repositories\JobPositionRepository;
+use Repositories\JobRepository;
 
 /**
  * JobPositionService
@@ -22,10 +24,14 @@ use Repositories\JobPositionRepository;
 class JobPositionService
 {
   private JobPositionRepository $repository;
+  private JobRepository $jobRepository;
+  private JobClassRepository $jobClassRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->repository = new JobPositionRepository($this->pdo);
+    $this->jobRepository = new JobRepository($this->pdo);
+    $this->jobClassRepository = new JobClassRepository($this->pdo);
   }
 
   /**
@@ -135,7 +141,7 @@ class JobPositionService
         'page' => $page,
         'limit' => $limit,
         'total' => $total,
-        'total_pages' => (int) ceil($total / $limit),
+        'total_pages' => (int)ceil($total / $limit),
       ],
     ];
   }
@@ -151,7 +157,8 @@ class JobPositionService
   }
 
   /**
-   * Retrieves all job positions assigned to a specific user.
+   * Retrieves all job positions assigned to a specific user, including related
+   * job and job class information.
    *
    * @param string $userId
    * @return array<int, array<string, mixed>>
@@ -163,7 +170,31 @@ class JobPositionService
       throw new ApiException(ErrorType::missingField('user_id'));
     }
 
-    return $this->repository->getByUserId($userId);
+    $jobPositions = $this->repository->getByUserId($userId);
+
+    foreach ($jobPositions as &$position) {
+      $position['job'] = null;
+      $position['job_class'] = null;
+
+      if (!empty($position['job_id'])) {
+        $job = $this->jobRepository->findById($position['job_id']);
+
+        if ($job !== null) {
+          $position['job'] = $job;
+
+          if (!empty($job['job_class_id'])) {
+            $jobClass = $this->jobClassRepository->findById(
+              $job['job_class_id']
+            );
+            if ($jobClass !== null) {
+              $position['job_class'] = $jobClass;
+            }
+          }
+        }
+      }
+    }
+
+    return $jobPositions;
   }
 
   /**

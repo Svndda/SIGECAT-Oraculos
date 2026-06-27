@@ -7,6 +7,7 @@ import {
 } from './common';
 import type { JobPosition } from './jobPositionService';
 import type { Job } from './jobService';
+import type {UserProfile} from "./userService.ts";
 
 export type DeclarationStatus =
   | 'Incomplete'
@@ -54,6 +55,7 @@ export interface Declaration {
   job?: Job;
   status_history?: DeclarationStatusHistory[];
   job_functions?: JobFunction[];
+  user? : UserProfile;
 }
 
 export interface CreateDeclarationPayload {

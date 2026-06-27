@@ -40,11 +40,47 @@ export interface ServiceError {
 /** Normalizes an Axios/unknown error into the API's {code, message} shape. */
 export function extractApiError(error: unknown): ServiceError {
   if (error && typeof error === 'object' && 'response' in error) {
-    const axiosError = error as { response?: { data?: { errors?: ServiceError[] } } };
+    const axiosError = error as {
+      response?: { data?: { errors?: ServiceError[] } }
+    };
     const errors = axiosError.response?.data?.errors;
     if (errors?.length) return errors[0];
   }
-  return { code: 'INTERNAL_ERROR', message: 'Error del servidor. Intente de nuevo más tarde.' };
+  return {
+    code: 'INTERNAL_ERROR',
+    message: 'Error del servidor. Intente de nuevo más tarde.'
+  };
+}
+
+export function parseOracleToTimeInput(oracleDateStr: string | null | undefined): string {
+  if (!oracleDateStr) return '';
+  const cleanStr = oracleDateStr.trim().toUpperCase();
+  const parts = cleanStr.split(/\s+/);
+
+  if (parts.length >= 3) {
+    const timePart = parts[1]; // ej: "08.00.00.000000"
+    const ampm = parts[2];     // ej: "AM" o "PM"
+
+    const timeSegments = timePart.split(/[.:]/);
+    let hour = parseInt(timeSegments[0] || '0', 10);
+    const minute = parseInt(timeSegments[1] || '0', 10);
+
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  try {
+    const d = new Date(oracleDateStr);
+    if (!isNaN(d.getTime())) {
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+  } catch (e) {
+    return '';
+  }
+
+  return '';
 }
 
 export function formatDateForBackend(date: Date | string): string {
@@ -127,7 +163,11 @@ export function formatOracleTime(dateStr: string | null | undefined): string {
     const parts = cleanStr.split(/\s+/);
     if (parts.length < 3) {
       const d = new Date(dateStr);
-      return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('es-CR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
     }
 
     const timePart = parts[1]; // "02.00.00.000000"
