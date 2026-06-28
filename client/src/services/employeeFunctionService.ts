@@ -30,8 +30,6 @@ export interface CatalogFunction {
 export interface CreateCustomFunctionPayload {
   name: string;
   description: string;
-  /** Execution time, in minutes. NOTE: not persisted — CUSTOM_FUNCTIONS has no such column. */
-  execution_time: number;
 }
 
 /** OFFICIAL_FUNCTIONS.expected_time is stored in hours; the UI works in minutes. */
@@ -71,8 +69,7 @@ export const employeeFunctionService = {
         id: created.id,
         name: created.name,
         description: created.description,
-        // Kept client-side for the declaration prefill; the backend does not store it.
-        expected_time: payload.execution_time,
+        expected_time: null,
         is_custom: true,
       };
     } catch (e) {
