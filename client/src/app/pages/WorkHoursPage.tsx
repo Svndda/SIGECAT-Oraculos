@@ -14,7 +14,6 @@ import {declarationService} from '../../services/declarationsService';
 import type {ServiceError} from '../../services/common';
 import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
 import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
-import DeclarationWorkday from '../../features/employee/DeclarationWorkday';
 
 export default function WorkHoursPage() {
   const navigate = useNavigate();
@@ -67,9 +66,6 @@ export default function WorkHoursPage() {
                     sx={{mb: 4, color: '#666', textAlign: 'center'}}>
           Diagnóstico de Cargas de trabajo
         </Typography>
-
-        {/* Jornada laboral (magnitud + límites) */}
-        <DeclarationWorkday/>
 
         {/* Funciones a desarrollar (propias del cargo / de otro cargo / apoyo condicional) */}
         <DeclarationFunctions/>
