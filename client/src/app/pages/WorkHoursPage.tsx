@@ -20,11 +20,13 @@ import {
 } from '@mui/material';
 import type {ReactNode} from 'react';
 import {useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import {declarationService} from '../../services/declarationsService';
+import type {ServiceError} from '../../services/common';
 import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
 import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
 import DeclarationWorkday from '../../features/employee/DeclarationWorkday';
@@ -41,6 +43,7 @@ interface HourRow {
 
 export default function WorkHoursPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -179,13 +182,27 @@ export default function WorkHoursPage() {
 
     setIsSaving(true);
     try {
-      setMessage('Registro guardado exitosamente');
+      // The declaration is created in EmployeeFormPage and passed via router
+      // state; fall back to the user's current incomplete one.
+      let declarationId = (location.state as { declarationId?: string } | null)?.declarationId ?? null;
+      if (!declarationId) {
+        const incomplete = await declarationService.checkIncomplete();
+        declarationId = incomplete.has_incomplete ? incomplete.declaration_id ?? null : null;
+      }
+      if (!declarationId) {
+        setMessage('Error: No se encontró una declaración activa para completar.');
+        return;
+      }
+
+      await declarationService.changeStatus(declarationId, {status: 'Completed'});
+      setMessage('Declaración completada exitosamente');
 
       setTimeout(() => {
         navigate('/');
-      }, 2000);
+      }, 1500);
     } catch (error) {
-      setMessage('Error al guardar el registro: ' + String(error));
+      const e = error as ServiceError;
+      setMessage('Error al completar la declaración: ' + (e.message ?? String(error)));
     } finally {
       setIsSaving(false);
     }
