@@ -61,12 +61,13 @@ class UnitController {
    */
   public function index(): void {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $result = $this->unitService->getUnits($page, $limit, $filter, $status);
 
@@ -83,9 +84,10 @@ class UnitController {
    */
   public function show(string $unitId): void {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $unit = $this->unitService->getUnitById($unitId, $status);
 
