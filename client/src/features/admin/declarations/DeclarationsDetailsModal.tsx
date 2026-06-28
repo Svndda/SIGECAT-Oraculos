@@ -22,6 +22,8 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 
 import {useSnackbar} from '../../../context/SnackbarContext';
@@ -57,6 +59,8 @@ export default function DeclarationsDetailsModal(
     loading,
   }: AdminDeclarationDetailModalProps) {
   const snackbar = useSnackbar();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [localDeclaration, setLocalDeclaration] = useState<Declaration | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<DeclarationStatus | ''>('');
@@ -153,7 +157,8 @@ export default function DeclarationsDetailsModal(
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+              PaperProps={{sx: {m: {xs: 1, sm: 4}, width: {xs: 'calc(100% - 16px)', sm: 'auto'}}}}>
         <DialogTitle sx={{pb: 1, pt: 2}}>
           <Stack
             direction="row"
@@ -358,6 +363,55 @@ export default function DeclarationsDetailsModal(
                               sx={{letterSpacing: 1}}>
                     Funciones Declaradas ({job_functions.length})
                   </Typography>
+                  {isMobile ? (
+                    <Stack spacing={1.5} sx={{mt: 1}}>
+                      {job_functions.map((jf: JobFunction) => (
+                        <Paper
+                          key={jf.job_function_id}
+                          elevation={0}
+                          sx={{p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider'}}
+                        >
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 0.5}}>
+                            <Chip
+                              label={jf.function_type === 'official' ? 'Oficial' : 'Personalizada'}
+                              size="small"
+                              color={jf.function_type === 'official' ? 'primary' : 'secondary'}
+                              variant="outlined"
+                              sx={{fontSize: '0.65rem', height: 20}}
+                            />
+                            <Typography variant="body2" fontWeight={500}>
+                              {jf.function_name || '—'}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary" sx={{display: 'block'}}>
+                            {jf.function_description || 'Sin descripción'}
+                          </Typography>
+                          {jf.justification && (
+                            <Typography variant="caption" color="text.secondary"
+                                        sx={{fontStyle: 'italic', display: 'block'}}>
+                              Justif: {jf.justification}
+                            </Typography>
+                          )}
+                          <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1}}>
+                            <Typography variant="caption">
+                              <strong>Horario:</strong>{' '}
+                              {formatOracleTime(jf.starts_at)} - {formatOracleTime(jf.ends_at)}
+                            </Typography>
+                            <Typography variant="caption">
+                              <strong>Frecuencia:</strong> {jf.frequency || '—'}
+                            </Typography>
+                            <Typography variant="caption">
+                              <strong>Tiempo:</strong>{' '}
+                              {jf.expected_time != null ? `${jf.expected_time} h` : '—'}
+                            </Typography>
+                            <Typography variant="caption">
+                              <strong>Extras:</strong> {jf.overtime ? 'Sí' : 'No'}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      ))}
+                    </Stack>
+                  ) : (
                   <TableContainer sx={{mt: 1}}>
                     <Table size="small">
                       <TableHead>
@@ -433,6 +487,7 @@ export default function DeclarationsDetailsModal(
                       </TableBody>
                     </Table>
                   </TableContainer>
+                  )}
                 </Paper>
               )}
 
