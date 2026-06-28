@@ -8,6 +8,7 @@ import PrivateRoute from '../components/PrivateRoute';
 import RoleRoute from '../components/RoleRoute.tsx';
 import {AuthProvider} from '../context/AuthContext';
 import {SnackbarProvider} from '../context/SnackbarContext';
+import {AccessibilityProvider} from '../context/AccessibilityContext';
 import MainLayout from '../layouts/MainLayout';
 import AccessDeniedPage from './pages/AccessDeniedPage.tsx';
 import AreasPage from './pages/admin/AreasPage.tsx';
@@ -34,6 +35,7 @@ function App() {
   return (
     <AuthProvider>
       <SnackbarProvider>
+        <AccessibilityProvider>
         <BrowserRouter>
           <Routes>
 
@@ -74,6 +76,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+        </AccessibilityProvider>
       </SnackbarProvider>
     </AuthProvider>
   );

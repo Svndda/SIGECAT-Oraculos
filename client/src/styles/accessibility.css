@@ -1,0 +1,75 @@
+/*
+ * Global accessibility utility classes toggled on <html> by AccessibilityContext.
+ * Font scaling is applied separately via documentElement.style.fontSize.
+ */
+
+/* --- High contrast --------------------------------------------------------- */
+html.a11y-contrast {
+  --color-background: #000000;
+  --color-surface: #000000;
+  --color-on-surface: #ffffff;
+  --color-text: #ffffff;
+  --color-primary: #ffff00;
+  --color-secondary: #ffff00;
+  --color-outline: #ffffff;
+}
+
+html.a11y-contrast body {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+/* Force readable foreground/background on the common MUI surfaces. */
+html.a11y-contrast .MuiPaper-root,
+html.a11y-contrast .MuiDialog-paper,
+html.a11y-contrast .MuiAppBar-root {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+html.a11y-contrast .MuiTypography-root,
+html.a11y-contrast .MuiInputBase-input,
+html.a11y-contrast .MuiInputLabel-root,
+html.a11y-contrast .MuiFormLabel-root {
+  color: #ffffff !important;
+}
+
+/* --- Grayscale ------------------------------------------------------------- */
+html.a11y-grayscale body {
+  filter: grayscale(1);
+}
+
+/* --- Invert colours -------------------------------------------------------- */
+html.a11y-invert body {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Re-invert media so photos/logos look normal under inverted colours. */
+html.a11y-invert img,
+html.a11y-invert video,
+html.a11y-invert svg.a11y-keep-color {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Grayscale + invert combined. */
+html.a11y-grayscale.a11y-invert body {
+  filter: grayscale(1) invert(1) hue-rotate(180deg);
+}
+
+/* --- Dyslexia-friendly font ------------------------------------------------ */
+html.a11y-dyslexia,
+html.a11y-dyslexia body,
+html.a11y-dyslexia .MuiTypography-root,
+html.a11y-dyslexia .MuiButton-root,
+html.a11y-dyslexia .MuiInputBase-input {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Atkinson Hyperlegible', Verdana, sans-serif !important;
+  letter-spacing: 0.03em;
+  word-spacing: 0.08em;
+}
+
+/* The accessibility widget itself must stay visible under body filters:
+   it is rendered with this class so it can opt out of the inversion. */
+.a11y-widget-root {
+  isolation: isolate;
+}

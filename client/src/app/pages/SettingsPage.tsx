@@ -41,7 +41,9 @@ export default function SettingsPage() {
         const profile = await userService.getProfile();
         setProfileInfo({
           first_name: profile.first_name,
-          last_name: profile.last_name,
+          last_name: [profile.first_last_name, profile.second_last_name]
+            .filter(Boolean)
+            .join(' '),
           email: profile.email,
         });
       } catch (err) {
