@@ -198,7 +198,9 @@ final class DeclarationsController
     try {
       $auth = $this->authService->requireAuth();
       $userId = (string)$auth['user_id'];
-      $isAdmin = $this->authService->requireAdmin();
+      // requireAdmin() throws for non-admins; here we only need a non-throwing
+      // role check so owners can still view their own declaration (see below).
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
       $includeHistory = filter_var(
         $_GET['include_history'] ?? false,
