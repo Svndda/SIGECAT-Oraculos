@@ -61,11 +61,11 @@ final class UpdateJobClassDTO {
     }
 
     if ($this->jobClassCode !== null 
-        && strlen((string)$this->jobClassCode) != 5) {
+        && strlen((string)$this->jobClassCode) > 5) {
       throw new ApiException(
         ErrorType::invalidField(
           'job_class_code',
-          'El código de la clase ocupacional debe tener 5 números'
+          'El código de la clase ocupacional  no puede exceder los 5 dígitos'
         )
       );
     }

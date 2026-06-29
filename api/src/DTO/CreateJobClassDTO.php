@@ -58,11 +58,11 @@ final class CreateJobClassDTO {
       throw new ApiException(ErrorType::missingField('job_class_code'));
     }
 
-    if (strlen((string)$this->jobClassCode) != 5) {
+    if (strlen((string)$this->jobClassCode) > 5) {
       throw new ApiException(
         ErrorType::invalidField(
           'jobClassCode',
-          'El código de la clase ocupacional debe tener 5 números'
+          'El código de la clase ocupacional no puede exceder los 5 dígitos'
         )
       );
     }
