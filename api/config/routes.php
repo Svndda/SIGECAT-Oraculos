@@ -39,6 +39,11 @@ return [
 
   // Occupational class routes
   ['method' => 'GET', 'path' => '/job-classes', 'controller' => 'JobClassController', 'action' => 'index'],
+  ['method' => 'POST', 'path' => '/job-class', 'controller' => 'JobClassController', 'action' => 'create'],
+  ['method' => 'GET', 'path' => '/job-class', 'controller' => 'JobClassController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/job-class/{id}', 'controller' => 'JobClassController', 'action' => 'show'],
+  ['method' => 'PATCH', 'path' => '/job-class/{id}', 'controller' => 'JobClassController', 'action' => 'update'],
+  ['method' => 'DELETE', 'path' => '/job-class/{id}', 'controller' => 'JobClassController', 'action' => 'delete'],
 
   // Declaration routes
   ['method' => 'POST', 'path' => '/declarations', 'controller' => 'DeclarationsController', 'action' => 'create'],
