@@ -150,4 +150,20 @@ final class Request
   {
     return getallheaders();
   }
+
+  /**
+   * Best-effort client IP for the current request, honouring the first hop of
+   * X-Forwarded-For when the API sits behind a proxy. Falls back to a constant
+   * when no address is available (e.g. CLI) so callers always get a usable key.
+   *
+   * @return string
+   */
+  public static function clientIp(): string
+  {
+    $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+    if ($forwarded !== '') {
+      return trim(explode(',', $forwarded)[0]);
+    }
+    return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+  }
 }

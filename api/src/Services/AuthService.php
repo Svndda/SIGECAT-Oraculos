@@ -25,6 +25,16 @@ final class AuthService
 {
   private const MAX_FAILED_ATTEMPTS = 5;
 
+  /** A locked account auto-unlocks once this many seconds pass with no new failed attempt. */
+  private const LOCKOUT_WINDOW_SECONDS = 900;
+
+  /**
+   * Well-formed bcrypt hash verified against when the email is unknown, so a
+   * non-existent account costs the same time as a real one and cannot be
+   * distinguished by response timing.
+   */
+  private const DUMMY_PASSWORD_HASH = '$2y$12$O91HmhXywDDSk01KQ7hAxuvKzC98h4vlYHkZ44hajmVJ.QzL9hhny';
+
   private UserRepository $userRepository;
   private AuthRepository $authRepository;
 
@@ -55,6 +65,9 @@ final class AuthService
     $user = $this->userRepository->findByEmail($dto->email, 'active');
 
     if ($user === null) {
+      // Spend the same time as a real verification so an unknown email cannot be
+      // told apart from a wrong password by how long the response takes.
+      password_verify($dto->password, self::DUMMY_PASSWORD_HASH);
       throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'), 401);
     }
 
@@ -64,12 +77,19 @@ final class AuthService
       throw new ApiException(ErrorType::from('ACCOUNT_INACTIVE', 'La cuenta está desactivada'), 403);
     }
 
-    if ((int) $user['failed_logging_attempts'] >= self::MAX_FAILED_ATTEMPTS) {
-      Logger::warning('security', 'Intento de acceso a cuenta bloqueada', 'auth.login_locked', [
-        'user_id' => $userId,
-        'email'   => $dto->email,
-      ]);
-      throw new ApiException(ErrorType::from('ACCOUNT_LOCKED', 'La cuenta está bloqueada por demasiados intentos fallidos'), 403);
+    $failedAttempts = (int) $user['failed_logging_attempts'];
+    if ($failedAttempts >= self::MAX_FAILED_ATTEMPTS) {
+      if ($this->lockoutExpired($user['last_failed_attempt_at'] ?? null)) {
+        // Cool-down elapsed: clear the lock and let this attempt proceed.
+        $this->userRepository->resetFailedAttempts($userId);
+        $failedAttempts = 0;
+      } else {
+        Logger::warning('security', 'Intento de acceso a cuenta bloqueada', 'auth.login_locked', [
+          'user_id' => $userId,
+          'email'   => $dto->email,
+        ]);
+        throw new ApiException(ErrorType::from('ACCOUNT_LOCKED', 'La cuenta está bloqueada por demasiados intentos fallidos'), 403);
+      }
     }
 
     if (!password_verify($dto->password, (string) $user['password_hash'])) {
@@ -304,6 +324,24 @@ final class AuthService
   private function hashToken(string $rawToken): string
   {
     return hash('sha256', $rawToken, true);
+  }
+
+  /**
+   * Whether a lockout has cooled down: true when there is no recorded last
+   * failed attempt, or it happened more than LOCKOUT_WINDOW_SECONDS ago.
+   *
+   * @param mixed $lastFailedAt Oracle timestamp string, or null.
+   */
+  private function lockoutExpired(mixed $lastFailedAt): bool
+  {
+    if ($lastFailedAt === null || $lastFailedAt === '') {
+      return true;
+    }
+    $timestamp = strtotime((string) $lastFailedAt);
+    if ($timestamp === false) {
+      return false;
+    }
+    return (time() - $timestamp) >= self::LOCKOUT_WINDOW_SECONDS;
   }
 
   /**

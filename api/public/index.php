@@ -25,6 +25,9 @@ $safeRequire = function (string $path) {
 // CORS Rules
 $safeRequire($configPath . 'cors.php');
 
+// Baseline security response headers
+$safeRequire($configPath . 'headers.php');
+
 // Initial configurations
 $safeRequire($configPath . 'init.php');
 

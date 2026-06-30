@@ -11,6 +11,7 @@ use Http\ErrorType;
 use Http\Request;
 use Http\Response;
 use Services\AuthService;
+use Services\RateLimiter;
 use PDO;
 
 /**
@@ -28,7 +29,12 @@ use PDO;
  */
 final class AuthController
 {
+  /** Allowed login attempts per IP within the window before a 429. */
+  private const LOGIN_MAX_ATTEMPTS = 10;
+  private const LOGIN_WINDOW_SECONDS = 300;
+
   private AuthService $authService;
+  private RateLimiter $rateLimiter;
 
   /**
    * AuthController constructor.
@@ -38,6 +44,7 @@ final class AuthController
   public function __construct(private PDO $pdo)
   {
     $this->authService = new AuthService($this->pdo);
+    $this->rateLimiter = new RateLimiter($this->pdo);
   }
 
   /**
@@ -51,6 +58,13 @@ final class AuthController
   public function login(): void
   {
     try {
+      $this->rateLimiter->enforce(
+        'auth.login',
+        Request::clientIp(),
+        self::LOGIN_MAX_ATTEMPTS,
+        self::LOGIN_WINDOW_SECONDS
+      );
+
       $data = Request::parseJsonRequest();
       $dto = LoginUserDTO::fromArray($data);
       $result = $this->authService->login($dto);
