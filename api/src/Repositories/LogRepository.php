@@ -49,13 +49,13 @@ final class LogRepository extends Repository
            (log_id, log_level, category, action, message, context,
             user_id, ip_address, http_method, http_path, status_code, created_at)
          VALUES
-           (:id, :level, :category, :action, :message, :context,
+           (:id, :log_level, :category, :action, :message, :context,
             :user_id, :ip, :method, :path, :status, CURRENT_TIMESTAMP)'
       );
 
       $stmt->execute([
-        ':id'       => UlidGenerator::generate(),
-        ':level'    => $entry['level'],
+        ':id'        => UlidGenerator::generate(),
+        ':log_level' => $entry['level'],
         ':category' => $entry['category'],
         ':action'   => $entry['action'],
         ':message'  => $entry['message'],
@@ -154,8 +154,8 @@ final class LogRepository extends Repository
     $params = [];
 
     if (!empty($filters['level'])) {
-      $conditions[] = 'log_level = :level';
-      $params[':level'] = $filters['level'];
+      $conditions[] = 'log_level = :log_level';
+      $params[':log_level'] = $filters['level'];
     }
     if (!empty($filters['category'])) {
       $conditions[] = 'category = :category';
