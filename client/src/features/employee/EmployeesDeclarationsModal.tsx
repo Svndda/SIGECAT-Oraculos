@@ -52,29 +52,42 @@ type FunctionLabel = {
   chipColor: 'primary' | 'secondary' | 'warning' | 'default';
 };
 
-/**
- * Sums the expected_time of every declared job function.
- * expected_time is treated as hours (weekly basis).
- */
 function calcTotalDeclaredHours(jobFunctions: JobFunction[]): number {
-  return jobFunctions.reduce((sum, jf) => sum + (jf.expected_time ?? 0), 0);
+  let total = 0;
+  for (const jf of jobFunctions) {
+    if (!jf.starts_at || !jf.ends_at) continue;
+    const start = parseOracleToTimeInput(jf.starts_at);
+    const end = parseOracleToTimeInput(jf.ends_at);
+    if (!start || !end) continue;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+    if (dailyHours < 0) dailyHours += 24;
+    let multiplier = 0;
+    const freq = jf.frequency?.toLowerCase() || '';
+    if (freq.includes('diario') || freq === 'diario') multiplier = 5;
+    else if (freq.includes('semanal') || freq === 'semanal') multiplier = 1;
+    else if (freq.includes('quincenal')) multiplier = 2;
+    else if (freq.includes('mensual')) multiplier = 4;
+    else if (freq.includes('anual')) multiplier = 0.02;
+    else multiplier = 1; // por defecto semanal
+    total += dailyHours * multiplier;
+  }
+  return Math.round(total * 100) / 100;
 }
 
-/**
- * Derives the weekly shift hours from the Oracle-format start/end strings.
- * Assumes a 5-day work week. Returns 0 when times cannot be parsed.
- */
 function calcWeeklyShiftHours(
   startOracle: string | undefined,
   endOracle: string | undefined,
 ): number {
   if (!startOracle || !endOracle) return 0;
-  const startHHMM = parseOracleToTimeInput(startOracle); // "HH:MM"
+  const startHHMM = parseOracleToTimeInput(startOracle);
   const endHHMM = parseOracleToTimeInput(endOracle);
   if (!startHHMM || !endHHMM) return 0;
   const [sh, sm] = startHHMM.split(':').map(Number);
   const [eh, em] = endHHMM.split(':').map(Number);
-  const dailyHours = Math.max(0, (eh * 60 + em - (sh * 60 + sm)) / 60);
+  let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+  if (dailyHours < 0) dailyHours += 24;
   return dailyHours * 5;
 }
 
@@ -113,7 +126,6 @@ export default function EmployeeDeclarationDetailModal(
 
     const originalStyle = element.style.cssText;
 
-    // Force the view to expand
     element.style.overflow = "visible";
     element.style.maxHeight = "none";
     element.style.height = "auto";
@@ -148,20 +160,42 @@ export default function EmployeeDeclarationDetailModal(
   };
 
   useEffect(() => {
-    const jobId = declaration?.job?.job_id;
+    let isMounted = true;
+    const jobId = declaration?.job_position?.job_id;
+
     if (!open || !jobId) {
-      setOfficialFnsForJob([]);
+      setTimeout(() => {
+        if (isMounted) setOfficialFnsForJob([]);
+      }, 0);
       return;
     }
-    setLoadingOfficialFns(true);
+
+    setTimeout(() => {
+      if (isMounted) setLoadingOfficialFns(true);
+    }, 0);
+
     officialFunctionService
       .getOfficialFunctions({job_id: jobId, limit: 100})
-      .then((r) => setOfficialFnsForJob(
-        r.data.filter((f) => f.is_deleted === 0))
-      )
-      .catch(() => setOfficialFnsForJob([]))
-      .finally(() => setLoadingOfficialFns(false));
-  }, [open, declaration?.job?.job_id]);
+      .then((r) => {
+        if (isMounted) {
+          setOfficialFnsForJob(r.data.filter((f) => !f.is_deleted));
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setOfficialFnsForJob([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingOfficialFns(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, declaration?.job_position?.job_id]);
 
   if (!declaration && !loading) return null;
 
@@ -249,7 +283,6 @@ export default function EmployeeDeclarationDetailModal(
         </Box>
       ) : (
         <Stack spacing={4}>
-          {/* Position and Job Hours */}
           <Paper
             elevation={0}
             sx={{
@@ -261,7 +294,6 @@ export default function EmployeeDeclarationDetailModal(
             }}
           >
             <Grid container spacing={3}>
-              {/* job info */}
               <Grid size={{xs: 12, md: 6}}>
                 <Stack spacing={1.5}>
                   <Typography
@@ -308,7 +340,6 @@ export default function EmployeeDeclarationDetailModal(
                 </Stack>
               </Grid>
 
-              {/* schedule and creation date */}
               <Grid size={{xs: 12, md: 6}}>
                 <Stack spacing={2}>
                   <Box>
@@ -353,7 +384,6 @@ export default function EmployeeDeclarationDetailModal(
             </Grid>
           </Paper>
 
-          {/* Justification */}
           <Paper
             elevation={0}
             sx={{
@@ -385,7 +415,6 @@ export default function EmployeeDeclarationDetailModal(
                 borderColor: 'divider',
               }}
             >
-              {/* Section header + weekly hours */}
               <Stack
                 direction={{xs: 'column', sm: 'row'}}
                 justifyContent="space-between"
@@ -402,7 +431,6 @@ export default function EmployeeDeclarationDetailModal(
                   Funciones Declaradas ({job_functions.length})
                 </Typography>
 
-                {/* Weekly hours badge */}
                 <Stack direction="row" alignItems="center" spacing={1}
                        flexWrap="wrap">
                   <Typography variant="caption" color="text.secondary">
@@ -427,7 +455,6 @@ export default function EmployeeDeclarationDetailModal(
                       color={isHoursExceeded ? 'error.main' : 'text.primary'}
                     >
                       {Number(totalDeclaredHours)}
-
                     </Typography>
                     {shiftHoursKnown && (
                       <Typography variant="body2" color="text.secondary"
@@ -595,7 +622,6 @@ export default function EmployeeDeclarationDetailModal(
             </Paper>
           )}
 
-          {/* Status history */}
           {status_history && status_history.length > 0 && (
             <Paper
               elevation={0}
