@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Pagination } from '@mui/material';
 import type { Job } from '../../../services/jobService';
 import { jobService } from '../../../services/jobService';
@@ -51,34 +51,28 @@ export default function JobsPage() {
       .catch(() => {});
   }, []);
 
-  const loadJobs = (isSubscribed: boolean) => {
+  const loadJobs = useCallback(() => {
     setLoading(true);
-    jobService.getJobsPage({
+    return jobService.getJobsPage({
       page,
       limit: LIMIT,
       filter: appliedFilter,
       status: 'active'
     })
       .then((res) => {
-        if (!isSubscribed) return;
         setJobs(res.data ?? []);
         setMeta(res.meta);
       })
       .catch((error) => {
-        if (!isSubscribed) return;
         const e = error as ServiceError;
         snackbar.error(e.message ?? 'Error del servidor al cargar cargos.');
       })
-      .finally(() => {
-        if (isSubscribed) setLoading(false);
-      });
-  };
+      .finally(() => setLoading(false));
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    loadJobs(isSubscribed);
-    return () => { isSubscribed = false; };
-  }, [page, appliedFilter]);
+    void loadJobs();
+  }, [loadJobs]);
 
   const totalPages = meta?.total_pages ?? 1;
 
@@ -180,7 +174,7 @@ export default function JobsPage() {
         await jobService.createJob(payload);
       }
       closeModal();
-      loadJobs(true);
+      loadJobs();
       snackbar.success(editTarget ? 'Puesto actualizado exitosamente.' : 'Puesto creado exitosamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -196,7 +190,7 @@ export default function JobsPage() {
     try {
       await jobService.deleteJob(deleteTarget.job_id);
       setDeleteTarget(null);
-      loadJobs(true);
+      loadJobs();
       snackbar.success('Puesto eliminado exitosamente.');
     } catch (error) {
       const e = error as ServiceError;

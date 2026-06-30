@@ -158,7 +158,7 @@ export default function EmployeeFormPage() {
         shift_ends_at: times.end,
       });
       navigate('/work-hours', {state: {declarationId: res?.declaration_id}});
-    } catch (err) {
+    } catch {
       setError('Error al crear la declaración. Intente de nuevo.');
     }
   };
