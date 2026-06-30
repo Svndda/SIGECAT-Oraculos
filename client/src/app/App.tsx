@@ -30,6 +30,7 @@ import SettingsPage from './pages/SettingsPage.tsx';
 import WorkHoursPage from './pages/WorkHoursPage';
 import EmployeeRecordPage from "./pages/EmployeeRecordPage.tsx";
 import DeclarationsPage from "./pages/admin/DeclarationsPage";
+import LogsPage from './pages/admin/LogsPage.tsx';
 
 function App() {
   return (
@@ -71,6 +72,7 @@ function App() {
                   <Route path="plazas" element={<JobPositionsPage/>}/>
                   <Route path="usuarios" element={<UsersPage/>}/>
                   <Route path="declaraciones" element={<DeclarationsPage/>}/>
+                  <Route path="registros" element={<LogsPage/>}/>
                 </Route>
               </Route>
             </Route>
