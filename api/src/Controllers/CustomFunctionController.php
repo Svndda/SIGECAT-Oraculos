@@ -54,20 +54,25 @@ class CustomFunctionController
   /**
    * GET /custom-functions
    * Admins list every user's custom functions (read-only view); other users
-   * only their own. Query params: page, limit, filter.
+   * only their own. Passing `mine=true` forces the caller's own scope even for
+   * admins (used by the declaration flow, where only owned functions are
+   * reportable). Query params: page, limit, filter, mine.
    */
   public function index(): void
   {
     try {
       $auth = $this->authService->requireAuth();
       $isAdmin = ($auth['role'] ?? '') === 'admin';
+      $onlyMine = filter_var($_GET['mine'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
       $page   = max(1, (int) ($_GET['page'] ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit'] ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
 
+      $ownerScope = ($isAdmin && !$onlyMine) ? null : (string) $auth['user_id'];
+
       $result = $this->customFunctionService->getCustomFunctions(
-        $page, $limit, $filter, $isAdmin ? null : (string) $auth['user_id']
+        $page, $limit, $filter, $ownerScope
       );
 
       Response::success($result['data'], $result['meta'], 200);
