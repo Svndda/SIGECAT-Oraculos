@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Pagination } from '@mui/material';
 import {
   officialFunctionService,
@@ -61,34 +61,28 @@ export default function FunctionsPage() {
       .catch(() => {});
   }, []);
 
-  const loadFunctions = (isSubscribed: boolean) => {
+  const loadFunctions = useCallback(() => {
     setLoading(true);
-    officialFunctionService.getOfficialFunctions({
+    return officialFunctionService.getOfficialFunctions({
       page,
       limit: LIMIT,
       filter: appliedFilter,
       status: 'active'
     })
       .then((res) => {
-        if (!isSubscribed) return;
         setFunctions(res.data ?? []);
         setMeta(res.meta);
       })
       .catch((error) => {
-        if (!isSubscribed) return;
         const e = error as ServiceError;
         snackbar.error(e.message ?? 'Error del servidor al cargar funciones.');
       })
-      .finally(() => {
-        if (isSubscribed) setLoading(false);
-      });
-  };
+      .finally(() => setLoading(false));
+  }, [page, appliedFilter, snackbar]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    loadFunctions(isSubscribed);
-    return () => { isSubscribed = false; };
-  }, [page, appliedFilter]);
+    void loadFunctions();
+  }, [loadFunctions]);
 
   const totalPages = meta?.total_pages ?? 1;
 
@@ -188,7 +182,7 @@ export default function FunctionsPage() {
         snackbar.success('Función creada exitosamente.');
       }
       closeModal();
-      loadFunctions(true);
+      loadFunctions();
     } catch (error) {
       const e = error as ServiceError;
       // The function is used by one or more declarations: ask the admin to
@@ -213,7 +207,7 @@ export default function FunctionsPage() {
         confirm: true,
       });
       setPendingUpdate(null);
-      loadFunctions(true);
+      loadFunctions();
       snackbar.success('Función actualizada exitosamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -230,7 +224,7 @@ export default function FunctionsPage() {
     try {
       await officialFunctionService.deleteOfficialFunction(deleteTarget.id);
       setDeleteTarget(null);
-      loadFunctions(true);
+      loadFunctions();
       snackbar.success('Función eliminada exitosamente.');
     } catch (error) {
       const e = error as ServiceError;

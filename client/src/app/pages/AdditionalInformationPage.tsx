@@ -21,7 +21,7 @@ import DeclarationRestTimes from '../../features/employee/DeclarationRestTimes';
 import {useSnackbar} from '../../context/SnackbarContext';
 
 function parseTimestamp(s: string): Date {
-  let clean = s.replace('T', ' ');
+  const clean = s.replace('T', ' ');
   let d = new Date(clean);
   if (!isNaN(d.getTime())) return d;
 
