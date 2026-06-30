@@ -32,6 +32,10 @@ yarn-error.log*
 .env.build
 .vercel
 
+# Keep committed templates (override the .env.* ignore above)
+!.env.example
+!**/.env.example
+
 # OCI configuration (contains sensitive credentials)
 api/config/oci_config.php
 
