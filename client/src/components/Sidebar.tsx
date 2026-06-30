@@ -29,7 +29,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ModalAlert from './modals/ModalAlert';
-import {DocumentScannerRounded, Engineering} from "@mui/icons-material";
+import {DocumentScannerRounded, Engineering, ReceiptLongRounded} from "@mui/icons-material";
 
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
@@ -51,6 +51,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Funciones', icon: <AssignmentIcon fontSize="small" />, route: '/funciones', adminOnly: true },
   { label: 'Funciones Personalizadas', icon: <AssignmentIndIcon fontSize="small" />, route: '/funciones-personalizadas', adminOnly: true },
   { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
+  { label: 'Registros', icon: <ReceiptLongRounded fontSize="small" />, route: '/registros', adminOnly: true },
 ];
 
 interface SidebarProps {
