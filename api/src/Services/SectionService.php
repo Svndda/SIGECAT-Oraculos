@@ -60,6 +60,11 @@ class SectionService {
     }
 
     $this->sectionRepository->create($dto, $createdBy);
+
+    Logger::info('section', 'Sección creada', 'section.create', [
+      'name'       => $dto->name,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -84,6 +89,11 @@ class SectionService {
     }
 
     $this->sectionRepository->update($sectionId, $dto);
+
+    Logger::info('section', 'Sección actualizada', 'section.update', [
+      'section_id' => $sectionId,
+      'name'       => $dto->name,
+    ]);
   }
 
   /**
@@ -156,6 +166,11 @@ class SectionService {
     }
 
     $this->sectionRepository->delete($sectionId, $deletedBy);
+
+    Logger::warning('section', 'Sección eliminada', 'section.delete', [
+      'section_id' => $sectionId,
+      'deleted_by' => $deletedBy,
+    ]);
   }
 
   /**
@@ -191,5 +206,9 @@ class SectionService {
     }
 
     $this->sectionRepository->restoreSection($sectionId);
+
+    Logger::info('section', 'Sección restaurada', 'section.restore', [
+      'section_id' => $sectionId,
+    ]);
   }
 }

@@ -135,6 +135,10 @@ class UserService
 
     $hashed = password_hash($newPassword, PASSWORD_BCRYPT);
     $this->userRepository->updatePasswordById($userId, $hashed);
+
+    Logger::info('security', 'Contraseña actualizada por el usuario', 'user.change_password', [
+      'user_id' => $userId,
+    ]);
   }
 
   /**

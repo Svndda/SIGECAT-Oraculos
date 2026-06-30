@@ -64,6 +64,12 @@ class UnitService {
 
     $unitId = $this->unitRepository->createUnit($createdBy, $dto);
 
+    Logger::info('unit', 'Unidad creada', 'unit.create', [
+      'unit_id'    => $unitId,
+      'name'       => $dto->name,
+      'created_by' => $createdBy,
+    ]);
+
     return $this->getUnitById($unitId);
   }
 
@@ -92,6 +98,11 @@ class UnitService {
 
     $this->unitRepository->updateUnit($unitId, $dto);
 
+    Logger::info('unit', 'Unidad actualizada', 'unit.update', [
+      'unit_id' => $unitId,
+      'name'    => $dto->name,
+    ]);
+
     return $this->getUnitById($unitId);
   }
 
@@ -111,6 +122,11 @@ class UnitService {
     }
 
     $this->unitRepository->deleteUnit($unitId, $deletedBy);
+
+    Logger::warning('unit', 'Unidad eliminada', 'unit.delete', [
+      'unit_id'    => $unitId,
+      'deleted_by' => $deletedBy,
+    ]);
   }
 
   /**
@@ -145,6 +161,10 @@ class UnitService {
     }
 
     $this->unitRepository->restoreUnit($unitId);
+
+    Logger::info('unit', 'Unidad restaurada', 'unit.restore', [
+      'unit_id' => $unitId,
+    ]);
   }
 
   /**

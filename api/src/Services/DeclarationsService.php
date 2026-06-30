@@ -461,6 +461,11 @@ final class DeclarationsService
       $declarationId, $dto->justification
     );
 
+    Logger::info('declaration', 'Justificación de declaración actualizada', 'declaration.update_justification', [
+      'declaration_id' => $declarationId,
+      'actor_id'       => $userId,
+    ]);
+
     return [
       'declaration_id' => $declarationId,
       'justification' => $dto->justification
