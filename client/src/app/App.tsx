@@ -17,6 +17,7 @@ import JobsPage from './pages/admin/JobPage.tsx';
 import JobPositionsPage from './pages/admin/JobPositionsPage';
 import FunctionsPage from './pages/admin/FunctionsPage.tsx';
 import CustomFunctionsPage from './pages/admin/CustomFunctionsPage.tsx';
+import LicenseTypesPage from './pages/admin/LicenseTypesPage.tsx';
 import SectionsPage from './pages/admin/SectionsPage.tsx';
 import UnitsPage from './pages/admin/UnitsPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -69,6 +70,7 @@ function App() {
                   <Route path="funciones" element={<FunctionsPage/>}/>
                   <Route path="funciones-personalizadas"
                          element={<CustomFunctionsPage/>}/>
+                  <Route path="tipos-de-licencia" element={<LicenseTypesPage/>}/>
                   <Route path="plazas" element={<JobPositionsPage/>}/>
                   <Route path="usuarios" element={<UsersPage/>}/>
                   <Route path="declaraciones" element={<DeclarationsPage/>}/>
