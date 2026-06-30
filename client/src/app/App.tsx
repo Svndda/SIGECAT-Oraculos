@@ -6,9 +6,9 @@ import {
 
 import PrivateRoute from '../components/PrivateRoute';
 import RoleRoute from '../components/RoleRoute.tsx';
-import {AuthProvider} from '../context/AuthContext';
-import {SnackbarProvider} from '../context/SnackbarContext';
-import {AccessibilityProvider} from '../context/AccessibilityContext';
+import {AuthProvider} from '../context/AuthProvider';
+import {SnackbarProvider} from '../context/SnackbarProvider';
+import {AccessibilityProvider} from '../context/AccessibilityProvider';
 import MainLayout from '../layouts/MainLayout';
 import AccessDeniedPage from './pages/AccessDeniedPage.tsx';
 import AreasPage from './pages/admin/AreasPage.tsx';
