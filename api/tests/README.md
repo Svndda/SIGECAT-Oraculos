@@ -1,52 +1,53 @@
 # Pruebas — Backend SIGECAT
 
-Tests para los casos del documento de especificación. Cada `tcXX_*.php` es un script PHP autónomo que imprime PASS/FAIL en colores.
+Las pruebas se dividen en dos suites según lo que necesitan para correr:
 
-## Mapeo TC → archivo
+- **Unitarias (PHPUnit)** — `tests/Unit/`. Ejercen la lógica de dominio (DTOs:
+  validación y mapeo de filas de Oracle) sin servidor ni base de datos. Corren
+  en cualquier entorno, incluido CI.
+- **Integración (HTTP)** — `tests/tc*.php`. Scripts autónomos que pegan contra
+  la API levantada y la base de datos real; imprimen PASS/FAIL en colores.
 
-| TC    | Archivo                           | Tipo            | Requiere server |
-|-------|-----------------------------------|-----------------|-----------------|
-| TC-01 | `tc01_login_valid.php`            | HTTP end-to-end | Sí              |
-| TC-02 | `tc02_login_invalid.php`          | HTTP end-to-end | Sí              |
-| TC-03 | `tc03_logout.php`                 | HTTP end-to-end | Sí              |
-| TC-04 | `tc04_create_user.php`            | HTTP end-to-end | Sí              |
-| TC-05 | `tc05_dto_invalid_email.php`     | Unitario (DTO)  | No              |
-| TC-06 | `tc06_dto_weak_password.php`     | Unitario (DTO)  | No              |
-| TC-07 | `tc07_sql_injection.php`          | Unitario (DB)   | No (sí DB)      |
-| TC-08 | `tc08_invalid_json.php`           | HTTP end-to-end | Sí              |
-| TC-09 | `tc09_area_dto_validation.php`           | Unitario (DTO) | No |
-| TC-10 | `tc10_area_response_dto.php`             | Unitario (DTO) | No |
-| TC-11 | `tc11_department_dto_validation.php`     | Unitario (DTO) | No |
-| TC-12 | `tc12_section_dto_validation.php`        | Unitario (DTO) | No |
-| TC-13 | `tc13_unit_dto_validation.php`           | Unitario (DTO) | No |
-| TC-14 | `tc14_job_position_dto_validation.php`   | Unitario (DTO) | No |
-| TC-15 | `tc15_job_position_parent_mapping.php`   | Unitario (DTO) | No |
-| TC-16 | `tc16_job_position_update_dto.php`       | Unitario (DTO) | No |
-| TC-17 | `tc17_unit_response_dto.php`             | Unitario (DTO) | No |
+## Suite unitaria (PHPUnit)
 
-## Pruebas de entidades (TC-09..17)
+```bash
+cd api
+composer install
+vendor/bin/phpunit
+```
 
-Cubren la lógica de negocio de las entidades organizativas (área, departamento,
-sección, unidad, plaza) a nivel de DTO — validación y mapeo de respuesta — sin
-necesidad de servidor ni base de datos. Incluyen regresiones de los bugs
-corregidos recientemente:
+Cubre la lógica de las entidades organizativas (área, departamento, sección,
+unidad, plaza) y de usuarios/contraseñas a nivel de DTO. Incluye regresiones de
+bugs corregidos:
 
-- **TC-10** fija el contrato `area_id` del `AreaResponseDTO` (bug "Error al
-  eliminar / El recurso 'Área' no pudo ser localizado").
-- **TC-14/TC-15** cubren la regla "una plaza pertenece a exactamente una
-  entidad", detrás de los errores `ORA-02290` / `ORA-01722` de creación de plazas.
-- **TC-17** verifica la normalización de claves Oracle en el listado de unidades
-  (bug del select de entidad que no se podía elegir).
+- `AreaResponseDTOTest` fija el contrato `area_id` (bug "El recurso 'Área' no
+  pudo ser localizado").
+- `CreateJobPositionDTOTest` cubre la regla "una plaza pertenece a exactamente
+  una entidad" y el mapeo de la columna FK (errores `ORA-02290` / `ORA-01722`).
+- `UnitResponseDTOTest` verifica la normalización de claves Oracle del listado
+  de unidades.
 
-## Precondiciones
+## Suite de integración (HTTP)
 
-1. Wallet de Oracle accesible. Si corrés desde `client/` con `npm run api`, ya está. Si lanzás los tests desde otro contexto, exportá:
+| Archivo                    | Cubre                              |
+|----------------------------|------------------------------------|
+| `tc01_login_valid.php`     | Login con credenciales válidas     |
+| `tc02_login_invalid.php`   | Login con credenciales inválidas   |
+| `tc03_logout.php`          | Cierre de sesión                   |
+| `tc04_create_user.php`     | Registro de usuario (admin)        |
+| `tc07_sql_injection.php`   | Entrada maliciosa neutralizada     |
+| `tc08_invalid_json.php`    | Manejo de JSON malformado          |
+
+### Precondiciones
+
+1. Wallet de Oracle accesible. Si corrés desde `client/` con `npm run api`, ya
+   está. Si no, exportá:
    ```bash
    export TNS_ADMIN="$PWD/../instantclient-basic-linux.x64-21.12.0.0.0dbru.el9/instantclient_21_12/network/admin"
    ```
    El `bootstrap.php` intenta setearlo automáticamente si no está.
 
-2. Para los tests de HTTP (TC-01..04, TC-08) el API tiene que estar arriba en `localhost:8000`:
+2. La API tiene que estar arriba en `localhost:8000`:
    ```bash
    cd client && npm run api
    ```
@@ -65,22 +66,12 @@ corregidos recientemente:
    const TEST_ADMIN_PASSWORD = '<contraseña-del-seed>';
    ```
 
-## Cómo correr
+### Cómo correr
 
-### Todos
 ```bash
 cd api
-php tests/run_all.php
+php tests/run_all.php          # todos
+php tests/tc01_login_valid.php # uno solo
 ```
 
-### Uno solo
-```bash
-cd api
-php tests/tc05_dto_invalid_email.php
-```
-
-## Códigos de salida
-
-- `0` — pasó
-- `1` — falló (algún assert)
-- `2` — saltado (servidor no disponible)
+Códigos de salida: `0` pasó · `1` falló · `2` saltado (servidor no disponible).
