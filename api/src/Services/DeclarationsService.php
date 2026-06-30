@@ -215,7 +215,7 @@ final class DeclarationsService
 
       $job = $this->jobRepository->findById($jobPosition['job_id']);
       if ($job !== null) {
-        $item['job'] = $job;
+        $result['job'] = $job;
       }
     }
 
