@@ -1,107 +1,106 @@
 # SIGECAT
 
-Sistema de gestión de cargas de trabajo y declaraciones de jornada para la
-Universidad de Costa Rica. Permite que los funcionarios declaren las funciones,
-licencias y tiempos de descanso de su jornada, y que el personal administrativo
-gestione la estructura organizacional (áreas, departamentos, secciones,
-unidades, cargos y plazas) y los catálogos asociados.
+Workload and work-shift declaration management system for the University of
+Costa Rica. Employees declare the functions, licenses and rest periods of their
+shift, while administrative staff manage the organizational structure (areas,
+departments, sections, units, jobs and positions) and the related catalogues.
 
-## Arquitectura
+## Architecture
 
-El proyecto es un monorepo con dos componentes desplegables de forma
-independiente:
+The project is a monorepo with two independently deployable components:
 
-- **`client/`** — SPA en React 19 + TypeScript, construida con Vite y Material
-  UI. Consume la API por HTTP (Axios) y exporta declaraciones a PDF.
-- **`api/`** — API REST en PHP 8.4 sobre Oracle Database, sin framework. Usa un
-  enrutador propio, controladores delgados, servicios para la lógica de negocio
-  y repositorios con sentencias preparadas (PDO/OCI).
+- **`client/`** — React 19 + TypeScript SPA, built with Vite and Material UI.
+  Talks to the API over HTTP (Axios) and exports declarations to PDF.
+- **`api/`** — Framework-less REST API in PHP 8.4 on Oracle Database. It uses a
+  small custom router, thin controllers, services for business logic, and
+  repositories backed by prepared statements (PDO/OCI).
 
-La autenticación es por token (Bearer en `Authorization`, refresh token en el
-cuerpo); el frontend guarda los tokens en `sessionStorage`. Los roles son
-`admin` y `employee`.
+Authentication is token-based (Bearer in `Authorization`, refresh token in the
+body); the frontend keeps tokens in `sessionStorage`. The roles are `admin` and
+`employee`.
 
-## Estructura del repositorio
+## Repository layout
 
 ```
 client/                 SPA (React + TypeScript + Vite)
-  src/features/         Vistas por dominio (admin, employee)
-  src/services/         Clientes HTTP de la API
-api/                    API REST (PHP + Oracle)
-  src/Controllers/      Capa HTTP
-  src/Services/         Lógica de negocio
-  src/Repositories/     Acceso a datos (PDO, sentencias preparadas)
-  config/routes.php     Definición de rutas
-  tests/                Suite de pruebas (ver api/tests/README.md)
-docs/                   Manual de usuario y notas de diseño
-SIGECAT-DB-*.sql        Esquema y migraciones de la base de datos
+  src/features/         Domain views (admin, employee)
+  src/services/         API HTTP clients
+api/                    REST API (PHP + Oracle)
+  src/Controllers/      HTTP layer
+  src/Services/         Business logic
+  src/Repositories/     Data access (PDO, prepared statements)
+  config/routes.php     Route definitions
+  tests/                Test suite (see api/tests/README.md)
+docs/                   User manual and design notes
+SIGECAT-DB-*.sql        Database schema and migrations
 ```
 
-## Requisitos
+## Requirements
 
 - Node.js 20+
-- PHP 8.4 con la extensión `pdo_oci`
-- Oracle Instant Client 21+ y el wallet de conexión a la base de datos
+- PHP 8.4 with the `pdo_oci` extension
+- Oracle Instant Client 21+ and the database connection wallet
 
-La extensión `pdo_oci` se removió del núcleo de PHP en 8.4; el script
-`setup-pdo-oci.sh` compila e instala la versión de PECL. El Instant Client, el
-wallet y `config/oci_config.php` son locales y no se versionan (contienen
-credenciales).
+`pdo_oci` was removed from PHP core in 8.4; the `setup-pdo-oci.sh` script builds
+and installs the PECL version. The Instant Client, the wallet and
+`config/oci_config.php` are local and not versioned (they hold credentials).
 
-## Puesta en marcha
+## Getting started
 
-Instalar dependencias:
+Install dependencies:
 
 ```bash
 cd client && npm install
 cd ../api && composer install
 ```
 
-Levantar frontend y API a la vez (desde `client/`):
+Run the frontend and API together (from `client/`):
 
 ```bash
 npm run dev:full
 ```
 
-O por separado:
+Or separately:
 
 ```bash
-npm run dev   # SPA en http://localhost:5173
-npm run api   # API en http://localhost:8000
+npm run dev   # SPA at http://localhost:5173
+npm run api   # API at http://localhost:8000
 ```
 
-## Base de datos
+## Database
 
-El esquema y sus cambios se mantienen como scripts SQL en la raíz
-(`SIGECAT-DB-*.sql`). Las migraciones se aplican en orden cronológico sobre la
-instancia de Oracle; cada archivo documenta su propósito en el encabezado. La
-lógica de negocio en base de datos (procedimientos y triggers) está en
-`SIGECAT-DB-ROUTINES-business-logic.sql` y se describe en
+The schema and its changes are kept as SQL scripts at the repository root
+(`SIGECAT-DB-*.sql`). Migrations are applied in chronological order against the
+Oracle instance; each file documents its purpose in the header. Database-side
+business logic (procedures and triggers) lives in
+`SIGECAT-DB-ROUTINES-business-logic.sql` and is described in
 `docs/db-business-logic-routines.md`.
 
-## Pruebas y calidad
+## Testing and quality
 
 ```bash
 # Frontend
 cd client && npm run lint && npm run build
 
-# Backend (la API debe estar corriendo para las pruebas HTTP)
+# Backend (the API must be running for the HTTP tests)
 cd api && php tests/run_all.php
 ```
 
-El backend incluye análisis estático con PHPStan (`api/phpstan.neon`).
+The backend includes static analysis with PHPStan (`api/phpstan.neon`).
+Continuous integration runs the frontend lint/build and PHPStan on every pull
+request.
 
-## Seguridad
+## Security
 
-- Contraseñas con `bcrypt`; validación de fortaleza en el registro.
-- Tokens aleatorios almacenados con hash; access token de vida corta con
-  rotación de refresh token.
-- Rate limiting por IP en autenticación y recuperación de contraseña.
-- Bloqueo de cuenta temporal tras intentos fallidos, con desbloqueo automático.
-- Acceso a datos exclusivamente con sentencias preparadas.
+- Passwords hashed with `bcrypt`; strength validation on registration.
+- Random tokens stored as hashes; short-lived access token with refresh-token
+  rotation.
+- Per-IP rate limiting on authentication and password recovery.
+- Temporary account lockout after failed attempts, with automatic release.
+- Data access exclusively through prepared statements.
 
-## Documentación
+## Documentation
 
-- `docs/manual-usuario.md` — manual de usuario (administrador y funcionario).
-- `docs/soft-delete-design.md`, `docs/password-hashing.md` — notas de diseño.
-- `api/tests/README.md` — cómo ejecutar y configurar la suite de pruebas.
+- `docs/manual-usuario.md` — user manual (administrator and employee).
+- `docs/soft-delete-design.md`, `docs/password-hashing.md` — design notes.
+- `api/tests/README.md` — how to run and configure the test suite.
