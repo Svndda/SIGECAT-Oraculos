@@ -118,4 +118,8 @@ return [
   ['method' => 'GET', 'path' => '/license/{id}', 'controller' => 'LicenseController', 'action' => 'show'],
   ['method' => 'PATCH', 'path' => '/license/{id}', 'controller' => 'LicenseController', 'action' => 'update'],
   ['method' => 'DELETE', 'path' => '/license/{id}', 'controller' => 'LicenseController', 'action' => 'delete'],
+
+  // System log routes (admin-only audit trail)
+  ['method' => 'GET', 'path' => '/logs', 'controller' => 'LogController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/logs/facets', 'controller' => 'LogController', 'action' => 'facets'],
 ];

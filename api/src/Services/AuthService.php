@@ -65,16 +65,29 @@ final class AuthService
     }
 
     if ((int) $user['failed_logging_attempts'] >= self::MAX_FAILED_ATTEMPTS) {
+      Logger::warning('security', 'Intento de acceso a cuenta bloqueada', 'auth.login_locked', [
+        'user_id' => $userId,
+        'email'   => $dto->email,
+      ]);
       throw new ApiException(ErrorType::from('ACCOUNT_LOCKED', 'La cuenta está bloqueada por demasiados intentos fallidos'), 403);
     }
 
     if (!password_verify($dto->password, (string) $user['password_hash'])) {
       $this->userRepository->incrementFailedAttempts($userId);
+      Logger::warning('security', 'Credenciales inválidas en inicio de sesión', 'auth.login_failed', [
+        'user_id' => $userId,
+        'email'   => $dto->email,
+      ]);
       throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'), 401);
     }
 
     // Reset attempts on successful login
     $this->userRepository->resetFailedAttempts($userId);
+
+    Logger::info('auth', 'Inicio de sesión exitoso', 'auth.login', [
+      'user_id' => $userId,
+      'role'    => $user['role'] ?? 'employee',
+    ]);
 
     $accessTtl = 60 * 5;
     $refreshTtl = 3600; // 1 Hour
@@ -209,6 +222,9 @@ final class AuthService
 
     if ($userId !== null) {
       $this->authRepository->deleteUserTokens($userId);
+      Logger::info('auth', 'Cierre de sesión', 'auth.logout', [
+        'user_id' => $userId,
+      ]);
     }
   }
 

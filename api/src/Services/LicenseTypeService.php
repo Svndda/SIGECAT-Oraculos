@@ -57,6 +57,11 @@ class LicenseTypeService
     }
 
     $this->repository->createLicenseType($createdBy, $dto);
+
+    Logger::info('license_type', 'Tipo de licencia creado', 'license_type.create', [
+      'name'       => $dto->name,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -83,6 +88,11 @@ class LicenseTypeService
     }
 
     $this->repository->updateLicenseType($licenseTypeId, $dto);
+
+    Logger::info('license_type', 'Tipo de licencia actualizado', 'license_type.update', [
+      'license_type_id' => $licenseTypeId,
+      'name'            => $dto->name,
+    ]);
   }
 
   /**
@@ -111,6 +121,11 @@ class LicenseTypeService
     }
 
     $this->repository->deleteLicenseType($licenseTypeId, $deletedBy);
+
+    Logger::warning('license_type', 'Tipo de licencia eliminado', 'license_type.delete', [
+      'license_type_id' => $licenseTypeId,
+      'deleted_by'      => $deletedBy,
+    ]);
   }
 
   /**

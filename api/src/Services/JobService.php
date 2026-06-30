@@ -71,6 +71,12 @@ class JobService
     }
 
     $jobId = $this->jobRepository->create($dto, $createdBy);
+
+    Logger::info('job', 'Puesto creado', 'job.create', [
+      'job_id'     => $jobId,
+      'created_by' => $createdBy,
+    ]);
+
     return $this->getJobById($jobId);
   }
 
@@ -106,6 +112,11 @@ class JobService
     }
 
     $this->jobRepository->update($jobId, $dto);
+
+    Logger::info('job', 'Puesto actualizado', 'job.update', [
+      'job_id' => $jobId,
+    ]);
+
     return $this->getJobById($jobId);
   }
 
@@ -136,6 +147,11 @@ class JobService
         ErrorType::from('DELETE_FAILED', 'No se pudo eliminar el puesto')
       );
     }
+
+    Logger::warning('job', 'Puesto eliminado', 'job.delete', [
+      'job_id'     => $jobId,
+      'deleted_by' => $deletedBy,
+    ]);
   }
 
   /**

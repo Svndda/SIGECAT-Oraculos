@@ -60,6 +60,11 @@ class AreaService {
     }
 
     $this->areaRepository->createArea($createdBy, $dto);
+
+    Logger::info('area', 'Área creada', 'area.create', [
+      'name'       => $dto->name,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -85,6 +90,11 @@ class AreaService {
     }
 
     $this->areaRepository->updateArea($areaId, $dto);
+
+    Logger::info('area', 'Área actualizada', 'area.update', [
+      'area_id' => $areaId,
+      'name'    => $dto->name,
+    ]);
   }
 
   /**
@@ -163,6 +173,11 @@ class AreaService {
     }
 
     $this->areaRepository->deleteArea($areaId, $deletedBy);
+
+    Logger::warning('area', 'Área eliminada', 'area.delete', [
+      'area_id'    => $areaId,
+      'deleted_by' => $deletedBy,
+    ]);
   }
 
   /**
@@ -198,5 +213,9 @@ class AreaService {
     }
 
     $this->areaRepository->restoreArea($areaId);
+
+    Logger::info('area', 'Área restaurada', 'area.restore', [
+      'area_id' => $areaId,
+    ]);
   }
 }

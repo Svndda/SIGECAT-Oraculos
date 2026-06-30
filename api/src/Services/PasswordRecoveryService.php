@@ -114,5 +114,9 @@ class PasswordRecoveryService {
     $this->userRepository->updatePasswordById($userId, $hashedPassword);
     $this->recoveryRepository->markTokenAsUsed($tokenId);
     $this->authRepository->deleteUserTokens($userId);
+
+    Logger::info('security', 'Contraseña restablecida por recuperación', 'auth.password_reset', [
+      'user_id' => (string) $userId,
+    ]);
   }
 }

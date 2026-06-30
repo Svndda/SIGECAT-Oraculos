@@ -132,6 +132,12 @@ final class DeclarationsService
         $dto->shiftStartsAt,
         $dto->shiftEndsAt
       );
+      Logger::info('declaration', 'Declaración creada', 'declaration.create', [
+        'declaration_id'  => $declarationId,
+        'user_id'         => $userId,
+        'job_position_id' => $dto->jobPositionId,
+      ]);
+
       return $this->getDeclarationById($declarationId, false);
     } catch (PDOException $e) {
       $code = (int)$e->getCode();
@@ -348,6 +354,15 @@ final class DeclarationsService
       $this->declarationRepository->changeStatus(
         $declarationId, $dto->status, $userId
       );
+
+      Logger::info('declaration', 'Estado de declaración modificado', 'declaration.change_status', [
+        'declaration_id' => $declarationId,
+        'from'           => $currentStatus,
+        'to'             => $dto->status,
+        'actor_id'       => $userId,
+        'as_admin'       => $isAdmin,
+      ]);
+
       return [
         'declaration_id' => $declarationId,
         'new_status' => $dto->status,
@@ -442,6 +457,11 @@ final class DeclarationsService
     $this->declarationRepository->updateJustification(
       $declarationId, $dto->justification
     );
+
+    Logger::info('declaration', 'Justificación de declaración actualizada', 'declaration.update_justification', [
+      'declaration_id' => $declarationId,
+      'actor_id'       => $userId,
+    ]);
 
     return [
       'declaration_id' => $declarationId,

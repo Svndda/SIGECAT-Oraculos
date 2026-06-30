@@ -62,6 +62,12 @@ class UserService
 
     $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
     $this->userRepository->create($createdBy, $dto);
+
+    Logger::info('user', 'Usuario registrado', 'user.create', [
+      'email'      => $dto->email,
+      'role'       => $dto->role,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -129,6 +135,10 @@ class UserService
 
     $hashed = password_hash($newPassword, PASSWORD_BCRYPT);
     $this->userRepository->updatePasswordById($userId, $hashed);
+
+    Logger::info('security', 'Contraseña actualizada por el usuario', 'user.change_password', [
+      'user_id' => $userId,
+    ]);
   }
 
   /**
@@ -229,6 +239,12 @@ class UserService
     }
 
     $this->userRepository->delete($userId, $deletedBy);
+
+    Logger::warning('user', 'Usuario eliminado', 'user.delete', [
+      'user_id'    => $userId,
+      'email'      => $existing['email'] ?? null,
+      'deleted_by' => $deletedBy,
+    ]);
   }
 
   /**
@@ -263,6 +279,13 @@ class UserService
     }
 
     $this->userRepository->updateRole($userId, $role);
+
+    Logger::info('user', 'Rol de usuario modificado', 'user.change_role', [
+      'user_id'  => $userId,
+      'from'     => $existing['role'] ?? null,
+      'to'       => $role,
+      'actor_id' => $actorId,
+    ]);
   }
 
   /**
@@ -291,5 +314,10 @@ class UserService
     }
 
     $this->userRepository->restore($userId);
+
+    Logger::info('user', 'Usuario restaurado', 'user.restore', [
+      'user_id' => $userId,
+      'email'   => $existing['email'] ?? null,
+    ]);
   }
 }

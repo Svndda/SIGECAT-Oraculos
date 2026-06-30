@@ -6,6 +6,7 @@ namespace Core;
 use Http\Response;
 use Http\ErrorType;
 use Http\ApiException;
+use Services\Logger;
 use ErrorException;
 use PDOException;
 use Throwable;
@@ -109,6 +110,23 @@ class GlobalErrorHandler
       $e->getFile(),
       $e->getLine()
     ));
+
+    // Mirror the failure into the system log. ApiExceptions are expected,
+    // client-facing outcomes (validation, auth, not-found) and only warrant a
+    // WARNING; anything else is an unexpected server fault. Logger never throws,
+    // so this is safe even while we are already handling an error.
+    $isExpected = $e instanceof ApiException;
+    Logger::log(
+      $isExpected ? Logger::WARNING : Logger::ERROR,
+      $e instanceof PDOException ? 'database' : 'exception',
+      sprintf('%s: %s', basename(str_replace('\\', '/', get_class($e))), $e->getMessage()),
+      'unhandled.exception',
+      [
+        'type' => get_class($e),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+      ]
+    );
   }
 
   /**

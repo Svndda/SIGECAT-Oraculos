@@ -62,6 +62,12 @@ class RestTimeService
 
     $restTimeId = $this->restTimeRepository->create($userId, $dto);
 
+    Logger::info('rest_time', 'Tiempo de descanso declarado', 'rest_time.create', [
+      'rest_time_id'   => $restTimeId,
+      'declaration_id' => $dto->declarationId,
+      'user_id'        => $userId,
+    ]);
+
     return $this->getRestTimeById($restTimeId);
   }
 
@@ -88,6 +94,11 @@ class RestTimeService
 
     $this->restTimeRepository->update($restTimeId, $dto);
 
+    Logger::info('rest_time', 'Tiempo de descanso actualizado', 'rest_time.update', [
+      'rest_time_id' => $restTimeId,
+      'user_id'      => $userId,
+    ]);
+
     return $this->getRestTimeById($restTimeId);
   }
 
@@ -108,6 +119,11 @@ class RestTimeService
         ErrorType::from('DELETE_FAILED', 'No se pudo eliminar el registro de descanso')
       );
     }
+
+    Logger::info('rest_time', 'Tiempo de descanso eliminado', 'rest_time.delete', [
+      'rest_time_id' => $restTimeId,
+      'user_id'      => $userId,
+    ]);
   }
 
   /**

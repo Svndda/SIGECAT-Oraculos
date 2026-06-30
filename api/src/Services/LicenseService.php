@@ -66,6 +66,13 @@ class LicenseService
 
     $licenseTimeId = $this->licenseRepository->create($userId, $dto);
 
+    Logger::info('license', 'Licencia declarada', 'license.create', [
+      'license_time_id' => $licenseTimeId,
+      'declaration_id'  => $dto->declarationId,
+      'license_type_id' => $dto->licenseTypeId,
+      'user_id'         => $userId,
+    ]);
+
     return $this->getLicenseById($licenseTimeId);
   }
 
@@ -95,6 +102,11 @@ class LicenseService
 
     $this->licenseRepository->update($licenseTimeId, $dto);
 
+    Logger::info('license', 'Licencia actualizada', 'license.update', [
+      'license_time_id' => $licenseTimeId,
+      'user_id'         => $userId,
+    ]);
+
     return $this->getLicenseById($licenseTimeId);
   }
 
@@ -115,6 +127,11 @@ class LicenseService
         ErrorType::from('DELETE_FAILED', 'No se pudo eliminar la licencia')
       );
     }
+
+    Logger::info('license', 'Licencia eliminada', 'license.delete', [
+      'license_time_id' => $licenseTimeId,
+      'user_id'         => $userId,
+    ]);
   }
 
   /**
