@@ -53,12 +53,14 @@ final class JobClassRepository extends Repository
 
     $sql = '
       INSERT INTO job_classes (
+        job_class_id,
         job_class_code,
         name,
         description,
         created_by
       )
       VALUES (
+        :v_job_class_id,
         :v_job_class_code,
         :v_name,
         :v_description,
@@ -69,6 +71,7 @@ final class JobClassRepository extends Repository
     $stmt = $this->db->prepare($sql);
 
     $stmt->execute([
+      ':v_job_class_id' => $jobClassId,
       ':v_job_class_code' => $dto->jobClassCode,
       ':v_name' => $dto->name,
       ':v_description' => $dto->description,
@@ -216,7 +219,7 @@ final class JobClassRepository extends Repository
 
     if ($dto->jobClassCode !== null) {
       $fields[] = 'job_class_code = :v_job_class_code';
-      $params[':v_job_class_id'] = $dto->jobClassCode;
+      $params[':v_job_class_code'] = $dto->jobClassCode;
     }
 
     if ($dto->name !== null) {
@@ -262,5 +265,15 @@ final class JobClassRepository extends Repository
     ]);
 
     return $stmt->rowCount() > 0;
+  }
+
+  public function existsByCode(int $jobClassCode): bool
+  {
+    $stmt = $this->db->prepare(
+      'SELECT COUNT(*) AS cnt FROM JOB_CLASSES WHERE job_class_code = :code'
+    );
+    $stmt->execute([':code' => $jobClassCode]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int)($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
   }
 }
