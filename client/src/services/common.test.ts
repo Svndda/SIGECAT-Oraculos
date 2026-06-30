@@ -19,6 +19,37 @@ describe('extractApiError', () => {
       message: 'Error del servidor. Intente de nuevo más tarde.',
     });
   });
+
+  it('falls back to a generic error for a network failure (no response)', () => {
+    // Axios sets `response` on the error instance but leaves it undefined when
+    // the request never reached the server (network down, CORS, timeout).
+    const networkError = { response: undefined, message: 'Network Error' };
+    expect(extractApiError(networkError)).toEqual({
+      code: 'INTERNAL_ERROR',
+      message: 'Error del servidor. Intente de nuevo más tarde.',
+    });
+  });
+
+  it('never surfaces raw backend internals (stack traces, SQL, etc.)', () => {
+    // Regression guard: a malformed or unexpected error shape must never leak
+    // through as the displayed message.
+    const leaky = {
+      response: {
+        data: {
+          errors: [],
+          // Some unexpected internal detail the backend should never send,
+          // but which must not be picked up even if it did.
+          trace: 'ORA-00001: unique constraint violated at UserRepository.php:42',
+        },
+      },
+    };
+    const result = extractApiError(leaky);
+    expect(result.message).not.toMatch(/ORA-|\.php|stack/i);
+    expect(result).toEqual({
+      code: 'INTERNAL_ERROR',
+      message: 'Error del servidor. Intente de nuevo más tarde.',
+    });
+  });
 });
 
 describe('parseOracleToTimeInput', () => {
