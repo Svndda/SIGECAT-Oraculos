@@ -187,7 +187,6 @@ export default function DataTable<T>({
 
   // ----- Desktop: horizontal table -----
   const actionsWidth = actions && actions.length > 0 ? Math.max(72, actions.length * 44) : 0;
-  const primaryColumn = columns.find((c) => c.primary);
 
   return (
     <Box sx={{ overflowX: 'auto' }}>
@@ -262,24 +261,18 @@ export default function DataTable<T>({
                       gap: 0.5,
                     }}
                   >
-                    {actions!.map((action) => {
-                      const primaryValue = primaryColumn ? primaryColumn.render(item) : null;
-                      const accessibleLabel = isText(primaryValue)
-                        ? `${action.label}: ${primaryValue}`
-                        : action.label;
-                      return (
-                        <Tooltip key={action.label} title={action.label}>
-                          <IconButton
-                            size="small"
-                            onClick={() => action.onClick(item)}
-                            aria-label={accessibleLabel}
-                            sx={{ color: action.color ?? '#666' }}
-                          >
-                            {action.icon}
-                          </IconButton>
-                        </Tooltip>
-                      );
-                    })}
+                    {actions!.map((action) => (
+                      <Tooltip key={action.label} title={action.label}>
+                        <IconButton
+                          size="small"
+                          onClick={() => action.onClick(item)}
+                          aria-label={action.label}
+                          sx={{ color: action.color ?? '#666' }}
+                        >
+                          {action.icon}
+                        </IconButton>
+                      </Tooltip>
+                    ))}
                   </Box>
                 )}
               </Paper>
