@@ -167,15 +167,25 @@ final class DeclarationsRepository extends Repository
   public function updateJustification(
     string $declarationId, string $justification
   ): bool {
-    $sql = 'UPDATE DECLARATIONS 
-                    SET JUSTIFICATION = :v_justification 
-                    WHERE DECLARATION_ID = :v_declaration_id';
-    return $this->db->prepare($sql)->execute(
-      [
-        ':v_justification' => $justification,
-        ':v_declaration_id' => $declarationId
-      ]
-    );
+    $sql = 'BEGIN 
+                :v_result := CLIENT.FN_UPDATE_JUSTIFICATION(
+                    :v_declaration_id,
+                    :v_justification
+                );
+            END;';
+
+
+    $stmt = $this->db->prepare($sql);
+
+    $result = null;
+    $stmt->bindParam(':v_result', $result, PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT, 10);
+
+    $stmt->bindParam(':v_declaration_id', $declarationId, PDO::PARAM_STR, 50);
+    $stmt->bindParam(':v_justification', $justification, PDO::PARAM_STR, 4000);
+
+    $stmt->execute();
+
+    return (bool)$result;
   }
 
   /**
@@ -241,25 +251,19 @@ final class DeclarationsRepository extends Repository
    */
   public function findIncompleteByUser(string $userId): ?string
   {
-    $sql = '
-                SELECT d.DECLARATION_ID
-                FROM DECLARATIONS d
-                INNER JOIN DECLARATIONS_STATUS ds 
-                    ON d.DECLARATION_ID = ds.DECLARATION_ID
-                WHERE d.USER_ID = :v_user_id
-                    AND ds.STATUS_VALUE = \'Incomplete\'
-                    AND ds.CREATED_AT = (
-                        SELECT MAX(CREATED_AT) 
-                        FROM DECLARATIONS_STATUS 
-                        WHERE DECLARATION_ID = d.DECLARATION_ID
-                    )
-                ORDER BY d.CREATED_AT DESC
-                FETCH FIRST 1 ROWS ONLY
-            ';
+    $sql = 'BEGIN 
+                :v_result := CLIENT.FN_FIND_INCOMPLETE_BY_USER(:v_user_id);
+            END;';
+
     $stmt = $this->db->prepare($sql);
-    $stmt->execute([':v_user_id' => $userId]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row !== false ? (string)$row['declaration_id'] : null;
+    $stmt->bindParam(
+      ':v_result', $result, PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT, 50
+    );
+    $stmt->bindValue(':v_user_id', $userId);
+    $stmt->execute();
+
+    // The function returns NULL if not found, which becomes an empty string or null in PHP
+    return ($result !== null && $result !== '') ? $result : null;
   }
 
   /**
@@ -267,7 +271,7 @@ final class DeclarationsRepository extends Repository
    *
    * @param int $limit Number of records per page.
    * @param int $offset Offset for pagination.
-   * @param array<string, string>  $filters Associative array of filters.
+   * @param array<string, string> $filters Associative array of filters.
    * @return array<int, array<string, mixed>> List of declarations.
    * @throws PDOException
    */
@@ -368,27 +372,46 @@ final class DeclarationsRepository extends Repository
    */
   public function countAll(array $filters = []): int
   {
-    $baseSql = '
-                SELECT COUNT(*) as total
-                FROM DECLARATIONS d
-                INNER JOIN DECLARATIONS_STATUS ds 
-                    ON d.DECLARATION_ID = ds.DECLARATION_ID
-                WHERE ds.CREATED_AT = (
-                    SELECT MAX(CREATED_AT) 
-                    FROM DECLARATIONS_STATUS 
-                    WHERE DECLARATION_ID = d.DECLARATION_ID
-                )
-            ';
-
-    $filterResult = $this->buildFilterConditions($filters);
-    $sql = $baseSql . $filterResult['where'];
+    $sql = 'BEGIN 
+                :v_result := CLIENT.FN_COUNT_DECLARATIONS(
+                    :v_user_id,
+                    :v_status,
+                    :v_from_date,
+                    :v_to_date,
+                    :v_filter
+                );
+            END;';
 
     $stmt = $this->db->prepare($sql);
-    foreach ($filterResult['params'] as $key => $value) {
-      $stmt->bindValue($key, $value);
-    }
+
+    $result = null;
+    $stmt->bindParam(':v_result', $result, PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT, 20);
+
+    $user_id   = $filters['user_id'] ?? null;
+    $status    = $this->normalizeStatusFilter($filters['status'] ?? null);
+    $from_date = $filters['from_date'] ?? null;
+    $to_date   = $filters['to_date'] ?? null;
+    $filter    = $filters['filter'] ?? null;
+
+    $stmt->bindParam(':v_user_id', $user_id, PDO::PARAM_STR, 50);
+    $stmt->bindParam(':v_status', $status, PDO::PARAM_STR, 50);
+    $stmt->bindParam(':v_from_date', $from_date, PDO::PARAM_STR, 50);
+    $stmt->bindParam(':v_to_date', $to_date, PDO::PARAM_STR, 50);
+    $stmt->bindParam(':v_filter', $filter, PDO::PARAM_STR, 200);
+
     $stmt->execute();
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row !== false ? (int)($row['total'] ?? 0) : 0;
+
+    return (int) $result;
+  }
+
+  /**
+   * Helper to convert status filter to NULL when it is 'all' or empty.
+   */
+  private function normalizeStatusFilter(?string $status): ?string
+  {
+    if ($status === null || $status === 'all') {
+      return null;
+    }
+    return $status;
   }
 }
