@@ -54,7 +54,7 @@ final class CreateJobClassDTO {
   }
 
   public function validate(): void {
-    if (empty($this->jobClassCode)) {
+    if ($this->jobClassCode > 0) {
       throw new ApiException(ErrorType::missingField('job_class_code'));
     }
 
