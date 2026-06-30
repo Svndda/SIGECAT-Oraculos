@@ -43,7 +43,6 @@ export default function SectionsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Cargar secciones con paginación
   const loadSections = useCallback(() => {
     setLoading(true);
     sectionService.getSectionsPage({ page, limit: LIMIT, filter: appliedFilter })
@@ -62,7 +61,7 @@ export default function SectionsPage() {
     loadSections();
   }, [loadSections]);
 
-  // Cargar áreas (solo una vez)
+  // Load area list once — secondary data for the area-name dropdown/column.
   useEffect(() => {
     areaService.getAreas({ limit: 100 })
       .then((res) => setAreas(res.data))
@@ -71,7 +70,6 @@ export default function SectionsPage() {
 
   const totalPages = meta?.total_pages ?? 1;
 
-  // Mapa de áreas para mostrar el nombre en la tabla
   const areaMap = useMemo(() => {
     const map = new Map<string, string>();
     areas.forEach((area) => map.set(area.area_id, area.name));
