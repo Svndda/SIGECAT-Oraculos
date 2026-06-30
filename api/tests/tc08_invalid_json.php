@@ -12,9 +12,19 @@ tc_require_server();
 
 echo "TC-08 — Request con JSON malformado\n";
 
+// /users/register exige rol admin; sin un token válido la petición se rechaza
+// con UNAUTHORIZED antes de intentar parsear el cuerpo. Autenticamos primero
+// para que el flujo llegue al parseo del JSON y se evalúe INVALID_JSON.
+$adminLogin = tc_http('POST', '/auth/login', [
+    'email'    => tc_admin_email(),
+    'password' => tc_admin_password(),
+]);
+tc_assert($adminLogin['status'] === 200, 'TC-08', 'precondición: login de admin exitoso');
+$adminToken = $adminLogin['body']['data']['access_token'] ?? '';
+
 $malformed = '{ "email": "a@b.com", "password": '; // JSON cortado a propósito
 
-$response = tc_http('POST', '/users/register', null, [], $malformed);
+$response = tc_http('POST', '/users/register', null, ['Authorization' => "Bearer $adminToken"], $malformed);
 
 tc_assert($response['status'] >= 400 && $response['status'] < 500, 'TC-08', "HTTP status 4xx (got {$response['status']})");
 tc_assert($response['body'] !== null, 'TC-08', 'response sigue siendo JSON válido (estructura estándar)');
