@@ -1,55 +1,98 @@
+// WorkHoursPage.tsx
 import {
   Container,
   Box,
   Button,
   Typography,
   Stack,
-  Alert
+  Alert,
+  CircularProgress,
 } from '@mui/material';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import {declarationService} from '../../services/declarationsService';
 import type {ServiceError} from '../../services/common';
 import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
-import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
+
+function parseCanonical(s: string): Date {
+  return new Date(s.replace(' ', 'T'));
+}
+
+function durationMinutes(start: string, end: string): number {
+  const startDate = parseCanonical(start);
+  const endDate = parseCanonical(end);
+  return Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+}
 
 export default function WorkHoursPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [declarationId, setDeclarationId] = useState<string | null>(null);
+  const [totalFunctionMinutes, setTotalFunctionMinutes] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCompleteRecord = async () => {
-    setIsSaving(true);
-    try {
-      // The declaration is created in EmployeeFormPage and passed via router
-      // state; fall back to the user's current incomplete one.
-      let declarationId = (location.state as { declarationId?: string } | null)?.declarationId ?? null;
-      if (!declarationId) {
-        const incomplete = await declarationService.checkIncomplete();
-        declarationId = incomplete.has_incomplete ? incomplete.declaration_id ?? null : null;
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        let id = (location.state as {
+          declarationId?: string
+        } | null)?.declarationId ?? null;
+        if (!id) {
+          const incomplete = await declarationService.checkIncomplete();
+          id = incomplete.has_incomplete ? incomplete.declaration_id ?? null : null;
+        }
+        if (!id) {
+          if (active) setError('No se encontró una declaración activa.');
+          setLoading(false);
+          return;
+        }
+
+        const decl = await declarationService.getDeclarationById(id);
+        if (!active) return;
+
+        setDeclarationId(id);
+        let total = 0;
+        if (decl.job_functions) {
+          for (const fn of decl.job_functions) {
+            total += durationMinutes(fn.starts_at, fn.ends_at);
+          }
+        }
+        setTotalFunctionMinutes(total);
+        setLoading(false);
+      } catch (err) {
+        if (active) {
+          setError((err as ServiceError).message ?? 'Error al cargar la declaración.');
+          setLoading(false);
+        }
       }
-      if (!declarationId) {
-        setMessage('Error: No se encontró una declaración activa para completar.');
-        return;
-      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [location.state]);
 
-      await declarationService.changeStatus(declarationId, {status: 'Completed'});
-      setMessage('Declaración completada exitosamente');
-
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
-    } catch (error) {
-      const e = error as ServiceError;
-      setMessage('Error al completar la declaración: ' + (e.message ?? String(error)));
-    } finally {
-      setIsSaving(false);
+  const handleContinue = () => {
+    if (declarationId) {
+      navigate('/additional-information', {
+        state: {declarationId, totalFunctionMinutes},
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{display: 'flex', justifyContent: 'center', py: 8}}>
+          <CircularProgress size={40}/>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg">
@@ -67,16 +110,11 @@ export default function WorkHoursPage() {
           Diagnóstico de Cargas de trabajo
         </Typography>
 
-        {/* Funciones a desarrollar (propias del cargo / de otro cargo / apoyo condicional) */}
         <DeclarationFunctions/>
 
-        {/* Permisos y licencias */}
-        <DeclarationLicenses/>
-
-        {message && (
-          <Alert severity={message.includes('Error') ? 'error' : 'success'}
-                 sx={{mt: 3}}>
-            {message}
+        {error && (
+          <Alert severity="error" sx={{mt: 3}}>
+            {error}
           </Alert>
         )}
 
@@ -92,15 +130,15 @@ export default function WorkHoursPage() {
           </Button>
           <Button
             variant="contained"
-            endIcon={<CheckCircleIcon/>}
-            onClick={handleCompleteRecord}
-            disabled={isSaving}
+            endIcon={<ArrowForwardIcon/>}
+            onClick={handleContinue}
+            disabled={!declarationId}
             sx={{
               backgroundColor: '#2c2c2c',
-              '&:hover': {backgroundColor: '#1a1a1a'}
+              '&:hover': {backgroundColor: '#1a1a1a'},
             }}
           >
-            {isSaving ? 'Guardando...' : 'Completar'}
+            Continuar
           </Button>
         </Stack>
       </Box>
