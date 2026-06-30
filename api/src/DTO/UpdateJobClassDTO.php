@@ -56,7 +56,7 @@ final class UpdateJobClassDTO {
   }
 
   public function validate(): void {
-    if ($this->jobClassCode !== null && empty($this->jobClassCode)) {
+    if ($this->jobClassCode !== null && $this->jobClassCode <= 0) {
       throw new ApiException(ErrorType::invalidField('job_class_code'));
     }
 
