@@ -72,7 +72,7 @@ export default function EmployeeRecordPage() {
       await declarationService.changeStatus(incompleteData.declaration_id, {status: 'Abandoned'});
       snackbar.success('Declaración abandonada exitosamente.');
       setIncompleteData({has_incomplete: false});
-    } catch (error) {
+    } catch {
       snackbar.error('Error al intentar abandonar la declaración.');
     }
   };

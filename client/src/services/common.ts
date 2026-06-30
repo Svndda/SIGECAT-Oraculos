@@ -76,7 +76,7 @@ export function parseOracleToTimeInput(oracleDateStr: string | null | undefined)
     if (!isNaN(d.getTime())) {
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
-  } catch (e) {
+  } catch {
     return '';
   }
 
@@ -149,7 +149,7 @@ export function formatOracleDate(dateStr: string | null | undefined, incluirHora
       month: '2-digit',
       year: 'numeric'
     });
-  } catch (e) {
+  } catch {
     return '—';
   }
 }
@@ -189,7 +189,7 @@ export function formatOracleTime(dateStr: string | null | undefined): string {
       minute: '2-digit',
       hour12: true
     });
-  } catch (e) {
+  } catch {
     return '—';
   }
 }
