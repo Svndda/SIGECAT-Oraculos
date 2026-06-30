@@ -60,6 +60,12 @@ class JobPositionService
     }
 
     $this->repository->createJobPosition($createdBy, $dto);
+
+    Logger::info('job_position', 'Plaza creada', 'job_position.create', [
+      'number'     => $dto->jobPositionNumber,
+      'user_id'    => $dto->userId,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -103,6 +109,11 @@ class JobPositionService
     }
 
     $this->repository->updateJobPosition($jobPositionId, $dto);
+
+    Logger::info('job_position', 'Plaza actualizada', 'job_position.update', [
+      'job_position_id' => $jobPositionId,
+      'actor_id'        => $actionByUserId,
+    ]);
   }
 
   /**
@@ -215,5 +226,10 @@ class JobPositionService
     }
 
     $this->repository->deleteJobPosition($jobPositionId, $deletedBy);
+
+    Logger::warning('job_position', 'Plaza eliminada', 'job_position.delete', [
+      'job_position_id' => $jobPositionId,
+      'deleted_by'      => $deletedBy,
+    ]);
   }
 }

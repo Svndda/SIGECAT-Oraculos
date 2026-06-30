@@ -65,6 +65,12 @@ class DepartmentService {
 
     $departmentId = $this->departmentRepository->create($dto, $createdBy);
 
+    Logger::info('department', 'Departamento creado', 'department.create', [
+      'department_id' => $departmentId,
+      'area_id'       => $areaId,
+      'created_by'    => $createdBy,
+    ]);
+
     return $this->getDepartmentById($departmentId);
   }
 
@@ -98,6 +104,10 @@ class DepartmentService {
 
     $this->departmentRepository->update($departmentId,$dto);
 
+    Logger::info('department', 'Departamento actualizado', 'department.update', [
+      'department_id' => $departmentId,
+    ]);
+
     return $this->getDepartmentById($departmentId);
   }
 
@@ -130,6 +140,11 @@ class DepartmentService {
         ErrorType::from('DELETE_FAILED', 'No se pudo eliminar el departamento')
       );
     }
+
+    Logger::warning('department', 'Departamento eliminado', 'department.delete', [
+      'department_id' => $departmentId,
+      'deleted_by'    => $deletedBy,
+    ]);
   }
 
   /**
@@ -167,6 +182,10 @@ class DepartmentService {
         ErrorType::from('RESTORE_FAILED', 'No se pudo restaurar el departamento')
       );
     }
+
+    Logger::info('department', 'Departamento restaurado', 'department.restore', [
+      'department_id' => $departmentId,
+    ]);
   }
 
   /**

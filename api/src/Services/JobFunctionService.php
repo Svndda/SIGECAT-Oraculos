@@ -83,6 +83,12 @@ class JobFunctionService
       'ends_at'              => $dto->endsAt,
     ]);
 
+    Logger::info('job_function', 'Función agregada a declaración', 'job_function.create', [
+      'job_function_id' => $id,
+      'declaration_id'  => $dto->declarationId,
+      'user_id'         => $userId,
+    ]);
+
     return $this->getJobFunctionById($userId, $id);
   }
 
@@ -148,6 +154,12 @@ class JobFunctionService
       'ends_at'              => $endsAt,
     ]);
 
+    Logger::info('job_function', 'Función de declaración actualizada', 'job_function.update', [
+      'job_function_id' => $jobFunctionId,
+      'declaration_id'  => (string) $existing['declaration_id'],
+      'user_id'         => $userId,
+    ]);
+
     return $this->getJobFunctionById($userId, $jobFunctionId);
   }
 
@@ -171,6 +183,12 @@ class JobFunctionService
         ErrorType::from('DELETE_FAILED', 'No se pudo eliminar la función de la declaración')
       );
     }
+
+    Logger::info('job_function', 'Función eliminada de declaración', 'job_function.delete', [
+      'job_function_id' => $jobFunctionId,
+      'declaration_id'  => (string) $existing['declaration_id'],
+      'user_id'         => $userId,
+    ]);
   }
 
   /**

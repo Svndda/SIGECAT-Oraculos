@@ -47,6 +47,12 @@ class CustomFunctionService
 
     $id = $this->repository->createCustomFunction($userId, $dto);
 
+    Logger::info('custom_function', 'Función personalizada creada', 'custom_function.create', [
+      'custom_function_id' => $id,
+      'name'               => $dto->name,
+      'user_id'            => $userId,
+    ]);
+
     return $this->getOwnedCustomFunctionById($userId, $id);
   }
 

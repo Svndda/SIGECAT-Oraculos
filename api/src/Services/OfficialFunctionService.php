@@ -65,6 +65,12 @@ class OfficialFunctionService
     }
 
     $this->repository->createOfficialFunction($createdBy, $dto);
+
+    Logger::info('official_function', 'Función oficial creada', 'official_function.create', [
+      'name'       => $dto->name,
+      'job_id'     => $dto->jobId,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -120,6 +126,11 @@ class OfficialFunctionService
     }
 
     $this->repository->updateOfficialFunction($officialFunctionId, $dto);
+
+    Logger::info('official_function', 'Función oficial actualizada', 'official_function.update', [
+      'official_function_id' => $officialFunctionId,
+      'affected_declarations' => $declarations,
+    ]);
   }
 
   /**
@@ -148,6 +159,11 @@ class OfficialFunctionService
     }
 
     $this->repository->deleteOfficialFunction($officialFunctionId, $deletedBy);
+
+    Logger::warning('official_function', 'Función oficial eliminada', 'official_function.delete', [
+      'official_function_id' => $officialFunctionId,
+      'deleted_by'           => $deletedBy,
+    ]);
   }
 
   /**

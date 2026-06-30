@@ -222,6 +222,9 @@ final class AuthService
 
     if ($userId !== null) {
       $this->authRepository->deleteUserTokens($userId);
+      Logger::info('auth', 'Cierre de sesión', 'auth.logout', [
+        'user_id' => $userId,
+      ]);
     }
   }
 
