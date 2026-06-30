@@ -7,25 +7,29 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import {useLocation} from 'react-router-dom';
 import {
-  employeeLicenseService,
-  type LicenseType
-} from '../../services/employeeLicenseService';
-import {licenseService} from '../../services/licenseService';
+  restTimeService,
+  REST_TYPES,
+  REST_TIME_MAX_MINUTES,
+  type RestType,
+} from '../../services/restTimeService';
 import {declarationService} from '../../services/declarationsService';
-import {
-  formatDateForBackend,
-  type ServiceError
-} from '../../services/common';
+import {formatDateForBackend, type ServiceError} from '../../services/common';
 import {useSnackbar} from '../../context/SnackbarContext';
 
-interface DeclaredLicense {
+interface DeclaredRestTime {
   id: string;
-  typeId: string;
-  typeName: string;
+  restType: RestType;
   startTime: string;
   endTime: string;
   totalMinutes: number;
 }
+
+const REST_TYPE_LABELS: Record<RestType, string> = {
+  Breakfast: 'Desayuno',
+  Coffee: 'Café',
+  Dinner: 'Cena',
+  Lunch: 'Almuerzo',
+};
 
 function parseCanonical(s: string): Date {
   return new Date(s.replace(' ', 'T'));
@@ -74,11 +78,11 @@ function formatHM(total: number): string {
   return h > 0 ? `${h} h` : `${m} min`;
 }
 
-interface DeclarationLicensesProps {
+interface DeclarationRestTimesProps {
   onDataChange?: () => void;
 }
 
-export default function DeclarationLicenses({onDataChange}: DeclarationLicensesProps) {
+export default function DeclarationRestTimes({onDataChange}: DeclarationRestTimesProps) {
   const location = useLocation();
   const snackbar = useSnackbar();
 
@@ -86,13 +90,15 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
   const [declarationId, setDeclarationId] = useState<string | null>(null);
   const [shiftDate, setShiftDate] = useState('');
 
-  const [types, setTypes] = useState<LicenseType[]>([]);
-  const [licenses, setLicenses] = useState<DeclaredLicense[]>([]);
+  const [restTimes, setRestTimes] = useState<DeclaredRestTime[]>([]);
 
-  const [typeId, setTypeId] = useState('');
+  const [restType, setRestType] = useState<RestType | ''>('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [errors, setErrors] = useState<{ typeId?: string; time?: string }>({});
+  const [errors, setErrors] = useState<{
+    restType?: string;
+    time?: string
+  }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -112,24 +118,21 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
           return;
         }
 
-        const [declaration, typeList, existing] = await Promise.all([
+        const [declaration, existing] = await Promise.all([
           declarationService.getDeclarationById(declId),
-          employeeLicenseService.getLicenseTypes(),
-          licenseService.getLicensesByDeclaration(declId),
+          restTimeService.getRestTimesByDeclaration(declId),
         ]);
         if (!active) return;
 
         setDeclarationId(declId);
         setShiftDate(oracleDateOnly(declaration.shift_starts_at));
-        setTypes(typeList);
-        setLicenses(
-          existing.map((l) => {
-            const start = parseCanonical(l.starts_at);
-            const end = parseCanonical(l.ends_at);
+        setRestTimes(
+          existing.map((r) => {
+            const start = parseCanonical(r.starts_at);
+            const end = parseCanonical(r.ends_at);
             return {
-              id: l.license_time_id,
-              typeId: l.license_type_id,
-              typeName: l.license_type_name ?? l.license_type_id,
+              id: r.rest_time_id,
+              restType: r.rest_type,
               startTime: timeOnly(start),
               endTime: timeOnly(end),
               totalMinutes: Math.round((end.getTime() - start.getTime()) / 60000),
@@ -137,7 +140,7 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
           }),
         );
       } catch (error) {
-        if (active) snackbar.error((error as ServiceError).message ?? 'Error al cargar las licencias.');
+        if (active) snackbar.error((error as ServiceError).message ?? 'Error al cargar los tiempos de descanso.');
       } finally {
         if (active) setLoading(false);
       }
@@ -161,44 +164,49 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
   };
 
   const validate = (): boolean => {
-    const next: { typeId?: string; time?: string } = {};
-    if (!typeId) next.typeId = 'Seleccione el tipo de permiso/licencia.';
+    const next: { restType?: string; time?: string } = {};
+    if (!restType) {
+      next.restType = 'Seleccione el tipo de descanso.';
+    }
     if (!startTime || !endTime) {
       next.time = 'Indique la hora de inicio y la hora de fin.';
-    } else if (durationMinutes(startTime, endTime) <= 0) {
-      next.time = 'La hora de fin debe ser posterior a la de inicio.';
+    } else {
+      const minutes = durationMinutes(startTime, endTime);
+      if (minutes <= 0) {
+        next.time = 'La hora de fin debe ser posterior a la de inicio.';
+      } else if (restType && minutes > REST_TIME_MAX_MINUTES[restType]) {
+        next.time = `La duración del descanso '${REST_TYPE_LABELS[restType]}' no puede exceder los ${REST_TIME_MAX_MINUTES[restType]} minutos.`;
+      }
     }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
   const handleAdd = async () => {
-    if (!validate() || !declarationId) return;
+    if (!validate() || !declarationId || !restType) return;
     setIsSubmitting(true);
     try {
       const range = buildRange(startTime, endTime);
-      const created = await licenseService.createLicense({
+      const created = await restTimeService.createRestTime({
         declaration_id: declarationId,
-        license_type_id: typeId,
+        rest_type: restType,
         ...range,
       });
-      const type = types.find((t) => t.id === typeId);
-      setLicenses((prev) => [
+      setRestTimes((prev) => [
         ...prev,
         {
-          id: created.license_time_id,
-          typeId,
-          typeName: created.license_type_name ?? type?.name ?? typeId,
+          id: created.rest_time_id,
+          restType: created.rest_type,
           startTime,
           endTime,
           totalMinutes: previewMinutes,
         },
       ]);
-      setTypeId('');
+      setRestType('');
       setStartTime('');
       setEndTime('');
       setErrors({});
-      snackbar.success('Permiso/licencia registrado correctamente.');
+      snackbar.success('Tiempo de descanso registrado correctamente.');
       onDataChange?.();
     } catch (error) {
       snackbar.error((error as ServiceError).message ?? 'Error del servidor.');
@@ -209,12 +217,12 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
 
   const remove = async (id: string) => {
     try {
-      await licenseService.deleteLicense(id);
-      setLicenses((prev) => prev.filter((l) => l.id !== id));
-      snackbar.success('Permiso/licencia eliminado.');
+      await restTimeService.deleteRestTime(id);
+      setRestTimes((prev) => prev.filter((r) => r.id !== id));
+      snackbar.success('Tiempo de descanso eliminado.');
       onDataChange?.();
     } catch (error) {
-      snackbar.error((error as ServiceError).message ?? 'No se pudo eliminar la licencia.');
+      snackbar.error((error as ServiceError).message ?? 'No se pudo eliminar el tiempo de descanso.');
     }
   };
 
@@ -236,13 +244,13 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
     <Paper sx={{p: {xs: 2, sm: 3}, mb: 4, backgroundColor: '#f9f9fd'}}>
       <Typography variant="subtitle2"
                   sx={{mb: 2, fontWeight: 600, color: '#12457d'}}>
-        Permisos y licencias
+        Tiempos de descanso
       </Typography>
 
       {!declarationId ? (
         <Typography variant="body2" color="text.secondary">
           No hay una declaración activa. Iniciá la declaración desde el
-          formulario del cargo para registrar permisos o licencias.
+          formulario del cargo para registrar tiempos de descanso.
         </Typography>
       ) : (
         <>
@@ -250,17 +258,17 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
                  alignItems="flex-start">
             <TextField
               select
-              label="Tipo de permiso/licencia"
-              value={typeId}
+              label="Tipo de descanso"
+              value={restType}
               onChange={(e) => {
-                setTypeId(e.target.value);
-                if (errors.typeId) setErrors((p) => ({
+                setRestType(e.target.value as RestType);
+                if (errors.restType) setErrors((p) => ({
                   ...p,
-                  typeId: undefined
+                  restType: undefined
                 }));
               }}
-              error={!!errors.typeId}
-              helperText={errors.typeId}
+              error={!!errors.restType}
+              helperText={errors.restType}
               size="small"
               sx={{
                 flex: 1,
@@ -268,8 +276,10 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
                 backgroundColor: 'white'
               }}
             >
-              {types.map((t) => (
-                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+              {REST_TYPES.map((t) => (
+                <MenuItem key={t} value={t}>
+                  {REST_TYPE_LABELS[t]} (máx. {REST_TIME_MAX_MINUTES[t]} min)
+                </MenuItem>
               ))}
             </TextField>
             <TextField
@@ -317,18 +327,19 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
             <Typography variant="caption" color="text.secondary"
                         sx={{display: 'block', mb: 1}}>
               Duración: {formatHM(previewMinutes)}
+              {restType && ` (máx. ${REST_TIME_MAX_MINUTES[restType]} min para ${REST_TYPE_LABELS[restType]})`}
             </Typography>
           )}
 
-          {licenses.length === 0 ? (
+          {restTimes.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{py: 1}}>
-              No has registrado permisos ni licencias.
+              No has registrado tiempos de descanso.
             </Typography>
           ) : (
             <Stack spacing={1}>
-              {licenses.map((l) => (
+              {restTimes.map((r) => (
                 <Box
-                  key={l.id}
+                  key={r.id}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -340,14 +351,14 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
                   }}
                 >
                   <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                    <Typography>{l.typeName}</Typography>
+                    <Typography>{REST_TYPE_LABELS[r.restType]}</Typography>
                     <Chip
-                      label={`${l.startTime}–${l.endTime} · ${formatHM(l.totalMinutes)}`}
+                      label={`${r.startTime}–${r.endTime} · ${formatHM(r.totalMinutes)}`}
                       size="small"
                       variant="outlined"
                     />
                   </Box>
-                  <IconButton size="small" onClick={() => remove(l.id)}
+                  <IconButton size="small" onClick={() => remove(r.id)}
                               sx={{color: '#d32f2f'}}>
                     <DeleteOutlineIcon fontSize="small"/>
                   </IconButton>
