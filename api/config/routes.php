@@ -104,4 +104,18 @@ return [
   ['method' => 'GET', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'show'],
   ['method' => 'PATCH', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'update'],
   ['method' => 'DELETE', 'path' => '/job-functions/{id}', 'controller' => 'JobFunctionController', 'action' => 'delete'],
+
+  // License types routes (catalogue of permits/licenses) — admin writes, authenticated reads
+  ['method' => 'POST', 'path' => '/license-type', 'controller' => 'LicenseTypeController', 'action' => 'create'],
+  ['method' => 'GET', 'path' => '/license-type', 'controller' => 'LicenseTypeController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/license-type/{id}', 'controller' => 'LicenseTypeController', 'action' => 'show'],
+  ['method' => 'PATCH', 'path' => '/license-type/{id}', 'controller' => 'LicenseTypeController', 'action' => 'update'],
+  ['method' => 'DELETE', 'path' => '/license-type/{id}', 'controller' => 'LicenseTypeController', 'action' => 'delete'],
+
+  // License routes (declaration line items) — authenticated, self-scoped
+  ['method' => 'POST', 'path' => '/license', 'controller' => 'LicenseController', 'action' => 'create'],
+  ['method' => 'GET', 'path' => '/license', 'controller' => 'LicenseController', 'action' => 'index'],
+  ['method' => 'GET', 'path' => '/license/{id}', 'controller' => 'LicenseController', 'action' => 'show'],
+  ['method' => 'PATCH', 'path' => '/license/{id}', 'controller' => 'LicenseController', 'action' => 'update'],
+  ['method' => 'DELETE', 'path' => '/license/{id}', 'controller' => 'LicenseController', 'action' => 'delete'],
 ];
