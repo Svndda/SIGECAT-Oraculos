@@ -31,6 +31,7 @@ import WorkHoursPage from './pages/WorkHoursPage';
 import EmployeeRecordPage from "./pages/EmployeeRecordPage.tsx";
 import DeclarationsPage from "./pages/admin/DeclarationsPage";
 import LogsPage from './pages/admin/LogsPage.tsx';
+import JobClassPage from './pages/admin/JobClassPage.tsx';
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
                   <Route path="secciones" element={<SectionsPage/>}/>
                   <Route path="departamentos" element={<DepartmentsPage/>}/>
                   <Route path="cargos" element={<JobsPage/>}/>
+                  <Route path="clases-ocupacionales" element={<JobClassPage/>}/>
                   <Route path="funciones" element={<FunctionsPage/>}/>
                   <Route path="funciones-personalizadas"
                          element={<CustomFunctionsPage/>}/>

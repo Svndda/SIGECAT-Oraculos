@@ -30,6 +30,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ModalAlert from './modals/ModalAlert';
 import {DocumentScannerRounded, Engineering, ReceiptLongRounded} from "@mui/icons-material";
+import CategoryIcon from '@mui/icons-material/Category';
 
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
@@ -48,6 +49,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Secciones', icon: <ViewModuleIcon fontSize="small" />, route: '/secciones', adminOnly: true },
   { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades', adminOnly: true },
   { label: 'Cargos', icon: <Engineering fontSize="small" />, route: '/cargos', adminOnly: true },
+  { label: 'Clases Ocupacionales', icon: <CategoryIcon fontSize="small" />, route: '/clases-ocupacionales', adminOnly: true },
   { label: 'Funciones', icon: <AssignmentIcon fontSize="small" />, route: '/funciones', adminOnly: true },
   { label: 'Funciones Personalizadas', icon: <AssignmentIndIcon fontSize="small" />, route: '/funciones-personalizadas', adminOnly: true },
   { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
