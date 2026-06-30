@@ -5,8 +5,17 @@
         "psr-4": {
             "Sigecat\\Api\\": "src/",
             "Controllers\\": "src/Controllers/"
-            
+
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse"
     },
     "authors": [
         {
@@ -20,6 +29,7 @@
         "phpmailer/phpmailer": "^7.1"
     },
     "require-dev": {
-        "phpstan/phpstan": "^2.1"
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11"
     }
 }
