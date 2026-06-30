@@ -17,7 +17,7 @@ $dto = RegisterUserDTO::fromArray([
     'email'      => 'juan@correo',
     'first_name' => 'Juan',
     'last_name'  => 'Perez',
-    'password'   => 'Demo1234!',
+    'password'   => 'Irrelevant1!', // filler: este test sólo valida el email
     'role'       => 'employee',
 ]);
 

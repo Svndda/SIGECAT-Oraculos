@@ -16,9 +16,13 @@ use Http\ApiException;
 
 echo "TC-14 — CreateJobPositionDTO exige exactamente un padre\n";
 
+// The other required fields (user, shift, job) so validate() reaches the
+// parent-entity rule under test instead of failing earlier.
 $base = [
     'job_position_number' => 'PLZ-001',
-    'job_position_type_id'=> '01HZX0TYPE00000000000000AA',
+    'user_id'             => '01HZX0USER00000000000000AA',
+    'job_shift'          => 'Diurna',
+    'job_id'             => '01HZX0JOB000000000000000AA',
 ];
 
 /** @param array<string,mixed> $extra */
@@ -45,8 +49,10 @@ $expectThrows([
 $thrown = null;
 try {
     CreateJobPositionDTO::fromArray([
-        'job_position_type_id' => '01HZX0TYPE00000000000000AA',
-        'area_id'              => '01HZX0AREA00000000000000AA',
+        'user_id'   => '01HZX0USER00000000000000AA',
+        'job_shift' => 'Diurna',
+        'job_id'    => '01HZX0JOB000000000000000AA',
+        'area_id'   => '01HZX0AREA00000000000000AA',
     ])->validate();
 } catch (ApiException $e) {
     $thrown = $e;

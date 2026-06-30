@@ -33,6 +33,43 @@ if (getenv('TNS_ADMIN') === false) {
 
 const API_BASE_URL = 'http://localhost:8000';
 
+/**
+ * Test seed admin credentials, kept out of version control.
+ *
+ * Resolution order: the SIGECAT_TEST_ADMIN_* env var, then the matching
+ * constant in the gitignored config/oci_config.php (OCIConfig::TEST_ADMIN_*).
+ * The email is a non-secret demo account so it falls back to a default; the
+ * password has no in-repo fallback on purpose — set one of the two sources.
+ */
+function tc_admin_email(): string
+{
+    $env = getenv('SIGECAT_TEST_ADMIN_EMAIL');
+    if (is_string($env) && $env !== '') {
+        return $env;
+    }
+    if (defined('OCIConfig::TEST_ADMIN_EMAIL')) {
+        return (string) constant('OCIConfig::TEST_ADMIN_EMAIL');
+    }
+    return 'juan.perez@ucr.ac.cr';
+}
+
+function tc_admin_password(): string
+{
+    $env = getenv('SIGECAT_TEST_ADMIN_PASSWORD');
+    if (is_string($env) && $env !== '') {
+        return $env;
+    }
+    if (defined('OCIConfig::TEST_ADMIN_PASSWORD')) {
+        return (string) constant('OCIConfig::TEST_ADMIN_PASSWORD');
+    }
+    fwrite(
+        STDERR,
+        "[config] Falta la contraseña de prueba: definí SIGECAT_TEST_ADMIN_PASSWORD " .
+        "o OCIConfig::TEST_ADMIN_PASSWORD en config/oci_config.php (gitignored).\n"
+    );
+    exit(2);
+}
+
 function tc_pass(string $tc, string $message): void
 {
     echo "  \033[32m[PASS]\033[0m $tc — $message\n";

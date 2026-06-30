@@ -51,9 +51,19 @@ corregidos recientemente:
    cd client && npm run api
    ```
 
-3. Usuario de pruebas existente (TC-01..03):
-   - email: `juan.perez@ucr.ac.cr`
-   - password: `Demo1234!`
+3. Credenciales del admin semilla (TC-01, TC-03, TC-04, TC-08). No se guardan en
+   git: se resuelven por variable de entorno o, en su defecto, por las constantes
+   del archivo gitignored `config/oci_config.php`.
+   ```bash
+   # opción A — variables de entorno
+   export SIGECAT_TEST_ADMIN_EMAIL="juan.perez@ucr.ac.cr"
+   export SIGECAT_TEST_ADMIN_PASSWORD="<contraseña-del-seed>"
+   ```
+   ```php
+   // opción B — en config/oci_config.php (gitignored)
+   const TEST_ADMIN_EMAIL = 'juan.perez@ucr.ac.cr';
+   const TEST_ADMIN_PASSWORD = '<contraseña-del-seed>';
+   ```
 
 ## Cómo correr
 

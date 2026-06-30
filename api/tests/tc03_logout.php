@@ -14,12 +14,12 @@ tc_require_server();
 echo "TC-03 — Cierre de sesión\n";
 
 $login = tc_http('POST', '/auth/login', [
-    'email'    => 'juan.perez@ucr.ac.cr',
-    'password' => 'Demo1234!',
+    'email'    => tc_admin_email(),
+    'password' => tc_admin_password(),
 ]);
 
 tc_assert($login['status'] === 200, 'TC-03', 'precondición: login exitoso');
-$token = $login['body']['data']['ACCESS_TOKEN'] ?? null;
+$token = $login['body']['data']['access_token'] ?? null;
 tc_assert(is_string($token) && $token !== '', 'TC-03', 'access token obtenido del login');
 
 $response = tc_http('POST', '/auth/logout', null, ['Authorization' => "Bearer $token"]);
