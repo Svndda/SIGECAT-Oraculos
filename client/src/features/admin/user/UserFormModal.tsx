@@ -157,7 +157,12 @@ export default function UserFormModal({
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={onTogglePasswordVisibility} edge="end">
+                    <IconButton
+                      size="small"
+                      onClick={onTogglePasswordVisibility}
+                      edge="end"
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>

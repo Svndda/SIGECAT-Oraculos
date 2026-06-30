@@ -58,7 +58,12 @@ function LogRow({ log }: { log: SystemLog }) {
       <TableRow hover>
         <TableCell padding="checkbox">
           {hasDetail && (
-            <IconButton size="small" onClick={() => setOpen((v) => !v)}>
+            <IconButton
+              size="small"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? 'Ocultar detalle del registro' : 'Ver detalle del registro'}
+              aria-expanded={open}
+            >
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           )}
@@ -221,7 +226,7 @@ export default function LogsPage() {
 
         <Tooltip title="Actualizar">
           <span>
-            <IconButton onClick={() => void load()} disabled={loading}>
+            <IconButton onClick={() => void load()} disabled={loading} aria-label="Actualizar registros">
               <RefreshIcon />
             </IconButton>
           </span>
