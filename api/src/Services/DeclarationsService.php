@@ -214,9 +214,9 @@ final class DeclarationsService
       $result['job_position'] = $jobPosition;
     }
 
-    $job = $this->jobRepository->findById(
-      $jobPosition['job_id']
-    );
+    $job = $jobPosition !== null
+      ? $this->jobRepository->findById($jobPosition['job_id'])
+      : null;
 
     if ($job !== null) {
       $result['job'] = $job;
@@ -548,9 +548,9 @@ final class DeclarationsService
         $item['job_position'] = $jobPosition;
       }
 
-      $job = $this->jobRepository->findById(
-        $jobPosition['job_id']
-      );
+      $job = $jobPosition !== null
+        ? $this->jobRepository->findById($jobPosition['job_id'])
+        : null;
 
       if ($job !== null) {
         $item['job'] = $job;
