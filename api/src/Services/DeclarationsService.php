@@ -212,14 +212,11 @@ final class DeclarationsService
 
     if ($jobPosition !== null) {
       $result['job_position'] = $jobPosition;
-    }
 
-    $job = $this->jobRepository->findById(
-      $jobPosition['job_id']
-    );
-
-    if ($job !== null) {
-      $result['job'] = $job;
+      $job = $this->jobRepository->findById($jobPosition['job_id']);
+      if ($job !== null) {
+        $item['job'] = $job;
+      }
     }
 
     $jobFunctions = $this->jobFunctionRepository->getByDeclaration(
@@ -541,14 +538,11 @@ final class DeclarationsService
 
       if ($jobPosition !== null) {
         $item['job_position'] = $jobPosition;
-      }
 
-      $job = $this->jobRepository->findById(
-        $jobPosition['job_id']
-      );
-
-      if ($job !== null) {
-        $item['job'] = $job;
+        $job = $this->jobRepository->findById($jobPosition['job_id']);
+        if ($job !== null) {
+          $item['job'] = $job;
+        }
       }
 
       if ($isAdminView) {
@@ -628,6 +622,7 @@ final class DeclarationsService
     }
     return $result;
   }
+
   /**
    * Allowed status transitions.
    *
