@@ -30,9 +30,10 @@ api/                    REST API (PHP + Oracle)
   src/Services/         Business logic
   src/Repositories/     Data access (PDO, prepared statements)
   config/routes.php     Route definitions
+  bin/migrate.php       Database migration runner
   tests/                Test suite (see api/tests/README.md)
+migrations/             Ordered SQL migrations (see migrations/README.md)
 docs/                   User manual and design notes
-SIGECAT-DB-*.sql        Database schema and migrations
 ```
 
 ## Requirements
@@ -69,12 +70,18 @@ npm run api   # API at http://localhost:8000
 
 ## Database
 
-The schema and its changes are kept as SQL scripts at the repository root
-(`SIGECAT-DB-*.sql`). Migrations are applied in chronological order against the
-Oracle instance; each file documents its purpose in the header. Database-side
-business logic (procedures and triggers) lives in
-`SIGECAT-DB-ROUTINES-business-logic.sql` and is described in
-`docs/db-business-logic-routines.md`.
+Schema changes live as ordered SQL files in `migrations/` and are applied by the
+runner, which records each one in `SCHEMA_MIGRATIONS` so it runs exactly once:
+
+```bash
+cd api
+php bin/migrate.php status     # list applied / pending
+php bin/migrate.php migrate    # apply pending migrations
+php bin/migrate.php baseline   # mark all as applied (existing database)
+```
+
+See `migrations/README.md` for conventions. Database-side business logic
+(procedures and triggers) is described in `docs/db-business-logic-routines.md`.
 
 ## Testing and quality
 
