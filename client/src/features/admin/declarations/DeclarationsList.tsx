@@ -30,7 +30,14 @@ export default function DeclarationsList(
 
           <Box>
             <Typography variant="body2" fontWeight={500}>
-              {d.user ? `${d.user.first_name} ${d.user.second_name} ${d.user.first_last_name} ${d.user.second_last_name}` : '—'}
+              {[
+                d.user?.first_name,
+                d.user?.second_name,
+                d.user?.first_last_name,
+                d.user?.second_last_name,
+              ]
+                .filter(Boolean)
+                .join(' ')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {d.user?.email ?? '—'}
