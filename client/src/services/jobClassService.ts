@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { extractApiError, type ListParams, type Paginated } from './common';
+import { extractApiError, type ListParams, type PageMeta, type Paginated } from './common';
 
 export interface JobClass {
   job_class_id: string;
@@ -24,7 +24,7 @@ export const jobClassService = {
 
   async getJobClassesPage(params: ListParams = {}): Promise<Paginated<JobClass>> {
     try {
-      const res = await apiClient.get<{ data: JobClass[]; meta: any }>('/job-classes', { params });
+      const res = await apiClient.get<{ data: JobClass[]; meta: PageMeta }>('/job-classes', { params });
       return {
         data: res.data.data ?? [],
         meta: res.data.meta,

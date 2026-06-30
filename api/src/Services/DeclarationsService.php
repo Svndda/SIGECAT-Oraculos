@@ -223,31 +223,30 @@ final class DeclarationsService
       $declarationId, 0, 50
     );
 
-    if ($jobFunctions !== null) {
-      foreach ($jobFunctions as &$jf) {
-        if (!empty($jf['official_function_id'])) {
-          $official = $this->officialFunctionRepository->findById(
-            $jf['official_function_id']
-          );
-          if ($official) {
-            $jf['function_name'] = $official['name'];
-            $jf['function_description'] = $official['description'];
-            $jf['function_type'] = 'official';
-            $jf['expected_time'] = $official['expected_time'] ?? null;
-          }
-        } elseif (!empty($jf['custom_function_id'])) {
-          $custom = $this->customFunctionRepository->findById(
-            $jf['custom_function_id']
-          );
-          if ($custom) {
-            $jf['function_name'] = $custom['name'];
-            $jf['function_description'] = $custom['description'];
-            $jf['function_type'] = 'custom';
-          }
+    foreach ($jobFunctions as &$jf) {
+      if (!empty($jf['official_function_id'])) {
+        $official = $this->officialFunctionRepository->findById(
+          $jf['official_function_id']
+        );
+        if ($official) {
+          $jf['function_name'] = $official['name'];
+          $jf['function_description'] = $official['description'];
+          $jf['function_type'] = 'official';
+          $jf['expected_time'] = $official['expected_time'] ?? null;
+        }
+      } elseif (!empty($jf['custom_function_id'])) {
+        $custom = $this->customFunctionRepository->findById(
+          $jf['custom_function_id']
+        );
+        if ($custom) {
+          $jf['function_name'] = $custom['name'];
+          $jf['function_description'] = $custom['description'];
+          $jf['function_type'] = 'custom';
         }
       }
-      $result['job_functions'] = $jobFunctions;
     }
+    unset($jf);
+    $result['job_functions'] = $jobFunctions;
 
     $user = $this->userRepository->findById(
       $declaration['user_id'],
