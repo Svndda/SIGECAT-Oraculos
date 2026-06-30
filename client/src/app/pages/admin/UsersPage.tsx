@@ -43,8 +43,14 @@ export default function UsersPage() {
   // Carga inicial
   useEffect(() => {
     setLoading(true);
-    userService.getUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    userService.getUsers()
+      .then(setUsers)
+      .catch((error) => {
+        const e = error as ServiceError;
+        snackbar.error(e.message ?? 'Error del servidor al cargar usuarios.');
+      })
+      .finally(() => setLoading(false));
+  }, [snackbar]);
 
   const filtered = useMemo(() =>
     users.filter((u) =>
