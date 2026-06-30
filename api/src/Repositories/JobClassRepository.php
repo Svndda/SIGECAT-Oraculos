@@ -125,6 +125,7 @@ final class JobClassRepository extends Repository
       'SELECT job_class_id, job_class_code, name, description, created_at, created_by
          FROM JOB_CLASSES
         WHERE UPPER(name) LIKE UPPER(:filter)
+          AND is_deleted = 0
         ORDER BY name
         OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
     );
@@ -138,7 +139,10 @@ final class JobClassRepository extends Repository
   public function countJobClasses(string $filter = ''): int
   {
     $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS total FROM JOB_CLASSES WHERE UPPER(name) LIKE UPPER(:filter)'
+      'SELECT COUNT(*) AS total
+         FROM JOB_CLASSES
+        WHERE UPPER(name) LIKE UPPER(:filter)
+          AND is_deleted = 0'
     );
     $stmt->execute([':filter' => '%' . $filter . '%']);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -267,12 +271,30 @@ final class JobClassRepository extends Repository
     return $stmt->rowCount() > 0;
   }
 
-  public function existsByCode(int $jobClassCode): bool
+  public function existsByCode(int $jobClassCode, ?string $excludeJobClassId = null): bool
   {
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS cnt FROM JOB_CLASSES WHERE job_class_code = :code'
-    );
-    $stmt->execute([':code' => $jobClassCode]);
+    if ($excludeJobClassId !== null) {
+      $stmt = $this->db->prepare(
+        'SELECT COUNT(*) AS cnt
+           FROM JOB_CLASSES
+          WHERE job_class_code = :code
+            AND job_class_id <> :job_class_id
+            AND is_deleted = 0'
+      );
+      $stmt->execute([
+        ':code' => $jobClassCode,
+        ':job_class_id' => $excludeJobClassId
+      ]);
+    } else {
+      $stmt = $this->db->prepare(
+        'SELECT COUNT(*) AS cnt
+           FROM JOB_CLASSES
+          WHERE job_class_code = :code
+            AND is_deleted = 0'
+      );
+      $stmt->execute([':code' => $jobClassCode]);
+    }
+
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return (int)($row['cnt'] ?? $row['CNT'] ?? 0) > 0;
   }
