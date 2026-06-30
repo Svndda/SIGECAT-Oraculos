@@ -20,6 +20,20 @@ import { useSnackbar } from '../../context/SnackbarContext';
 /** Frequencies accepted by JOB_FUNCTIONS.frequency (the "Período"). */
 const FREQUENCIES = ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Semestral'];
 
+/**
+ * Occurrences per week implied by each frequency, used to roll a single
+ * reported range up to a weekly load. A 5 h "Diario" function therefore
+ * reports 25 h/week (5 work days). Months are taken as ~4 weeks.
+ */
+const FREQUENCY_PER_WEEK: Record<string, number> = {
+  Diario: 5,
+  Semanal: 1,
+  Quincenal: 1 / 2,
+  Mensual: 1 / 4,
+  Trimestral: 1 / 13,
+  Semestral: 1 / 26,
+};
+
 /** A function shown in a tab (an official function or one of the user's custom). */
 interface CatalogItem {
   id: string;
@@ -32,7 +46,9 @@ interface CatalogItem {
 interface Report {
   jobFunctionId: string;
   frequency: string;
-  totalMinutes: number;
+  /** Start/end of the function within the shift day, 'HH:MM'. */
+  startTime: string;
+  endTime: string;
   justification: string;
 }
 
@@ -65,9 +81,10 @@ const toMinutes = (hhmm: string): number => {
   return (h || 0) * 60 + (m || 0);
 };
 
-/** Minutes between two Oracle timestamps (same shift day; wraps past midnight). */
-function rangeMinutes(startsOracle: string, endsOracle: string): number {
-  let diff = toMinutes(parseOracleToTimeInput(endsOracle)) - toMinutes(parseOracleToTimeInput(startsOracle));
+/** Minutes between two 'HH:MM' times (same shift day; wraps past midnight). */
+function durationMinutes(start: string, end: string): number {
+  if (!start || !end) return 0;
+  let diff = toMinutes(end) - toMinutes(start);
   if (diff < 0) diff += 24 * 60;
   return diff;
 }
@@ -101,8 +118,8 @@ export default function DeclarationFunctions() {
   // Report ("Reporte de Función") modal state.
   const [reportItem, setReportItem] = useState<CatalogItem | null>(null);
   const [frequency, setFrequency] = useState('Semanal');
-  const [horas, setHoras] = useState('1');
-  const [minutos, setMinutos] = useState('0');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [justification, setJustification] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -148,7 +165,8 @@ export default function DeclarationFunctions() {
           map[key] = {
             jobFunctionId: jf.job_function_id,
             frequency: jf.frequency ?? 'Semanal',
-            totalMinutes: rangeMinutes(jf.starts_at, jf.ends_at),
+            startTime: parseOracleToTimeInput(jf.starts_at),
+            endTime: parseOracleToTimeInput(jf.ends_at),
             justification: jf.justification ?? '',
           };
         }
@@ -175,13 +193,31 @@ export default function DeclarationFunctions() {
   const shiftDurationMin = shiftStart && shiftEnd
     ? (toMinutes(shiftEnd) - toMinutes(shiftStart) + 24 * 60) % (24 * 60)
     : 0;
-  const totalSemanalMin = Object.values(reports).reduce((sum, r) => sum + r.totalMinutes, 0);
 
-  const buildRange = (totalMinutes: number): { starts_at: string; ends_at: string } => {
-    const starts = `${shiftDate} ${shiftStart}:00`;
-    const end = new Date(`${shiftDate}T${shiftStart}:00`);
-    end.setMinutes(end.getMinutes() + totalMinutes);
-    return { starts_at: starts, ends_at: formatDateForBackend(end) };
+  /** Weekly minutes a single report contributes, scaled by its frequency. */
+  const weeklyMinutes = (r: Pick<Report, 'startTime' | 'endTime' | 'frequency'>): number =>
+    durationMinutes(r.startTime, r.endTime) * (FREQUENCY_PER_WEEK[r.frequency] ?? 1);
+
+  const totalSemanalMin = Object.values(reports).reduce((sum, r) => sum + weeklyMinutes(r), 0);
+
+  /**
+   * Whether a [start, end] range falls (partly) outside the shift window.
+   * Offsets are measured from the shift start, wrapping past midnight, so a
+   * function that begins before the shift or ends after it is flagged.
+   */
+  const isOutsideShift = (start: string, end: string): boolean => {
+    if (!start || !end || !shiftStart || !shiftEnd) return false;
+    const duration = durationMinutes(start, end);
+    if (duration <= 0) return false;
+    const startOffset = (toMinutes(start) - toMinutes(shiftStart) + 24 * 60) % (24 * 60);
+    return startOffset + duration > shiftDurationMin;
+  };
+
+  const buildRange = (start: string, end: string): { starts_at: string; ends_at: string } => {
+    const starts = `${shiftDate} ${start}:00`;
+    const endDate = new Date(`${shiftDate}T${start}:00`);
+    endDate.setMinutes(endDate.getMinutes() + durationMinutes(start, end));
+    return { starts_at: starts, ends_at: formatDateForBackend(endDate) };
   };
 
   const openReport = (item: CatalogItem) => {
@@ -189,34 +225,37 @@ export default function DeclarationFunctions() {
     setReportItem(item);
     if (existing) {
       setFrequency(existing.frequency);
-      setHoras(String(Math.floor(existing.totalMinutes / 60)));
-      setMinutos(String(existing.totalMinutes % 60));
+      setStartTime(existing.startTime);
+      setEndTime(existing.endTime);
       setJustification(existing.justification);
     } else {
       setFrequency('Semanal');
-      setHoras('1');
-      setMinutos('0');
+      setStartTime(shiftStart);
+      setEndTime(shiftEnd);
       setJustification('');
     }
   };
 
-  const num = (s: string) => Math.max(0, Math.trunc(Number(s)) || 0);
-  const reportTotal = num(horas) * 60 + num(minutos);
-  const reportOutside = reportTotal > shiftDurationMin;
+  const reportTotal = durationMinutes(startTime, endTime);
+  const reportOutside = isOutsideShift(startTime, endTime);
 
   const submitReport = async () => {
     if (!reportItem || !declarationId) return;
+    if (!startTime || !endTime) {
+      snackbar.error('Debe indicar la hora de inicio y la hora de fin.');
+      return;
+    }
     if (reportTotal <= 0) {
-      snackbar.error('El tiempo reportado debe ser mayor a 0.');
+      snackbar.error('La hora de fin debe ser posterior a la hora de inicio.');
       return;
     }
     if (reportOutside && justification.trim() === '') {
-      snackbar.error('La justificación es obligatoria si el tiempo se sale de la jornada.');
+      snackbar.error('La justificación es obligatoria si la función se sale de la jornada.');
       return;
     }
     setIsSubmitting(true);
     try {
-      const range = buildRange(reportTotal);
+      const range = buildRange(startTime, endTime);
       const existing = reports[reportItem.id];
       const justif = reportOutside ? justification.trim() : '';
       if (existing) {
@@ -225,7 +264,7 @@ export default function DeclarationFunctions() {
         });
         setReports((prev) => ({
           ...prev,
-          [reportItem.id]: { ...existing, frequency, totalMinutes: reportTotal, justification: justif },
+          [reportItem.id]: { ...existing, frequency, startTime, endTime, justification: justif },
         }));
       } else {
         const created = await jobFunctionService.createJobFunction({
@@ -237,7 +276,7 @@ export default function DeclarationFunctions() {
         });
         setReports((prev) => ({
           ...prev,
-          [reportItem.id]: { jobFunctionId: created.id, frequency, totalMinutes: reportTotal, justification: justif },
+          [reportItem.id]: { jobFunctionId: created.id, frequency, startTime, endTime, justification: justif },
         }));
       }
       setReportItem(null);
@@ -307,7 +346,7 @@ export default function DeclarationFunctions() {
                   <Typography sx={{ fontWeight: 500 }}>{item.name}</Typography>
                   {report ? (
                     <Stack direction="row" spacing={0.5} alignItems="center" onClick={(e) => e.stopPropagation()}>
-                      <Chip size="small" color="primary" variant="outlined" label={`${formatHM(report.totalMinutes)} · ${report.frequency}`} />
+                      <Chip size="small" color="primary" variant="outlined" label={`${report.startTime}–${report.endTime} · ${report.frequency}`} />
                       <IconButton size="small" onClick={() => openReport(item)} sx={{ color: '#1a2b4a' }}><EditIcon fontSize="small" /></IconButton>
                       <IconButton size="small" onClick={() => removeReport(item)} sx={{ color: '#d32f2f' }}><DeleteOutlineIcon fontSize="small" /></IconButton>
                     </Stack>
@@ -409,19 +448,24 @@ export default function DeclarationFunctions() {
             {FREQUENCIES.map((f) => <MenuItem key={f} value={f}>{f}</MenuItem>)}
           </TextField>
           <Stack direction="row" spacing={2}>
-            <TextField label="Tiempo (horas)" type="number" value={horas}
-                       onChange={(e) => setHoras(e.target.value)} size="small" fullWidth inputProps={{ min: 0 }} />
-            <TextField label="Tiempo (minutos)" type="number" value={minutos}
-                       onChange={(e) => setMinutos(e.target.value)} size="small" fullWidth inputProps={{ min: 0, max: 59 }} />
+            <TextField label="Hora de inicio" type="time" value={startTime}
+                       onChange={(e) => setStartTime(e.target.value)} size="small" fullWidth
+                       InputLabelProps={{ shrink: true }} />
+            <TextField label="Hora de fin" type="time" value={endTime}
+                       onChange={(e) => setEndTime(e.target.value)} size="small" fullWidth
+                       InputLabelProps={{ shrink: true }} />
           </Stack>
           <Typography variant="subtitle2" sx={{ color: '#12457d' }}>
-            Total reportado: {formatHM(reportTotal)}
+            Duración: {formatHM(reportTotal)}
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              (aporta {formatHM(Math.round(weeklyMinutes({ startTime, endTime, frequency })))} semanales)
+            </Typography>
           </Typography>
           {reportOutside && (
-            <TextField label="Justificación (el tiempo se sale de la jornada)" value={justification}
+            <TextField label="Justificación (la función se sale de la jornada)" value={justification}
                        onChange={(e) => setJustification(e.target.value)} size="small" fullWidth multiline rows={2}
                        required error={justification.trim() === ''}
-                       helperText={justification.trim() === '' ? 'Obligatoria si el tiempo excede la jornada.' : undefined} />
+                       helperText={justification.trim() === '' ? 'Obligatoria si la función se sale de la jornada.' : undefined} />
           )}
         </Stack>
       </ModalForm>
