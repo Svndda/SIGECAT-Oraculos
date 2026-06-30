@@ -92,7 +92,6 @@ export default function UsersPage() {
     }
   };
 
-  // Formulario de creación
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setFormErrors({});
@@ -171,7 +170,6 @@ export default function UsersPage() {
         onView={openView}
       />
 
-      {/* Modales usando componentes específicos */}
       <UserFormModal
         open={formOpen}
         viewMode={!!viewTarget}
@@ -195,7 +193,6 @@ export default function UsersPage() {
         onConfirm={handleChangeRole}
       />
 
-      {/* Modal de confirmación de eliminación (puedes usar ModalAlert directamente o crear un componente DeleteConfirmModal) */}
       <ModalAlert
         open={!!deleteTarget}
         title="Eliminar usuario"

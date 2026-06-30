@@ -45,8 +45,7 @@ class OfficialFunctionService
 
   /**
    * Registers a new official function. The name must be unique among active
-   * functions of the same job, and the job must exist ("válido según
-   * normativa").
+   * functions of the same job, and the referenced job must exist.
    *
    * @throws ApiException
    */
