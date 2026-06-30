@@ -52,6 +52,7 @@ apiClient.interceptors.response.use(
         try {
           response.data = JSON.parse(match[0]);
         } catch {
+          // Not valid JSON: leave response.data as the original string.
         }
       }
     }

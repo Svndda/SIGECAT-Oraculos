@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [staging, main]
+  push:
+    branches: [staging, main]
+
+jobs:
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  backend:
+    name: Backend (static analysis)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo
+          tools: composer
+
+      - run: composer install --prefer-dist --no-progress
+
+      # config/oci_config.php holds DB credentials and is gitignored, so it is
+      # absent in CI. PHPStan only needs the OCIConfig symbol to resolve, not a
+      # real connection, so we generate a stub with placeholder constants.
+      - name: Generate oci_config stub for static analysis
+        run: |
+          cat > config/oci_config.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+
+          final class OCIConfig
+          {
+            const USERNAME = 'ci';
+            const PASSWORD = 'ci';
+            const TNSNAME = 'ci';
+            const TEST_ADMIN_EMAIL = 'ci@example.com';
+            const TEST_ADMIN_PASSWORD = 'ci';
+          }
+          PHP
+
+      - run: vendor/bin/phpstan analyse --no-progress
