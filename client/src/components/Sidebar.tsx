@@ -102,7 +102,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       >
         {showLabels ? (
           <>
-            <Avatar sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }} />
+            <Avatar
+              sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }}
+              alt={user ? `${user.first_name} ${user.last_name}` : 'Usuario'}
+            />
             <Box sx={{ flex: 1, minWidth: 0, mx: 1.5 }}>
               <Typography variant="caption" sx={{ color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }} display="block">
                 {user ? (ROLE_LABELS[user.role] ?? user.role) : ''}
@@ -118,6 +121,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 if (isMobile) onMobileClose();
                 else setCollapsed(true);
               }}
+              aria-label={isMobile ? 'Cerrar menú' : 'Contraer menú'}
               sx={{ flexShrink: 0, color: '#666' }}
             >
               <ChevronLeftIcon fontSize="small" />
@@ -130,6 +134,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               e.stopPropagation();
               setCollapsed(false);
             }}
+            aria-label="Expandir menú"
             sx={{ mx: 'auto', color: '#666' }}
           >
             <ChevronRightIcon fontSize="small" />

@@ -348,6 +348,7 @@ export default function DeclarationLicenses({onDataChange}: DeclarationLicensesP
                     />
                   </Box>
                   <IconButton size="small" onClick={() => remove(l.id)}
+                              aria-label="Eliminar licencia"
                               sx={{color: '#d32f2f'}}>
                     <DeleteOutlineIcon fontSize="small"/>
                   </IconButton>

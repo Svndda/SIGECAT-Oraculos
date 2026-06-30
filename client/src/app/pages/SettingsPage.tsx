@@ -9,7 +9,10 @@ import {
   Stack,
   CircularProgress,
   Grid,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { userService } from '../../services/userService.ts';
 import { authService } from '../../services/authService.ts';
 import type { ServiceError } from '../../services/common.ts';
@@ -32,6 +35,9 @@ export default function SettingsPage() {
     confirmPassword: '',
   });
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const snackbar = useSnackbar();
 
@@ -59,6 +65,10 @@ export default function SettingsPage() {
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswords({ ...passwords, [e.target.name]: e.target.value });
   };
+
+  const passwordsMatch =
+    passwords.confirmPassword === '' ||
+    passwords.newPassword === passwords.confirmPassword;
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +101,19 @@ export default function SettingsPage() {
       setIsSubmittingPassword(false);
     }
   };
+
+  const eyeButton = (show: boolean, setShow: (v: boolean) => void, label: string) => (
+    <InputAdornment position="end">
+      <IconButton
+        size="small"
+        onClick={() => setShow(!show)}
+        edge="end"
+        aria-label={show ? `Ocultar ${label}` : `Mostrar ${label}`}
+      >
+        {show ? <VisibilityOff /> : <Visibility />}
+      </IconButton>
+    </InputAdornment>
+  );
 
   if (loadingInitial) {
     return (
@@ -139,18 +162,49 @@ export default function SettingsPage() {
               <Stack spacing={2.5}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Contraseña Actual</Typography>
-                  <TextField fullWidth type="password" size="small" name="currentPassword" value={passwords.currentPassword} onChange={handlePasswordChange} />
+                  <TextField
+                    fullWidth
+                    type={showCurrent ? 'text' : 'password'}
+                    size="small"
+                    name="currentPassword"
+                    value={passwords.currentPassword}
+                    onChange={handlePasswordChange}
+                    slotProps={{ input: { endAdornment: eyeButton(showCurrent, setShowCurrent, 'contraseña actual') } }}
+                  />
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Nueva Contraseña</Typography>
-                  <TextField fullWidth type="password" size="small" name="newPassword" value={passwords.newPassword} onChange={handlePasswordChange} />
+                  <TextField
+                    fullWidth
+                    type={showNew ? 'text' : 'password'}
+                    size="small"
+                    name="newPassword"
+                    value={passwords.newPassword}
+                    onChange={handlePasswordChange}
+                    slotProps={{ input: { endAdornment: eyeButton(showNew, setShowNew, 'nueva contraseña') } }}
+                  />
                   <PasswordStrengthFeedback password={passwords.newPassword} />
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Confirmar Nueva Contraseña</Typography>
-                  <TextField fullWidth type="password" size="small" name="confirmPassword" value={passwords.confirmPassword} onChange={handlePasswordChange} />
+                  <TextField
+                    fullWidth
+                    type={showConfirm ? 'text' : 'password'}
+                    size="small"
+                    name="confirmPassword"
+                    value={passwords.confirmPassword}
+                    onChange={handlePasswordChange}
+                    error={!passwordsMatch}
+                    helperText={!passwordsMatch ? 'Las contraseñas no coinciden.' : undefined}
+                    slotProps={{ input: { endAdornment: eyeButton(showConfirm, setShowConfirm, 'confirmación de contraseña') } }}
+                  />
                 </Box>
-                <Button type="submit" variant="contained" disabled={isSubmittingPassword} sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' }, alignSelf: 'flex-start' }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSubmittingPassword}
+                  sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' }, alignSelf: 'flex-start' }}
+                >
                   {isSubmittingPassword ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Cambiar Contraseña'}
                 </Button>
               </Stack>

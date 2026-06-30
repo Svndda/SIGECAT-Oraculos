@@ -359,6 +359,7 @@ export default function DeclarationRestTimes({onDataChange}: DeclarationRestTime
                     />
                   </Box>
                   <IconButton size="small" onClick={() => remove(r.id)}
+                              aria-label="Eliminar tiempo de descanso"
                               sx={{color: '#d32f2f'}}>
                     <DeleteOutlineIcon fontSize="small"/>
                   </IconButton>

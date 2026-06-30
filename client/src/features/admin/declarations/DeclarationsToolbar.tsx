@@ -74,7 +74,7 @@ export default function DeclarationsToolbar(
               ),
               endAdornment: search && (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => onSearchChange('')}>
+                  <IconButton size="small" onClick={() => onSearchChange('')} aria-label="Limpiar búsqueda">
                     <ClearIcon fontSize="small"/>
                   </IconButton>
                 </InputAdornment>

@@ -347,8 +347,8 @@ export default function DeclarationFunctions() {
                   {report ? (
                     <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0} onClick={(e) => e.stopPropagation()}>
                       <Chip size="small" color="primary" variant="outlined" label={`${report.startTime}–${report.endTime} · ${report.frequency}`} />
-                      <IconButton size="small" onClick={() => openReport(item)} sx={{ color: '#1a2b4a' }}><EditIcon fontSize="small" /></IconButton>
-                      <IconButton size="small" onClick={() => removeReport(item)} sx={{ color: '#d32f2f' }}><DeleteOutlineIcon fontSize="small" /></IconButton>
+                      <IconButton size="small" onClick={() => openReport(item)} aria-label={`Editar reporte: ${item.name}`} sx={{ color: '#1a2b4a' }}><EditIcon fontSize="small" /></IconButton>
+                      <IconButton size="small" onClick={() => removeReport(item)} aria-label={`Eliminar reporte: ${item.name}`} sx={{ color: '#d32f2f' }}><DeleteOutlineIcon fontSize="small" /></IconButton>
                     </Stack>
                   ) : (
                     <Button size="small" variant="outlined" onClick={(e) => { e.stopPropagation(); openReport(item); }}
