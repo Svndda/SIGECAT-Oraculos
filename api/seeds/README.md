@@ -24,7 +24,9 @@ Existing (non-demo) data is never modified.
 
 ### Credentials
 
-All demo users share the password **`Demo1234!`**:
+All demo users share one password, taken from the `DEMO_SEED_PASSWORD`
+environment variable (so no secret lives in the repo). If it is not set, the
+script generates a random password and **prints it** at the end of the run.
 
 | Email | Role |
 |-------|------|
@@ -39,8 +41,8 @@ All demo users share the password **`Demo1234!`**:
 Against the Docker stack (see `docker-compose.yml`):
 
 ```bash
-# seed (idempotent — safe to run repeatedly)
-docker compose exec api php /app/api/seeds/demo_seed.php
+# seed (idempotent — safe to run repeatedly); set a known password for the demo
+docker compose exec -e DEMO_SEED_PASSWORD='<your-password>' api php /app/api/seeds/demo_seed.php
 
 # remove demo data only
 docker compose exec api php /app/api/seeds/demo_seed.php --purge
@@ -49,7 +51,7 @@ docker compose exec api php /app/api/seeds/demo_seed.php --purge
 Running the API directly on the host instead:
 
 ```bash
-php api/seeds/demo_seed.php
+DEMO_SEED_PASSWORD='<your-password>' php api/seeds/demo_seed.php
 ```
 
 > The script is **idempotent**: it purges any previous demo rows before

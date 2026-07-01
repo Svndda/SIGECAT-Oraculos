@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Populates every admin CRUD with a healthy amount of realistic data so the app
  * looks alive during a presentation, plus demo accounts with KNOWN passwords:
  *
- *   - 1 admin + 4 employees, all @ucr.ac.cr (see DEMO_PASSWORD).
+ *   - 1 admin + 4 employees, all @ucr.ac.cr (password from DEMO_SEED_PASSWORD env, or random).
  *   - Catalog top-up: areas, departments, sections, units, jobs, license types.
  *   - A job position assigned to each employee.
  *   - A couple of declarations per employee across a few statuses.
@@ -42,7 +42,13 @@ use Core\UlidGenerator;
 $pdo = require __DIR__ . '/../config/database.php';
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-const DEMO_PASSWORD = 'Demo1234!';
+// The demo password is taken from the DEMO_SEED_PASSWORD env var so no secret
+// lives in the repo. When unset, a random one is generated and printed below.
+$demoPassword = getenv('DEMO_SEED_PASSWORD');
+if ($demoPassword === false || $demoPassword === '') {
+  $demoPassword = bin2hex(random_bytes(6));
+}
+
 const DEMO_EMAIL_LIKE = 'demo.%@ucr.ac.cr';
 const DEMO_JOB_CODE_BASE = 90001;      // above the existing MAX(job_code)
 const DEMO_POSITION_BASE = 9001;
@@ -103,7 +109,7 @@ if ($purgeOnly) { say('Purge complete.'); return; }
 $anExistingAdmin = $pdo->query("SELECT user_id FROM users WHERE role='admin' AND is_deleted=0 FETCH FIRST 1 ROWS ONLY")->fetchColumn();
 if ($anExistingAdmin === false) { throw new RuntimeException('No admin user found to bootstrap.'); }
 
-$passwordHash = password_hash(DEMO_PASSWORD, PASSWORD_BCRYPT);
+$passwordHash = password_hash($demoPassword, PASSWORD_BCRYPT);
 $people = [
   ['email' => 'demo.admin@ucr.ac.cr', 'first' => 'Demo',  'second' => null,     'last1' => 'Administrador', 'last2' => 'Sistema', 'role' => 'admin'],
   ['email' => 'demo.ana@ucr.ac.cr',   'first' => 'Ana',   'second' => 'María',  'last1' => 'Rojas',         'last2' => 'Vargas',  'role' => 'employee'],
@@ -132,7 +138,7 @@ foreach ($people as $p) {
   $userIds[$p['email']] = $id;
 }
 $owner = $userIds['demo.admin@ucr.ac.cr']; // owns every seeded catalog row
-say('Created ' . count($userIds) . ' demo users (password for all: ' . DEMO_PASSWORD . ').');
+say('Created ' . count($userIds) . ' demo users (password for all: ' . $demoPassword . ').');
 
 // --- Catalog top-up (each CRUD gets a solid set of realistic rows) -----------
 
@@ -268,5 +274,5 @@ say("Created $made declarations ($abandoned Abandoned, rest Incomplete).");
 say('');
 say('Demo seed complete. Login with any of:');
 foreach ($people as $p) {
-  say(sprintf('  %-26s %s   (%s)', $p['email'], DEMO_PASSWORD, $p['role']));
+  say(sprintf('  %-26s %s   (%s)', $p['email'], $demoPassword, $p['role']));
 }
