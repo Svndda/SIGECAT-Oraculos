@@ -105,6 +105,10 @@ class JobClassService
    */
   public function updateJobClass(string $jobClassId, UpdateJobClassDTO $dto): ?array
   {
+    if (empty($jobClassId)) {
+      throw new ApiException(ErrorType::missingField('job_class_id'));
+    }
+
     $dto->validate();
 
     $existing = $this->repository->findById($jobClassId);
@@ -119,12 +123,12 @@ class JobClassService
     if (
       $dto->jobClassCode !== null &&
       $dto->jobClassCode !== $currentJobClassCode && 
-      $this->repository->existsByCode($dto->jobClassCode)
+      $this->repository->existsByCode($dto->jobClassCode, $jobClassId)
     ) {
       throw new ApiException(
-      ErrorType::from('REPEATED_JOB_CLASS_CODE', 'El código de clase ocupacional ya existe')
-    );
-}
+        ErrorType::from('REPEATED_JOB_CLASS_CODE', 'El código de clase ocupacional ya existe')
+      );
+    }
 
     $this->repository->update($jobClassId, $dto);
     return $this->getJobClassById($jobClassId);

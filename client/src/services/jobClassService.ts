@@ -8,6 +8,20 @@ export interface JobClass {
   description: string | null;
   created_at: string;
   created_by: string;
+  is_deleted: number;
+  deleted_at: string | null;
+}
+
+export interface CreateJobClassPayload {
+  name: string;
+  job_class_code: number;
+  description?: string;
+}
+
+export interface UpdateJobClassPayload {
+  name?: string;
+  job_class_code?: number;
+  description?: string;
 }
 
 export const jobClassService = {
@@ -33,4 +47,38 @@ export const jobClassService = {
       throw extractApiError(e);
     }
   },
+
+  async getJobClassById(id: string): Promise<JobClass> {
+    try {
+      const res = await apiClient.get<{ data: JobClass }>(`/job-class/${id}`);
+      return res.data.data;
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
+  async createJobClass(payload: CreateJobClassPayload): Promise<JobClass> {
+    try {
+      const res = await apiClient.post<{ data: JobClass }>('/job-class', payload);
+      return res.data.data;
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
+  async updateJobClass(id: string, payload: UpdateJobClassPayload): Promise<void> {
+    try {
+      await apiClient.patch(`/job-class/${id}`, payload);
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
+  async deleteJobClass(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/job-class/${id}`);
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  }
 };
