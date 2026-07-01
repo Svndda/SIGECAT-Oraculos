@@ -39,6 +39,9 @@ yarn-error.log*
 # OCI configuration (contains sensitive credentials)
 api/config/oci_config.php
 
+# Oracle wallet copy for the Docker stack (contains DB credentials)
+docker/wallet/
+
 # Mail configuration (contains SMTP credentials)
 api/config/mail_config.php
 
