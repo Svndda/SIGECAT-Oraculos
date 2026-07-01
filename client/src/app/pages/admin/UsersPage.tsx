@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { Box, Pagination } from '@mui/material';
 import { userService } from '../../../services/userService';
 import type { AdminUser } from '../../../services/userService';
-import type { ServiceError } from '../../../services/common';
+import type { PageMeta, ServiceError } from '../../../services/common';
 import UserToolbar from '../../../features/admin/user/UserToolbar';
 import UserList from '../../../features/admin/user/UserList';
 import UserFormModal from '../../../features/admin/user/UserFormModal';
@@ -10,6 +10,8 @@ import ChangeRoleModal from '../../../features/admin/user/ChangeRoleModal';
 import { useSnackbar } from '../../../context/SnackbarContext';
 import { validateInstitutionalEmail } from '../../../utils/validation';
 import ModalAlert from '../../../components/modals/ModalAlert';
+
+const LIMIT = 10;
 
 const EMPTY_FORM = {
   first_name: '',
@@ -23,7 +25,10 @@ const EMPTY_FORM = {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [meta, setMeta] = useState<PageMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [appliedFilter, setAppliedFilter] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Estados para modales
@@ -40,25 +45,34 @@ export default function UsersPage() {
 
   const snackbar = useSnackbar();
 
-  // Carga inicial
+  // Debounce the search box into the applied (server-side) filter.
   useEffect(() => {
+    const t = setTimeout(() => {
+      setAppliedFilter(search.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const loadUsers = useCallback(() => {
     setLoading(true);
-    userService.getUsers()
-      .then(setUsers)
+    return userService.getUsersPage({ page, limit: LIMIT, filter: appliedFilter })
+      .then((res) => {
+        setUsers(res.data);
+        setMeta(res.meta);
+      })
       .catch((error) => {
         const e = error as ServiceError;
         snackbar.error(e.message ?? 'Error del servidor al cargar usuarios.');
       })
       .finally(() => setLoading(false));
-  }, [snackbar]);
+  }, [page, appliedFilter, snackbar]);
 
-  const filtered = useMemo(() =>
-    users.filter((u) =>
-      `${u.first_name} ${u.last_name} ${u.email} ${u.role}`
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    ), [users, search]
-  );
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
+
+  const totalPages = meta?.total_pages ?? 1;
 
   // Handlers para cambiar rol
   const openRole = (user: AdminUser) => {
@@ -70,8 +84,8 @@ export default function UsersPage() {
     setIsSubmitting(true);
     try {
       await userService.changeRole(roleTarget.id, selectedRole);
-      setUsers((prev) => prev.map((u) => (u.id === roleTarget.id ? { ...u, role: selectedRole } : u)));
       setRoleTarget(null);
+      await loadUsers();
       snackbar.success('Rol actualizado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -87,8 +101,13 @@ export default function UsersPage() {
     setIsSubmitting(true);
     try {
       await userService.deleteUser(deleteTarget.id);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
+      // If we just removed the last row on a page beyond the first, step back.
+      if (users.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await loadUsers();
+      }
       snackbar.success('Usuario eliminado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -139,7 +158,7 @@ export default function UsersPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const created = await userService.registerUser({
+      await userService.registerUser({
         first_name: form.first_name,
         second_name: form.second_name || undefined,
         first_last_name: form.first_last_name,
@@ -148,8 +167,12 @@ export default function UsersPage() {
         role: form.role as 'admin' | 'employee',
         password: form.password,
       });
-      setUsers((prev) => [created, ...prev]);
       closeModal();
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        await loadUsers();
+      }
       snackbar.success('Usuario creado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
@@ -169,12 +192,24 @@ export default function UsersPage() {
       <UserToolbar search={search} onSearchChange={setSearch} onAddClick={openCreate} />
 
       <UserList
-        users={filtered}
+        users={users}
         loading={loading}
         onChangeRole={openRole}
         onDelete={setDeleteTarget}
         onView={openView}
       />
+
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            shape="rounded"
+          />
+        </Box>
+      )}
 
       <UserFormModal
         open={formOpen}

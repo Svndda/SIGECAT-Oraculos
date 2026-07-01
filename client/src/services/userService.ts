@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { extractApiError } from './common';
+import { extractApiError, type ListParams, type PageMeta, type Paginated } from './common';
 
 export interface AdminUser {
   id: string;
@@ -53,8 +53,35 @@ export const userService = {
       return [...mockUsers];
     }
     try {
-      const res = await apiClient.get<{ data: AdminUser[] }>('/users');
-      return res.data.data;
+      // Page through the full list so callers that need every user (counts,
+      // selection dropdowns) aren't silently capped at the server's page size.
+      const first = await apiClient.get<{ data: AdminUser[]; meta?: PageMeta }>(
+        '/users', { params: { page: 1, limit: 100 } }
+      );
+      const users = first.data.data ?? [];
+      const totalPages = first.data.meta?.total_pages ?? 1;
+      for (let page = 2; page <= totalPages; page++) {
+        const res = await apiClient.get<{ data: AdminUser[] }>(
+          '/users', { params: { page, limit: 100 } }
+        );
+        users.push(...(res.data.data ?? []));
+      }
+      return users;
+    } catch (e) { throw extractApiError(e); }
+  },
+
+  /** A single paginated page of users (with meta) for the admin list view. */
+  async getUsersPage(params: ListParams = {}): Promise<Paginated<AdminUser>> {
+    if (USE_MOCK) {
+      await new Promise((r) => setTimeout(r, 400));
+      return {
+        data: [...mockUsers],
+        meta: { page: 1, limit: mockUsers.length, total: mockUsers.length, total_pages: 1 },
+      };
+    }
+    try {
+      const res = await apiClient.get<{ data: AdminUser[]; meta: PageMeta }>('/users', { params });
+      return { data: res.data.data ?? [], meta: res.data.meta };
     } catch (e) { throw extractApiError(e); }
   },
 
