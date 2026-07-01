@@ -14,6 +14,7 @@ import {
   useTheme,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import CorporateFareIcon from '@mui/icons-material/CorporateFare';
 import BusinessIcon from '@mui/icons-material/Business';
@@ -43,6 +44,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ALL_NAV_ITEMS = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/', adminOnly: false },
+  { label: 'Panel', icon: <DashboardIcon fontSize="small" />, route: '/panel', adminOnly: true },
   { label: 'Usuarios', icon: <PeopleIcon fontSize="small" />, route: '/usuarios', adminOnly: true },
   { label: 'Declaraciones', icon: <DocumentScannerRounded fontSize="small" />, route: '/declaraciones', adminOnly: true },
   { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/areas', adminOnly: true },
