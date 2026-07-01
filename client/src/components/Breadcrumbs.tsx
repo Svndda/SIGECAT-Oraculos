@@ -20,6 +20,8 @@ const ROUTES: Record<string, RouteNode> = {
     parent: '/declaracion-registro'
   },
   '/work-hours': {label: 'Cargas de trabajo', parent: '/employee-form'},
+  '/additional-information': {label: 'Informacion Adicional', parent: '/work-hours'},
+
   '/cambiar-contrasena': {label: 'Cambiar contraseña', parent: '/'},
   '/ajustes': {label: 'Ajustes', parent: '/'},
   '/usuarios': {label: 'Usuarios', parent: '/'},
@@ -29,7 +31,14 @@ const ROUTES: Record<string, RouteNode> = {
   '/unidades': {label: 'Unidades', parent: '/'},
   '/cargos': {label: 'Cargos', parent: '/'},
   '/declaraciones': {label: 'Declaraciones', parent: '/'},
+  '/clases-ocupacionales': {label: 'Clases Ocupacionales', parent: '/'},
+  '/funciones': {label: 'Funciones', parent: '/'},
+  '/funciones-personalizadas': {label: 'Funciones Personalizadas', parent: '/'},
+  '/licencias': {label: 'Licencias', parent: '/'},
+  '/tipos-de-licencia': {label: 'Tipos de Licencia', parent: '/'},
   '/plazas': {label: 'Plazas', parent: '/'},
+  '/registros': {label: 'Registros  ', parent: '/'},
+
 };
 
 function buildTrail(pathname: string): Array<{ path: string; label: string }> {
