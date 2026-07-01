@@ -36,7 +36,7 @@ export default function DepartmentList(
       render: (d) => (
         <Tooltip title={d.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(d.name)}
+            {truncateText(d.name, 28)}
           </Typography>
         </Tooltip>
       ),
