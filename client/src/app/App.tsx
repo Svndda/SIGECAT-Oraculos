@@ -31,6 +31,7 @@ import SettingsPage from './pages/SettingsPage.tsx';
 import WorkHoursPage from './pages/WorkHoursPage';
 import EmployeeRecordPage from "./pages/EmployeeRecordPage.tsx";
 import DeclarationsPage from "./pages/admin/DeclarationsPage";
+import DashboardPage from './pages/admin/DashboardPage.tsx';
 import LogsPage from './pages/admin/LogsPage.tsx';
 import JobClassPage from './pages/admin/JobClassPage.tsx';
 import AdditionalInformationPage from "./pages/AdditionalInformationPage.tsx";
@@ -66,6 +67,7 @@ function App() {
                   <Route path="ajustes" element={<SettingsPage/>}/>
 
                   <Route element={<RoleRoute allowedRoles={['ADMIN']}/>}>
+                    <Route path="panel" element={<DashboardPage/>}/>
                     <Route path="areas" element={<AreasPage/>}/>
                     <Route path="unidades" element={<UnitsPage/>}/>
                     <Route path="secciones" element={<SectionsPage/>}/>

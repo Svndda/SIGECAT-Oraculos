@@ -1,5 +1,6 @@
 // src/pages/admin/DeclarationsPage.tsx
 import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useSearchParams} from 'react-router-dom';
 
 import {
   Box,
@@ -19,19 +20,27 @@ import {useSnackbar} from '../../../context/SnackbarContext';
 import type {ServiceError} from '../../../services/common';
 import type {Declaration} from '../../../services/declarationsService';
 import {declarationService} from '../../../services/declarationsService';
+import {STATUS_TRANSLATIONS} from '../../../services/declarationConstants';
 
 const PAGE_LIMIT = 10;
 const MAX_LIMIT = 500;
 
 export default function DeclarationsPage() {
   const snackbar = useSnackbar();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [allDeclarations, setAllDeclarations] = useState<Declaration[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Allow deep-linking a pre-filtered queue, e.g. from the dashboard: ?estado=Revision
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const estado = searchParams.get('estado');
+    return estado && Object.prototype.hasOwnProperty.call(STATUS_TRANSLATIONS, estado)
+      ? estado
+      : 'all';
+  });
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedDeclaration, setSelectedDeclaration] = useState<Declaration | null>(null);
@@ -88,7 +97,7 @@ export default function DeclarationsPage() {
     setPage(value);
   };
 
-  const handleViewDetail = async (declaration: Declaration) => {
+  const handleViewDetail = useCallback(async (declaration: Declaration) => {
     setDetailLoading(true);
     try {
       const fullDeclaration = await declarationService.getDeclarationById(
@@ -103,7 +112,21 @@ export default function DeclarationsPage() {
     } finally {
       setDetailLoading(false);
     }
-  };
+  }, [snackbar]);
+
+  // Auto-open a specific declaration when deep-linked with ?open=<id>
+  // (e.g. the "Revisar" action on the dashboard).
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || loading || allDeclarations.length === 0) return;
+
+    const target = allDeclarations.find((d) => d.declaration_id === openId);
+    if (target) handleViewDetail(target);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('open');
+    setSearchParams(next, {replace: true});
+  }, [searchParams, loading, allDeclarations, handleViewDetail, setSearchParams]);
 
   const handleCloseDetail = () => {
     setDetailOpen(false);
