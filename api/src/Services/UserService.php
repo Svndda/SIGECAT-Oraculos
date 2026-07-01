@@ -51,17 +51,17 @@ class UserService
   {
     $dto->validate();
 
-    $existing = $this->userRepository->findByEmail($dto->email, 'all');
+    $existing = $this->userRepository->findByEmail($dto->email);
     if ($existing !== null) {
       throw new ApiException(
         ErrorType::from(
           'EMAIL_TAKEN', 'El correo ya está registrado'
-        )
+        ), 409
       );
     }
 
     $dto->password = password_hash($dto->password, PASSWORD_BCRYPT);
-    $this->userRepository->create($createdBy, $dto);
+    $user_id = $this->userRepository->create($createdBy, $dto);
 
     Logger::info('user', 'Usuario registrado', 'user.create', [
       'email'      => $dto->email,

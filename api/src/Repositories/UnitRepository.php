@@ -72,7 +72,8 @@ final class UnitRepository extends Repository {
          FROM UNITS
          WHERE UPPER(name) = UPPER(:name)
          AND unit_id <> :unit_id
-         AND is_deleted = 0'
+         AND is_deleted = 0
+         AND deleted_at is NULL'
       );
       $stmt->execute([':name' => $name, ':unit_id' => $excludeUnitId]);
     } else {

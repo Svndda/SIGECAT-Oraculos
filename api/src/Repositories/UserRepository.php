@@ -106,7 +106,7 @@ final class UserRepository extends Repository {
     return $row !== false ? $row : null;
   }
 
-  public function create(string $createdBy, RegisterUserDTO $dto): void {
+  public function create(string $createdBy, RegisterUserDTO $dto): string {
     $newUserId = UlidGenerator::generate();
     $this->beginTransaction();
     try {
@@ -137,6 +137,7 @@ final class UserRepository extends Repository {
       ]);
 
       $this->commit();
+      return $newUserId;
     } catch (PDOException $e) {
       $this->rollBack();
       throw $e;
