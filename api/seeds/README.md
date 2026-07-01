@@ -6,16 +6,21 @@ so seeded rows respect every business rule and trigger.
 
 ## `demo_seed.php`
 
-Creates a small, self-contained demo dataset:
+Creates a self-contained demo dataset so **every admin CRUD shows data**:
 
 - **5 users** (1 admin + 4 employees), all `@ucr.ac.cr`, with a known password.
-- A **job position** assigned to each employee (reusing existing catalog rows).
+- **Catalog top-up** (realistic rows): areas, departments, sections, units,
+  jobs and license types.
+- A **job position** assigned to each employee.
 - **2 declarations per employee** across a couple of statuses.
 
-Everything it creates is tagged so it can be found and removed:
+Everything it creates is scoped to the demo users so it can be removed safely:
 
-- users → `email` starts with `demo.`
-- job positions → `DESCRIPTION = 'SEED_DEMO'`, `JOB_POSITION_NUMBER >= 9001`
+- users → `email` matches `demo.%@ucr.ac.cr`
+- catalog rows + positions → `CREATED_BY` = the demo admin's id
+- declarations / tokens → owned by a demo user
+
+Existing (non-demo) data is never modified.
 
 ### Credentials
 
