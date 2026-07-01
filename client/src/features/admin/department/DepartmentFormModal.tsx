@@ -1,4 +1,5 @@
-import { TextField, MenuItem, Stack } from '@mui/material';
+import { TextField, Stack } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { Area } from '../../../services/areaService';
 
@@ -11,6 +12,7 @@ interface FormState {
 interface DepartmentFormModalProps {
   open: boolean;
   isEditing: boolean;
+  viewMode?: boolean;
   form: FormState;
   formErrors: Partial<Record<keyof FormState, string>>;
   areas: Area[];
@@ -21,43 +23,71 @@ interface DepartmentFormModalProps {
 }
 
 export default function DepartmentFormModal({
-  open, isEditing, form, formErrors, areas, isSubmitting,
+  open, isEditing, viewMode = false, form, formErrors, areas, isSubmitting,
   onClose, onConfirm, onChange
 }: DepartmentFormModalProps) {
+  const selectedArea = areas.find((a) => a.area_id === form.area_id) ?? null;
+  const title = viewMode ? 'Ver Departamento' : isEditing ? 'Editar Departamento' : 'Registrar Departamento';
+  const MAX_NAME = 110;
+  const MAX_DESC = 255;
+
   return (
-    <ModalForm 
-      open={open} 
-      title={isEditing ? "Editar Departamento" : "Registrar Departamento"} 
-      onClose={onClose} 
-      onConfirm={onConfirm} 
-      confirmLabel={isEditing ? "Guardar Cambios" : "Confirmar"} 
-      isSubmitting={isSubmitting}
+    <ModalForm
+      open={open}
+      title={title}
+      onClose={onClose}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar Cambios' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.area_id || !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
-        <TextField 
-          label="Nombre del Departamento" 
-          value={form.name} 
-          onChange={onChange('name')} 
-          size="small" fullWidth 
-          error={!!formErrors.name} helperText={formErrors.name} required 
+        <TextField
+          label="Nombre del Departamento"
+          value={form.name}
+          onChange={onChange('name')}
+          size="small"
+          fullWidth
+          error={!!formErrors.name}
+          helperText={formErrors.name || `${form.name.length}/${MAX_NAME} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_NAME, step: 1 }}
+          required
+          disabled={viewMode}
         />
-        <TextField 
-          select label="Área a la que pertenece" 
-          value={form.area_id} 
-          onChange={onChange('area_id')} 
-          size="small" fullWidth 
-          error={!!formErrors.area_id} helperText={formErrors.area_id} required
-        >
-          {areas.map((area) => (
-            <MenuItem key={area.area_id} value={area.area_id}>{area.name}</MenuItem>
-          ))}
-        </TextField>
-        <TextField 
-          label="Descripción" 
-          value={form.description} 
-          onChange={onChange('description')} 
-          size="small" fullWidth multiline rows={3} 
-          error={!!formErrors.description} helperText={formErrors.description} 
+        <Autocomplete
+          options={areas}
+          getOptionLabel={(a) => a.name}
+          value={selectedArea}
+          onChange={(_, selected) => {
+            onChange('area_id')({
+              target: { value: selected?.area_id ?? '' },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }}
+          size="small"
+          fullWidth
+          disabled={viewMode}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Área a la que pertenece"
+              required
+              error={!!formErrors.area_id}
+              helperText={formErrors.area_id ?? (areas.length === 0 ? 'No hay áreas registradas.' : '')}
+            />
+          )}
+        />
+        <TextField
+          label="Descripción"
+          value={form.description}
+          onChange={onChange('description')}
+          size="small"
+          fullWidth
+          multiline
+          rows={3}
+          error={!!formErrors.description}
+          helperText={formErrors.description || `${form.description.length}/${MAX_DESC} caracteres`}
+          disabled={viewMode}
+          inputProps={{ min: 0, maxLength: MAX_DESC, step: 1 }}
         />
       </Stack>
     </ModalForm>

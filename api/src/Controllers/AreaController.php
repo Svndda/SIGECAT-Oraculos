@@ -58,9 +58,10 @@ class AreaController {
    */
   public function show(string $areaId): void {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $area = $this->areaService->getById($areaId, $status);
 
@@ -78,12 +79,13 @@ class AreaController {
    */
   public function index(): void {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $result = $this->areaService->getAreas($page, $limit, $filter, $status);
 

@@ -1,33 +1,39 @@
-import { Typography } from '@mui/material';
-import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import { Tooltip, Typography } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { AdminUser } from '../../../services/userService';
+import { truncateText } from '../../../utils/text';
 
 interface UserListProps {
   users: AdminUser[];
   loading: boolean;
-  onAssignClass: (user: AdminUser) => void;
   onChangeRole: (user: AdminUser) => void;
   onDelete: (user: AdminUser) => void;
-  className: (id?: string) => string;
+  onView: (user: AdminUser) => void;
 }
 
 export default function UserList({
   users,
   loading,
-  onAssignClass,
   onChangeRole,
   onDelete,
-  className,
+  onView
 }: UserListProps) {
   const columns: DataColumn<AdminUser>[] = [
     {
       label: 'Nombre completo',
       flex: '0 0 24%',
       primary: true,
-      render: (u) => `${u.first_name} ${u.last_name}`,
+      truncate: true,
+      render: (u) => (
+        <Tooltip title={`${u.first_name} ${u.last_name}`} arrow>
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {truncateText(`${u.first_name} ${u.last_name}`)}
+          </Typography>
+        </Tooltip>
+      ),
     },
     { label: 'Correo institucional', flex: '1', truncate: true, render: (u) => u.email },
     {
@@ -49,8 +55,7 @@ export default function UserList({
           {u.role === 'admin' ? 'Administrador' : 'Empleado'}
         </Typography>
       ),
-    },
-    { label: 'Clase ocupacional', flex: '0 0 22%', render: (u) => className(u.job_class_id) },
+    }
   ];
 
   return (
@@ -61,10 +66,10 @@ export default function UserList({
       loading={loading}
       actions={[
         {
-          icon: <AssignmentIndIcon fontSize="small" />,
-          label: 'Asignar clase',
-          color: '#1a2b4a',
-          onClick: onAssignClass,
+          icon: <VisibilityIcon fontSize="small" />,
+          label: 'Ver',
+          color: 'info.main',
+          onClick: onView,
         },
         {
           icon: <AdminPanelSettingsIcon fontSize="small" />,

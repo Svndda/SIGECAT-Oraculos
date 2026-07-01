@@ -60,6 +60,11 @@ class SectionService {
     }
 
     $this->sectionRepository->create($dto, $createdBy);
+
+    Logger::info('section', 'Sección creada', 'section.create', [
+      'name'       => $dto->name,
+      'created_by' => $createdBy,
+    ]);
   }
 
   /**
@@ -84,6 +89,11 @@ class SectionService {
     }
 
     $this->sectionRepository->update($sectionId, $dto);
+
+    Logger::info('section', 'Sección actualizada', 'section.update', [
+      'section_id' => $sectionId,
+      'name'       => $dto->name,
+    ]);
   }
 
   /**
@@ -124,8 +134,7 @@ class SectionService {
    *
    * @param string $status One of active|deleted|all (default active). With
    *                       'active', a soft-deleted section returns 404.
-   * @return array{section_id: string, area_id: string, name: string|null, description: string|null,
- *   created_at: string, created_by: string}
+   * @return array<string, mixed> The section row as returned by the repository.
    * @throws ApiException
    */
   public function getById(string $sectionId, string $status = 'active'): array {
@@ -157,6 +166,11 @@ class SectionService {
     }
 
     $this->sectionRepository->delete($sectionId, $deletedBy);
+
+    Logger::warning('section', 'Sección eliminada', 'section.delete', [
+      'section_id' => $sectionId,
+      'deleted_by' => $deletedBy,
+    ]);
   }
 
   /**
@@ -192,5 +206,9 @@ class SectionService {
     }
 
     $this->sectionRepository->restoreSection($sectionId);
+
+    Logger::info('section', 'Sección restaurada', 'section.restore', [
+      'section_id' => $sectionId,
+    ]);
   }
 }

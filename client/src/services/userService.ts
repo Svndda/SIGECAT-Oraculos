@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { extractApiError } from './common';
+import { extractApiError, type ListParams, type PageMeta, type Paginated } from './common';
 
 export interface AdminUser {
   id: string;
@@ -7,7 +7,6 @@ export interface AdminUser {
   first_name: string;
   last_name: string;
   role: 'admin' | 'employee';
-  job_class_id?: string;
 }
 
 export interface RegisterUserPayload {
@@ -24,9 +23,10 @@ export interface UserProfile {
   id: string;
   email: string;
   first_name: string;
-  last_name: string;
+  second_name: string;
+  first_last_name: string;
+  second_last_name: string;
   role: string;
-  job_class_id?: string | null;
 }
 
 export interface UpdateProfilePayload {
@@ -41,7 +41,7 @@ const USE_MOCK = false;
 
 const INITIAL_USERS: AdminUser[] = [
   { id: '01MOCK001', email: 'admin@ucr.ac.cr', first_name: 'Admin', last_name: 'UCR', role: 'admin' },
-  { id: '01MOCK002', email: 'empleado@ucr.ac.cr', first_name: 'María', last_name: 'González', role: 'employee', job_class_id: '5200' },
+  { id: '01MOCK002', email: 'empleado@ucr.ac.cr', first_name: 'María', last_name: 'González', role: 'employee'},
 ];
 
 let mockUsers: AdminUser[] = [...INITIAL_USERS];
@@ -53,14 +53,35 @@ export const userService = {
       return [...mockUsers];
     }
     try {
-      const res = await apiClient.get<{ data: AdminUser[] }>('/users');
-      return res.data.data;
+      // Page through the full list so callers that need every user (counts,
+      // selection dropdowns) aren't silently capped at the server's page size.
+      const first = await apiClient.get<{ data: AdminUser[]; meta?: PageMeta }>(
+        '/users', { params: { page: 1, limit: 100 } }
+      );
+      const users = first.data.data ?? [];
+      const totalPages = first.data.meta?.total_pages ?? 1;
+      for (let page = 2; page <= totalPages; page++) {
+        const res = await apiClient.get<{ data: AdminUser[] }>(
+          '/users', { params: { page, limit: 100 } }
+        );
+        users.push(...(res.data.data ?? []));
+      }
+      return users;
     } catch (e) { throw extractApiError(e); }
   },
 
-  async assignJobClass(userId: string, jobClassId: string): Promise<void> {
+  /** A single paginated page of users (with meta) for the admin list view. */
+  async getUsersPage(params: ListParams = {}): Promise<Paginated<AdminUser>> {
+    if (USE_MOCK) {
+      await new Promise((r) => setTimeout(r, 400));
+      return {
+        data: [...mockUsers],
+        meta: { page: 1, limit: mockUsers.length, total: mockUsers.length, total_pages: 1 },
+      };
+    }
     try {
-      await apiClient.patch(`/users/${userId}/job-class`, { job_class_id: jobClassId });
+      const res = await apiClient.get<{ data: AdminUser[]; meta: PageMeta }>('/users', { params });
+      return { data: res.data.data ?? [], meta: res.data.meta };
     } catch (e) { throw extractApiError(e); }
   },
 
@@ -103,7 +124,6 @@ export const userService = {
 
   async getProfile(): Promise<UserProfile> {
     try {
-      // Consume el endpoint GET /users/me del UserController
       const res = await apiClient.get<{ data: UserProfile }>('/users/me');
       return res.data.data;
     } catch (e) {
@@ -111,12 +131,4 @@ export const userService = {
     }
   },
 
-  async updateProfile(payload: UpdateProfilePayload): Promise<void> {
-    try {
-      // Consume el endpoint PATCH /users/me mapeado al UpdateUserDTO
-      await apiClient.patch('/users/me', payload);
-    } catch (e) {
-      throw extractApiError(e);
-    }
-  },
 };

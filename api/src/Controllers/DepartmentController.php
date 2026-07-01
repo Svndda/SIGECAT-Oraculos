@@ -4,7 +4,6 @@ namespace Controllers;
 
 use DTO\CreateDepartmentDTO;
 use DTO\UpdateDepartmentDTO;
-use Exception;
 use Http\ApiException;
 use Http\Request;
 use Http\Response;
@@ -46,8 +45,6 @@ class DepartmentController {
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
@@ -74,8 +71,6 @@ class DepartmentController {
       );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
-    } catch (Exception $e) {
-      Response::error($e->getMessage());
     }
   }
 
@@ -135,9 +130,10 @@ class DepartmentController {
   public function index(): void
   {
     try {
-      $auth = $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
 
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
@@ -172,8 +168,9 @@ class DepartmentController {
   public function show(string $departmentId): void
   {
     try {
-      $auth = $this->authService->requireAdmin();
-      $status = trim((string) ($_GET['status'] ?? 'active'));
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $department = $this->departmentService->getDepartmentById($departmentId, $status);
 

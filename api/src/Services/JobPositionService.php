@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace Services;
 
 use DTO\CreateJobPositionDTO;
-use DTO\UpdateJobPositionDTO;
 use DTO\JobPositionResponseDTO;
+use DTO\UpdateJobPositionDTO;
 use Http\ApiException;
 use Http\ErrorType;
 use PDO;
+use Repositories\JobClassRepository;
 use Repositories\JobPositionRepository;
+use Repositories\JobRepository;
 
 /**
  * JobPositionService
@@ -22,10 +24,137 @@ use Repositories\JobPositionRepository;
 class JobPositionService
 {
   private JobPositionRepository $repository;
+  private JobRepository $jobRepository;
+  private JobClassRepository $jobClassRepository;
 
   public function __construct(private PDO $pdo)
   {
     $this->repository = new JobPositionRepository($this->pdo);
+    $this->jobRepository = new JobRepository($this->pdo);
+    $this->jobClassRepository = new JobClassRepository($this->pdo);
+  }
+
+  /**
+   * Registers a new plaza. The plaza number must be unique among
+   * active plazas.
+   *
+   * @throws ApiException
+   */
+  public function createJobPosition(
+    string $createdBy,
+    CreateJobPositionDTO $dto
+  ): void {
+    $dto->validate();
+
+    if ($createdBy === $dto->userId) {
+      throw new ApiException(
+        ErrorType::from('FORBIDDEN', 'No puedes autoasignarte una plaza.'),
+        403
+      );
+    }
+
+    if ($this->repository->existsByNumber($dto->jobPositionNumber)) {
+      throw new ApiException(
+        ErrorType::conflict('Ya existe una plaza registrada con ese número')
+      );
+    }
+
+    $this->repository->createJobPosition($createdBy, $dto);
+
+    Logger::info('job_position', 'Plaza creada', 'job_position.create', [
+      'number'     => $dto->jobPositionNumber,
+      'user_id'    => $dto->userId,
+      'created_by' => $createdBy,
+    ]);
+  }
+
+  /**
+   * Applies a partial update to an existing (active) plaza. The plaza number
+   * (name), when provided, must stay unique among active plazas.
+   *
+   * @throws ApiException
+   */
+  public function updateJobPosition(
+    string $jobPositionId,
+    UpdateJobPositionDTO $dto,
+    string $actionByUserId
+  ): void {
+    if (trim($jobPositionId) === '') {
+      throw new ApiException(ErrorType::missingField('job_position_id'));
+    }
+
+    $dto->validate();
+
+    if ($dto->userId !== null && $actionByUserId === $dto->userId) {
+      throw new ApiException(
+        ErrorType::from('FORBIDDEN', 'No puedes autoasignarte una plaza.'),
+        403
+      );
+    }
+
+    if ($this->repository->findById($jobPositionId) === null) {
+      throw new ApiException(ErrorType::notFound('Plaza'));
+    }
+
+    if (
+      $dto->jobPositionNumber !== null
+      && $this->repository->existsByNumber(
+        $dto->jobPositionNumber,
+        $jobPositionId
+      )
+    ) {
+      throw new ApiException(
+        ErrorType::conflict('Ya existe una plaza registrada con ese número')
+      );
+    }
+
+    $this->repository->updateJobPosition($jobPositionId, $dto);
+
+    Logger::info('job_position', 'Plaza actualizada', 'job_position.update', [
+      'job_position_id' => $jobPositionId,
+      'actor_id'        => $actionByUserId,
+    ]);
+  }
+
+  /**
+   * Returns a paginated, optionally filtered list of plazas.
+   *
+   * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
+   * @throws ApiException
+   */
+  public function getJobPositions(
+    int $page,
+    int $limit,
+    string $filter = '',
+    string $status = 'active'
+  ): array {
+    if ($page < 1) {
+      throw new ApiException(ErrorType::invalidField('page'));
+    }
+    if ($limit < 1 || $limit > 100) {
+      throw new ApiException(ErrorType::invalidField('limit'));
+    }
+
+    $status = $this->normalizeStatus($status);
+    $offset = ($page - 1) * $limit;
+
+    $total = $this->repository->countJobPositions($filter, $status);
+    $data = $this->repository->getJobPositions(
+      $offset,
+      $limit,
+      $filter,
+      $status
+    );
+
+    return [
+      'data' => $data,
+      'meta' => [
+        'page' => $page,
+        'limit' => $limit,
+        'total' => $total,
+        'total_pages' => (int)ceil($total / $limit),
+      ],
+    ];
   }
 
   /** @throws ApiException when the status filter is invalid. */
@@ -39,86 +168,44 @@ class JobPositionService
   }
 
   /**
-   * Registers a new plaza. The plaza number (name) must be unique among
-   * active plazas.
+   * Retrieves all job positions assigned to a specific user, including related
+   * job and job class information.
    *
+   * @param string $userId
+   * @return array<int, array<string, mixed>>
    * @throws ApiException
    */
-  public function createJobPosition(string $createdBy, CreateJobPositionDTO $dto): void
+  public function getByUser(string $userId): array
   {
-    $dto->validate();
-
-    if ($this->repository->existsByNumber($dto->jobPositionNumber)) {
-      throw new ApiException(
-        ErrorType::conflict('Ya existe una plaza registrada con ese número')
-      );
+    if (trim($userId) === '') {
+      throw new ApiException(ErrorType::missingField('user_id'));
     }
 
-    $this->repository->createJobPosition($createdBy, $dto);
-  }
+    $jobPositions = $this->repository->getByUserId($userId);
 
-  /**
-   * Applies a partial update to an existing (active) plaza. The plaza number
-   * (name), when provided, must stay unique among active plazas.
-   *
-   * @throws ApiException
-   */
-  public function updateJobPosition(string $jobPositionId, UpdateJobPositionDTO $dto): void
-  {
-    if (trim($jobPositionId) === '') {
-      throw new ApiException(ErrorType::missingField('job_position_id'));
+    foreach ($jobPositions as &$position) {
+      $position['job'] = null;
+      $position['job_class'] = null;
+
+      if (!empty($position['job_id'])) {
+        $job = $this->jobRepository->findById($position['job_id']);
+
+        if ($job !== null) {
+          $position['job'] = $job;
+
+          if (!empty($job['job_class_id'])) {
+            $jobClass = $this->jobClassRepository->findById(
+              $job['job_class_id']
+            );
+            if ($jobClass !== null) {
+              $position['job_class'] = $jobClass;
+            }
+          }
+        }
+      }
     }
 
-    $dto->validate();
-
-    if ($this->repository->findById($jobPositionId) === null) {
-      throw new ApiException(ErrorType::notFound('Plaza'));
-    }
-
-    if ($dto->jobPositionNumber !== null && $this->repository->existsByNumber($dto->jobPositionNumber, $jobPositionId)) {
-      throw new ApiException(
-        ErrorType::conflict('Ya existe una plaza registrada con ese número')
-      );
-    }
-
-    $this->repository->updateJobPosition($jobPositionId, $dto);
-  }
-
-  /**
-   * Returns a paginated, optionally filtered list of plazas.
-   *
-   * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
-   * @throws ApiException
-   */
-  public function getJobPositions(int $page, int $limit, string $filter = '', string $status = 'active'): array
-  {
-    if ($page < 1) {
-      throw new ApiException(ErrorType::invalidField('page'));
-    }
-    if ($limit < 1 || $limit > 100) {
-      throw new ApiException(ErrorType::invalidField('limit'));
-    }
-
-    $status = $this->normalizeStatus($status);
-    $offset = ($page - 1) * $limit;
-
-    $total = $this->repository->countJobPositions($filter, $status);
-    $rows  = $this->repository->getJobPositions($offset, $limit, $filter, $status);
-
-    $data = array_map(
-      static fn(array $row) => JobPositionResponseDTO::fromArray($row)->toArray(),
-      $rows
-    );
-
-    return [
-      'data' => $data,
-      'meta' => [
-        'page'        => $page,
-        'limit'       => $limit,
-        'total'       => $total,
-        'total_pages' => (int) ceil($total / $limit),
-      ],
-    ];
+    return $jobPositions;
   }
 
   /**
@@ -126,8 +213,10 @@ class JobPositionService
    *
    * @throws ApiException
    */
-  public function deleteJobPosition(string $jobPositionId, string $deletedBy): void
-  {
+  public function deleteJobPosition(
+    string $jobPositionId,
+    string $deletedBy
+  ): void {
     if (trim($jobPositionId) === '') {
       throw new ApiException(ErrorType::missingField('job_position_id'));
     }
@@ -137,15 +226,10 @@ class JobPositionService
     }
 
     $this->repository->deleteJobPosition($jobPositionId, $deletedBy);
-  }
 
-  /**
-   * Lists the available job position types (for selection when creating a plaza).
-   *
-   * @return array<int, array<string, mixed>>
-   */
-  public function listTypes(): array
-  {
-    return $this->repository->listTypes();
+    Logger::warning('job_position', 'Plaza eliminada', 'job_position.delete', [
+      'job_position_id' => $jobPositionId,
+      'deleted_by'      => $deletedBy,
+    ]);
   }
 }

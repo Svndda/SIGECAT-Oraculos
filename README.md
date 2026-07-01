@@ -1,48 +1,113 @@
-# SIGECAT---Oráculos
+# SIGECAT
 
+Workload and work-shift declaration management system for the University of
+Costa Rica. Employees declare the functions, licenses and rest periods of their
+shift, while administrative staff manage the organizational structure (areas,
+departments, sections, units, jobs and positions) and the related catalogues.
 
-## How to Run
+## Architecture
+
+The project is a monorepo with two independently deployable components:
+
+- **`client/`** — React 19 + TypeScript SPA, built with Vite and Material UI.
+  Talks to the API over HTTP (Axios) and exports declarations to PDF.
+- **`api/`** — Framework-less REST API in PHP 8.4 on Oracle Database. It uses a
+  small custom router, thin controllers, services for business logic, and
+  repositories backed by prepared statements (PDO/OCI).
+
+Authentication is token-based (Bearer in `Authorization`, refresh token in the
+body); the frontend keeps tokens in `sessionStorage`. The roles are `admin` and
+`employee`.
+
+## Repository layout
+
+```
+client/                 SPA (React + TypeScript + Vite)
+  src/features/         Domain views (admin, employee)
+  src/services/         API HTTP clients
+api/                    REST API (PHP + Oracle)
+  src/Controllers/      HTTP layer
+  src/Services/         Business logic
+  src/Repositories/     Data access (PDO, prepared statements)
+  config/routes.php     Route definitions
+  bin/migrate.php       Database migration runner
+  tests/                Test suite (see api/tests/README.md)
+migrations/             Ordered SQL migrations (see migrations/README.md)
+docs/                   User manual and design notes
+```
+
+## Requirements
+
+- Node.js 20+
+- PHP 8.4 with the `pdo_oci` extension
+- Oracle Instant Client 21+ and the database connection wallet
+
+`pdo_oci` was removed from PHP core in 8.4; the `setup-pdo-oci.sh` script builds
+and installs the PECL version. The Instant Client, the wallet and
+`config/oci_config.php` are local and not versioned (they hold credentials).
+
+## Getting started
+
+Install dependencies:
+
 ```bash
-cd client
-npm install
-npm run dev
+cd client && npm install
+cd ../api && composer install
 ```
 
-## Terminal 2 / Run server
+Run the frontend and API together (from `client/`):
+
 ```bash
-cd client
-npm run api
+npm run dev:full
 ```
 
-The application will be available at `http://localhost:5173`
+Or separately:
 
-## Build
 ```bash
-npm run build
+npm run dev   # SPA at http://localhost:5173
+npm run api   # API at http://localhost:8000
 ```
 
-This generates optimized files in the `dist/` folder.
+## Database
 
-## Navigation Flow
-```
-EmployeeRecordPage (/) 
-    ↓ "Begin"
-EmployeeFormPage (/employee-form)
-    ├→ "Back" (returns to /)
-    ↓ "Next"
-WorkHoursPage (/work-hours)
-    ├→ "Back" (returns to /employee-form)
-    ↓ "Complete"
-Home (/home)
+Schema changes live as ordered SQL files in `migrations/` and are applied by the
+runner, which records each one in `SCHEMA_MIGRATIONS` so it runs exactly once:
 
+```bash
+cd api
+php bin/migrate.php status     # list applied / pending
+php bin/migrate.php migrate    # apply pending migrations
+php bin/migrate.php baseline   # mark all as applied (existing database)
 ```
-## Technologies Used
-- **React 19.2.4** - Main framework
-- **React Router DOM 7.13.2** - Client-side routing
-- **Material-UI (MUI) 7.3.9** - UI Components (Container, Box, Button, Typography, Stack, Alert)
-- **Material Icons 7.3.9** - Icons (ArrowForward, ArrowBack)
-- **TypeScript** - Static typing
-- **Vite** - Build tool
-- **Express.js** - Mock API server
-- **Axios** - HTTP client
-- **Concurrently** - Run multiple dev servers
+
+See `migrations/README.md` for conventions. Database-side business logic
+(procedures and triggers) is described in `docs/db-business-logic-routines.md`.
+
+## Testing and quality
+
+```bash
+# Frontend
+cd client && npm run lint && npm run build
+
+# Backend (the API must be running for the HTTP tests)
+cd api && php tests/run_all.php
+```
+
+The backend includes static analysis with PHPStan (`api/phpstan.neon`).
+Continuous integration runs the frontend lint/build and PHPStan on every pull
+request.
+
+## Security
+
+- Passwords hashed with `bcrypt`; strength validation on registration.
+- Random tokens stored as hashes; short-lived access token with refresh-token
+  rotation.
+- Per-IP rate limiting on authentication and password recovery.
+- Temporary account lockout after failed attempts, with automatic release.
+- Data access exclusively through prepared statements.
+
+## Documentation
+
+- `docs/manual-usuario.md` — user manual (administrator and employee).
+- `docs/soft-delete-design.md`, `docs/password-hashing.md` — design notes.
+- `api/tests/README.md` — how to run and configure the test suite.

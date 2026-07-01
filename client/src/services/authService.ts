@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { tokenStorage } from './tokenStorage';
 
 export interface AuthUser {
   id: string;
@@ -6,6 +7,7 @@ export interface AuthUser {
   first_name: string;
   last_name: string;
   role: 'ADMIN' | 'EMPLOYEE';
+  is_password_temp?: boolean;
 }
 
 export interface ServiceError {
@@ -26,6 +28,7 @@ interface BackendLoginData {
   email: string;
   name: string;
   role: string;
+  is_password_temp: boolean;
 }
 
 interface BackendUserData {
@@ -34,6 +37,7 @@ interface BackendUserData {
   first_name: string;
   last_name: string;
   role: string;
+  is_password_temp: boolean;
 }
 
 interface RefreshResponseData {
@@ -103,7 +107,6 @@ export const authService = {
     try {
       const response = await apiClient.post<{ data: BackendLoginData }>('/auth/login', { email, password });
       const d = response.data.data;
-      localStorage.setItem('sigecat_user_id', d.user_id);
       const [firstName, ...rest] = (d.name ?? '').split(' ');
       return {
         user: {
@@ -112,6 +115,7 @@ export const authService = {
           first_name: firstName ?? '',
           last_name: rest.join(' '),
           role: mapRole(d.role),
+          is_password_temp: Boolean(d.is_password_temp),
         },
         access_token: d.access_token,
         refresh_token: d.refresh_token,
@@ -146,7 +150,6 @@ export const authService = {
       await new Promise((r) => setTimeout(r, 200));
       return;
     }
-    localStorage.removeItem('sigecat_user_id');
     try {
       await apiClient.post('/auth/logout');
     } catch (error) {
@@ -156,12 +159,12 @@ export const authService = {
 
   async getMe(): Promise<AuthUser> {
     if (USE_MOCK) {
-      const token = localStorage.getItem('sigecat_access_token');
+      const token = tokenStorage.getAccessToken();
       if (!token) throw { code: 'MISSING_AUTH_TOKEN', message: 'No autenticado.' } satisfies ServiceError;
       return { ...MOCK_USER };
     }
     try {
-      const userId = localStorage.getItem('sigecat_user_id');
+      const userId = tokenStorage.getUserId();
       if (!userId) throw { code: 'MISSING_AUTH_TOKEN', message: 'No autenticado.' } satisfies ServiceError;
       const response = await apiClient.get<{ data: BackendUserData }>(`/users/${userId}`);
       const d = response.data.data;
@@ -171,6 +174,7 @@ export const authService = {
         first_name: d.first_name,
         last_name: d.last_name,
         role: mapRole(d.role),
+        is_password_temp: Boolean(d.is_password_temp),
       };
     } catch (error) {
       throw extractApiError(error);

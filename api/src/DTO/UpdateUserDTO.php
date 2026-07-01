@@ -13,7 +13,7 @@ use Http\ErrorType;
  * Responsibilities:
  * - Maps incoming request data using fromArray().
  * - Ensures the user identifier (user_id) is provided.
- * - Supports partial updates by allowing optional fields (email, name, password, role, job class, is_active).
+ * - Supports partial updates by allowing optional fields (email, name, password, role, is_active).
  * - Validates each field only if it is present in the request.
  * - Ensures email format is valid when provided.
  * - Enforces password rules if a new password is included.
@@ -27,7 +27,6 @@ class UpdateUserDTO {
   public ?string $firstLastName;
   public ?string $secondLastName;
   public ?string $password;
-  public ?string $jobPosition;
   public ?string $role;
   public ?int $isActive;
 
@@ -38,7 +37,6 @@ class UpdateUserDTO {
     ?string $firstLastName,
     ?string $secondLastName,
     ?string $password,
-    ?string $jobPosition,
     ?string $role,
     ?int $isActive
   ) {
@@ -48,7 +46,6 @@ class UpdateUserDTO {
     $this->firstLastName = $firstLastName;
     $this->secondLastName = $secondLastName;
     $this->password = $password;
-    $this->jobPosition = $jobPosition;
     $this->role = $role;
     $this->isActive = $isActive;
   }
@@ -61,7 +58,6 @@ class UpdateUserDTO {
    * first_last_name?: string,
    * second_last_name?: string,
    * password?: string,
-   * job_class_id?: string,
    * role?: string,
    * is_active?: int
    * } $data
@@ -74,7 +70,6 @@ class UpdateUserDTO {
       isset($data['first_last_name'])  ? (string) $data['first_last_name']  : null,
       isset($data['second_last_name']) ? (string) $data['second_last_name'] : null,
       isset($data['password'])         ? (string) $data['password']         : null,
-      isset($data['job_class_id'])     ? (string) $data['job_class_id']     : null,
       isset($data['role'])             ? (string) $data['role']             : null,
       isset($data['is_active'])        ? (int)    $data['is_active']        : null,
     );
@@ -85,15 +80,23 @@ class UpdateUserDTO {
       EmailValidator::validate($this->email);
     }
 
+    // Length limits mirror the USERS columns, so an over-long value is rejected
+    // with a clear message instead of bubbling up as an ORA-12899 database error.
     if ($this->firstName !== null) {
       $this->firstName = trim($this->firstName);
       if ($this->firstName === '') {
         throw new ApiException(ErrorType::invalidField('first_name'));
       }
+      if (strlen($this->firstName) > 25) {
+        throw new ApiException(ErrorType::invalidField('first_name', 'No puede exceder los 25 caracteres'));
+      }
     }
 
     if ($this->secondName !== null) {
       $this->secondName = trim($this->secondName);
+      if (strlen($this->secondName) > 55) {
+        throw new ApiException(ErrorType::invalidField('second_name', 'No puede exceder los 55 caracteres'));
+      }
     }
 
     if ($this->firstLastName !== null) {
@@ -101,12 +104,18 @@ class UpdateUserDTO {
       if ($this->firstLastName === '') {
         throw new ApiException(ErrorType::invalidField('first_last_name'));
       }
+      if (strlen($this->firstLastName) > 55) {
+        throw new ApiException(ErrorType::invalidField('first_last_name', 'No puede exceder los 55 caracteres'));
+      }
     }
 
     if ($this->secondLastName !== null) {
       $this->secondLastName = trim($this->secondLastName);
       if ($this->secondLastName === '') {
         throw new ApiException(ErrorType::invalidField('second_last_name'));
+      }
+      if (strlen($this->secondLastName) > 55) {
+        throw new ApiException(ErrorType::invalidField('second_last_name', 'No puede exceder los 55 caracteres'));
       }
     }
 

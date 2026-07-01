@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Controllers;
@@ -42,9 +43,16 @@ class JobPositionController
       $data = Request::parseJsonRequest();
       $dto  = CreateJobPositionDTO::fromArray($data);
 
-      $this->jobPositionService->createJobPosition((string) $auth['user_id'], $dto);
+      $this->jobPositionService->createJobPosition(
+        (string) $auth['user_id'],
+        $dto
+      );
 
-      Response::success(null, ['message' => 'Plaza creada exitosamente'], 201);
+      Response::success(
+        null,
+        ['message' => 'Plaza creada exitosamente'],
+        201
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }
@@ -64,9 +72,39 @@ class JobPositionController
       $filter = trim((string) ($_GET['filter'] ?? ''));
       $status = trim((string) ($_GET['status'] ?? 'active'));
 
-      $result = $this->jobPositionService->getJobPositions($page, $limit, $filter, $status);
+      $result = $this->jobPositionService->getJobPositions(
+        $page,
+        $limit,
+        $filter,
+        $status
+      );
 
-      Response::success($result['data'], $result['meta'], 200);
+      Response::success(
+        $result['data'],
+        $result['meta'],
+        200
+      );
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * GET /users/me/job-positions
+   * Public.
+   */
+  public function getByUser(): void
+  {
+    try {
+      $userId = $this->authService->requireAuth()['user_id'];
+
+      $result = $this->jobPositionService->getByUser($userId);
+
+      Response::success(
+        $result,
+        null,
+        200
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }
@@ -79,14 +117,22 @@ class JobPositionController
   public function update(string $jobPositionId): void
   {
     try {
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAdmin();
 
       $data = Request::parseJsonRequest();
       $dto  = UpdateJobPositionDTO::fromArray($data);
 
-      $this->jobPositionService->updateJobPosition($jobPositionId, $dto);
+      $this->jobPositionService->updateJobPosition(
+        $jobPositionId,
+        $dto,
+        (string) $auth['user_id']
+      );
 
-      Response::success(null, ['message' => 'Plaza actualizada exitosamente'], 200);
+      Response::success(
+        null,
+        ['message' => 'Plaza actualizada exitosamente'],
+        200
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }
@@ -101,26 +147,16 @@ class JobPositionController
     try {
       $auth = $this->authService->requireAdmin();
 
-      $this->jobPositionService->deleteJobPosition($jobPositionId, (string) $auth['user_id']);
+      $this->jobPositionService->deleteJobPosition(
+        $jobPositionId,
+        (string) $auth['user_id']
+      );
 
-      Response::success(null, ['message' => 'Plaza eliminada exitosamente'], 200);
-    } catch (ApiException $e) {
-      Response::error($e->getError(), $e->getHttpStatus());
-    }
-  }
-
-  /**
-   * GET /job-position-types
-   * Lists the available plaza types for selection. Admin only.
-   */
-  public function types(): void
-  {
-    try {
-      $this->authService->requireAdmin();
-
-      $types = $this->jobPositionService->listTypes();
-
-      Response::success($types, null, 200);
+      Response::success(
+        null,
+        ['message' => 'Plaza eliminada exitosamente'],
+        200
+      );
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }

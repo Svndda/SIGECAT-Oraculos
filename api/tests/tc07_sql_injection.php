@@ -9,12 +9,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Sigecat\Api\Database\DatabaseFactory;
 use Repositories\UserRepository;
 
 echo "TC-07 — Prevención de inyección SQL en UserRepository\n";
 
-$pdo = DatabaseFactory::getConnection();
+$pdo = require __DIR__ . '/../config/database.php';
 $repo = new UserRepository($pdo);
 
 $maliciousInput = "' OR 1=1 --";

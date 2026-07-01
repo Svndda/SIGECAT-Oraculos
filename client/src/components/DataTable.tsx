@@ -266,6 +266,7 @@ export default function DataTable<T>({
                         <IconButton
                           size="small"
                           onClick={() => action.onClick(item)}
+                          aria-label={action.label}
                           sx={{ color: action.color ?? '#666' }}
                         >
                           {action.icon}

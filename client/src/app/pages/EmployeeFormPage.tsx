@@ -1,417 +1,313 @@
-import { Container, Box, Button, Typography, Stack, TextField, MenuItem, Paper, Autocomplete } from '@mui/material';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {useState, useEffect, useMemo} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {
+  Container,
+  Box,
+  Typography,
+  Stack,
+  TextField,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  CircularProgress,
+  Alert,
+  type SelectChangeEvent
+} from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import classesData from '../../data/classes.json';
-import jobsData from '../../data/jobs.json';
-import { useRecords } from '../../context/RecordsContext';
+import {
+  jobPositionService,
+  type JobPosition
+} from '../../services/jobPositionService';
+import {declarationService} from '../../services/declarationsService';
+import {areaService, type Area} from '../../services/areaService';
+import {departmentService} from '../../services/departmentService';
+import {sectionService} from '../../services/sectionService';
+import {unitService, type Unit} from '../../services/unitService';
+import {type OrgOption, parseOracleToTimeInput} from '../../services/common';
 
-interface Class {
-  id: string;
-  codigo: string;
-  estrato: string;
-  descripcion: string;
+interface OrgDataState {
+  areas: Area[];
+  departments: OrgOption[];
+  sections: OrgOption[];
+  units: Unit[];
 }
 
-interface Job {
-  id: string;
-  codigo: string;
-  clase: string;
-  nombre: string;
-  descripcion: string;
-}
+const SHIFT_DURATIONS: Record<string, number> = {
+  'Diurna': 8,
+  'Media Diurna': 4,
+  'Mixta': 7,
+  'Nocturna': 6,
+  'Media Nocturna': 3
+};
 
 export default function EmployeeFormPage() {
   const navigate = useNavigate();
-  const { currentRecord, setCurrentRecord } = useRecords();
 
-  const [formData, setFormData] = useState({
-    name: currentRecord?.name || '',
-    idNumber: currentRecord?.idNumber || '',
-    institutionalEmail: currentRecord?.institutionalEmail || '',
-    employeeCode: currentRecord?.employeeCode || '',
-    ucrRelationship: currentRecord?.ucrRelationship || '',
-    workLocation: currentRecord?.workLocation || '',
-    plazaNumber: currentRecord?.plazaNumber || '',
-    occupationalClass: currentRecord?.occupationalClass || null,
-    jobPosition: (currentRecord as any)?.jobPosition || null,
-    workShift: currentRecord?.workShift || 'Diurna',
-    startTime: currentRecord?.startTime || '08:00',
-    endTime: currentRecord?.endTime || '16:30',
+  const [loading, setLoading] = useState(true);
+  const [jobPositions, setJobPositions] = useState<JobPosition[]>([]);
+  const [selectedPositionId, setSelectedPositionId] = useState<string>('');
+  const [orgData, setOrgData] = useState<OrgDataState>({
+    areas: [],
+    departments: [],
+    sections: [],
+    units: []
   });
+  const [times, setTimes] = useState({start: '08:00', end: '16:00'});
+  const [error, setError] = useState<string | null>(null);
 
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isSsoExpanded, setIsSsoExpanded] = useState(false);
+  const [currentDeclarationId, setCurrentDeclarationId] = useState<string | null>(null);
+  const [isContinuing, setIsContinuing] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [positions, resAreas, depts, sections, resUnits] = await Promise.all([
+          jobPositionService.getMyJobPositions(),
+          areaService.getAreas(),
+          departmentService.getDepartments(),
+          sectionService.getSections(),
+          unitService.getUnits()
+        ]);
 
-  const handleClassChange = (_: any, value: Class | null) => {
-    setFormData(prev => ({ ...prev, occupationalClass: value }));
-    if (errors.occupationalClass) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.occupationalClass;
-        return newErrors;
-      });
-    }
-  };
+        setJobPositions(positions);
+        setOrgData({
+          areas: resAreas.data || [],
+          departments: depts || [],
+          sections: sections || [],
+          units: resUnits.data || []
+        });
 
-  const handleJobChange = (_: any, value: Job | null) => {
-    setFormData(prev => ({ ...prev, jobPosition: value }));
-  };
+        const incomplete = await declarationService.checkIncomplete();
+        if (incomplete.has_incomplete && incomplete.declaration_id) {
+          const declId = incomplete.declaration_id;
+          setCurrentDeclarationId(declId);
+          setIsContinuing(true);
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
+          const declaration = await declarationService.getDeclarationById(declId);
+          setSelectedPositionId(declaration.job_position_id);
+          setTimes({
+            start: parseOracleToTimeInput(declaration.shift_starts_at) || '08:00',
+            end: parseOracleToTimeInput(declaration.shift_ends_at) || '16:00'
+          });
+        } else {
+          setIsContinuing(false);
+          setCurrentDeclarationId(null);
+          if (positions.length > 0) {
+            setSelectedPositionId(positions[0].job_position_id);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        setError("Error al cargar la información inicial.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (!formData.name.trim()) newErrors.name = 'Nombre es requerido';
-    if (!formData.workLocation.trim()) newErrors.workLocation = 'Lugar de trabajo es requerido';
-    if (!formData.plazaNumber.trim()) newErrors.plazaNumber = 'Número de plaza es requerido';
-    if (!formData.occupationalClass) newErrors.occupationalClass = 'Clase ocupacional es requerida';
+    fetchData();
+  }, []);
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const selectedPosition = jobPositions.find(p => p.job_position_id === selectedPositionId);
 
-  const handleNext = () => {
-    if (!validateForm()) {
+  const entityName = useMemo(() => {
+    if (!selectedPosition) return 'No asignada';
+    const {unit_id, section_id, department_id, area_id} = selectedPosition;
+
+    const unit = orgData.units.find((u) => u.id === unit_id);
+    if (unit) return `${unit.name}`;
+
+    const section = orgData.sections.find((s) => s.id === section_id);
+    if (section) return `${section.name}`;
+
+    const dept = orgData.departments.find((d) => d.id === department_id);
+    if (dept) return `${dept.name}`;
+
+    const area = orgData.areas.find((a) => a.area_id === area_id);
+    if (area) return `${area.name}`;
+
+    return 'No asignada';
+  }, [selectedPosition, orgData]);
+
+  const handleNext = async () => {
+    if (!selectedPosition) return;
+
+    if (isContinuing && currentDeclarationId) {
+      navigate('/work-hours', {state: {declarationId: currentDeclarationId}});
       return;
     }
 
-    setCurrentRecord({
-      name: formData.name,
-      idNumber: formData.idNumber,
-      institutionalEmail: formData.institutionalEmail,
-      employeeCode: formData.employeeCode,
-      ucrRelationship: formData.ucrRelationship,
-      workLocation: formData.workLocation,
-      plazaNumber: formData.plazaNumber,
-      occupationalClass: formData.occupationalClass,
-      workShift: formData.workShift,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      objective: '',
-      isRead: false,
-      hours: [],
-    });
-    navigate('/work-hours');
+    const startH = parseInt(times.start.split(':')[0]);
+    const endH = parseInt(times.end.split(':')[0]);
+    const duration = Math.abs(endH - startH);
+    const required = SHIFT_DURATIONS[selectedPosition.job_shift ?? ''] || 0;
+
+    if (required > 0 && duration !== required) {
+      setError(`El horario laboral ${selectedPosition.job_shift} requiere una duración de ${required} horas. La actual es de ${duration} horas.`);
+      return;
+    }
+
+    try {
+      const res = await declarationService.createDeclaration({
+        job_position_id: selectedPosition.job_position_id,
+        shift_starts_at: times.start,
+        shift_ends_at: times.end,
+      });
+      navigate('/work-hours', {state: {declarationId: res?.declaration_id}});
+    } catch {
+      setError('Error al crear la declaración. Intente de nuevo.');
+    }
   };
 
-  useEffect(() => {
-    setClasses(classesData as Class[]);
-    setJobs(jobsData as Job[]);
-  }, []);
+  if (loading) {
+    return (
+      <Container sx={{display: 'flex', justifyContent: 'center', py: 8}}>
+        <CircularProgress/>
+      </Container>
+    );
+  }
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
-        {/* Título */}
-        <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold', color: '#12457d', textAlign: 'center' }}>
+    <Container maxWidth="md">
+      <Box sx={{py: 4}}>
+        <Typography variant="h4" sx={{
+          mb: 1,
+          fontWeight: 'bold',
+          color: '#12457d',
+          textAlign: 'center'
+        }}>
           Cargas de Trabajo
         </Typography>
-        <Typography variant="subtitle1" sx={{ mb: 4, color: '#666', textAlign: 'center' }}>
-          Información General
+        <Typography variant="subtitle1"
+                    sx={{mb: 4, color: '#666', textAlign: 'center'}}>
+          Información del Puesto y Horario
         </Typography>
 
-        {/* Formulario */}
-        <Paper sx={{ p: { xs: 2, sm: 4 }, backgroundColor: '#f9f9fd' }}>
-          <Stack spacing={3}>
-            {/* SECCIÓN 1: CAMPOS PRINCIPALES */}
-            <Box>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold', color: '#12457d' }}>
-                Información Principal
-              </Typography>
-              <Stack spacing={2.5}>
-                {/* Nombre */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: '600', color: '#12457d' }}>
-                    Nombre:
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Carlos Pérez García"
-                    variant="outlined"
-                    size="small"
-                    error={!!errors.name}
-                    helperText={errors.name}
-                    sx={{ backgroundColor: 'white' }}
-                    required
-                  />
-                </Box>
+        <Paper sx={{p: {xs: 2, sm: 4}, backgroundColor: '#f9f9fd'}}>
+          {error && <Alert severity="error" sx={{mb: 3}}>{error}</Alert>}
+          {isContinuing && (
+            <Alert severity="info" sx={{mb: 3}}>
+              Modo de solo lectura: Se ha cargado la información correspondiente
+              a la declaración incompleta en curso. Estos campos no se pueden
+              modificar.
+            </Alert>
+          )}
 
-                {/* Lugar de Trabajo */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: '600', color: '#12457d' }}>
-                    Lugar de trabajo:
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    name="workLocation"
-                    value={formData.workLocation}
-                    onChange={handleChange}
-                    placeholder="Unidad de Investigación en Ciencias de la Materia..."
-                    variant="outlined"
-                    size="small"
-                    multiline
-                    rows={2}
-                    error={!!errors.workLocation}
-                    helperText={errors.workLocation}
-                    sx={{ backgroundColor: 'white' }}
-                    required
-                  />
-                </Box>
+          <Stack spacing={2.5}>
+            <TextField
+              label="Lugar de Trabajo"
+              value={entityName}
+              fullWidth
+              size="small"
+              InputProps={{readOnly: true}}
+              sx={{backgroundColor: 'white'}}
+            />
 
-                {/* Número de Plaza */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: '600', color: '#12457d' }}>
-                    Número de plaza:
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    name="plazaNumber"
-                    value={formData.plazaNumber}
-                    onChange={handleChange}
-                    placeholder="00333"
-                    variant="outlined"
-                    size="small"
-                    error={!!errors.plazaNumber}
-                    helperText={errors.plazaNumber}
-                    sx={{ backgroundColor: 'white' }}
-                    required
-                  />
-                </Box>
-
-                {/* Clase Ocupacional */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: '600', color: '#12457d' }}>
-                    Clase Ocupacional:
-                  </Typography>
-                  <Autocomplete
-                    options={classes}
-                    getOptionLabel={(option) => `${option.codigo} - ${option.descripcion}`}
-                    value={formData.occupationalClass}
-                    onChange={handleClassChange}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder="Buscar clase ocupacional..."
-                        variant="outlined"
-                        size="small"
-                        error={!!errors.occupationalClass}
-                        helperText={errors.occupationalClass}
-                        sx={{ backgroundColor: 'white' }}
-                        required
-                      />
-                    )}
-                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                  />
-                </Box>
-
-                {/* Cargo del Puesto */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: '600', color: '#12457d' }}>
-                    Cargo del puesto:
-                  </Typography>
-                  <Autocomplete
-                    options={jobs}
-                    getOptionLabel={(option) => `${option.codigo} - ${option.nombre}`}
-                    value={formData.jobPosition}
-                    onChange={handleJobChange}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder="Buscar cargo del puesto..."
-                        variant="outlined"
-                        size="small"
-                        sx={{ backgroundColor: 'white' }}
-                      />
-                    )}
-                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                  />
-                </Box>
-              </Stack>
-            </Box>
-
-            {/* Divisor */}
-            <Box sx={{ height: '1px', bgcolor: '#e0e0e0', my: 2 }} />
-
-            {/* SECCIÓN 2: INFORMACIÓN LABORAL */}
-            <Box>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold', color: '#12457d' }}>
-                Información Laboral
-              </Typography>
-              <Stack spacing={2.5}>
-                {/* Jornada Laboral */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: '600', color: '#12457d' }}>
-                    Jornada Laboral:
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    select
-                    name="workShift"
-                    value={formData.workShift}
-                    onChange={handleChange}
-                    variant="outlined"
-                    size="small"
-                    sx={{ backgroundColor: 'white' }}
-                  >
-                    <MenuItem value="Diurna">Diurna</MenuItem>
-                    <MenuItem value="Nocturna">Nocturna</MenuItem>
-                    <MenuItem value="Mixta">Mixta</MenuItem>
-                  </TextField>
-                </Box>
-
-                {/* Horario Laboral */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: '600', color: '#12457d' }}>
-                    Horario Laboral:
-                  </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 0.5 }}>
-                        Inicio:
-                      </Typography>
-                      <TextField
-                        fullWidth
-                        type="time"
-                        name="startTime"
-                        value={formData.startTime}
-                        onChange={handleChange}
-                        variant="outlined"
-                        size="small"
-                        inputProps={{ step: 300 }}
-                        sx={{ backgroundColor: 'white' }}
-                      />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 0.5 }}>
-                        Final:
-                      </Typography>
-                      <TextField
-                        fullWidth
-                        type="time"
-                        name="endTime"
-                        value={formData.endTime}
-                        onChange={handleChange}
-                        variant="outlined"
-                        size="small"
-                        inputProps={{ step: 300 }}
-                        sx={{ backgroundColor: 'white' }}
-                      />
-                    </Box>
-                  </Stack>
-                </Box>
-              </Stack>
-            </Box>
-
-            {/* Divisor */}
-            <Box sx={{ height: '1px', bgcolor: '#e0e0e0', my: 2 }} />
-
-            {/* SECCIÓN 3: INFORMACIÓN DEL SSO */}
-            <Box sx={{ p: 2, bgcolor: '#f0f8ff', borderRadius: 1 }}>
-              <Stack spacing={2}>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1565c0' }}>
-                    Esta información puede venir del SSO:
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    color="primary"
-                    onClick={() => setIsSsoExpanded(!isSsoExpanded)}
-                    sx={{ backgroundColor: '#1565c0', alignSelf: { xs: 'flex-end', sm: 'auto' } }}
-                  >
-                    {isSsoExpanded ? 'Ocultar' : 'Autocompletar datos'}
-                  </Button>
-                </Box>
-
-                {isSsoExpanded && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Nombre Completo"
-                      value={formData.name}
-                      fullWidth
-                      disabled
-                      size="small"
-                      sx={{ backgroundColor: 'white' }}
-                    />
-                    <TextField
-                      label="Número de Cédula"
-                      value={formData.idNumber}
-                      fullWidth
-                      disabled
-                      size="small"
-                      sx={{ backgroundColor: 'white' }}
-                    />
-                    <TextField
-                      label="Correo Institucional"
-                      value={formData.institutionalEmail}
-                      fullWidth
-                      disabled
-                      size="small"
-                      sx={{ backgroundColor: 'white' }}
-                    />
-                    <TextField
-                      label="Código de Empleado"
-                      value={formData.employeeCode}
-                      fullWidth
-                      disabled
-                      size="small"
-                      sx={{ backgroundColor: 'white' }}
-                    />
-                    <TextField
-                      label="UCR Relación"
-                      value={formData.ucrRelationship}
-                      fullWidth
-                      disabled
-                      size="small"
-                      sx={{ backgroundColor: 'white' }}
-                    />
-                  </Stack>
-                )}
-              </Stack>
-            </Box>
-
-            {/* Botones */}
-            <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
-                sx={{ color: '#12457d', borderColor: '#12457d' }}
+            <FormControl fullWidth size="small" disabled={isContinuing}>
+              <InputLabel>Número de Plaza</InputLabel>
+              <Select
+                value={selectedPositionId}
+                label="Número de Plaza"
+                onChange={(e: SelectChangeEvent) => setSelectedPositionId(e.target.value)}
+                sx={{backgroundColor: 'white'}}
               >
-                Atrás
-              </Button>
-              <Button
-                variant="contained"
-                endIcon={<ArrowForwardIcon />}
-                onClick={handleNext}
-                sx={{
-                  backgroundColor: '#2c2c2c',
-                  '&:hover': {
-                    backgroundColor: '#1a1a1a',
-                  },
-                }}
-              >
-                Siguiente
-              </Button>
+                {jobPositions.map((pos) => (
+                  <MenuItem key={pos.job_position_id}
+                            value={pos.job_position_id}>
+                    {pos.job_position_number}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Descripción de la Plaza"
+              value={selectedPosition?.description ?? 'N/A'}
+              fullWidth
+              size="small"
+              InputProps={{readOnly: true}}
+              sx={{backgroundColor: 'white'}}
+            />
+
+            <TextField
+              label="Cargo de la Plaza"
+              value={selectedPosition?.job?.name ?? 'N/A'}
+              fullWidth
+              size="small"
+              InputProps={{readOnly: true}}
+              sx={{backgroundColor: 'white'}}
+            />
+
+            <TextField
+              label="Clase Ocupacional"
+              value={selectedPosition?.job_class?.name ?? 'N/A'}
+              fullWidth
+              size="small"
+              InputProps={{readOnly: true}}
+              sx={{backgroundColor: 'white'}}
+            />
+
+            <TextField
+              label="Jornada Laboral"
+              value={selectedPosition?.job_shift ?? 'No definido'}
+              fullWidth
+              size="small"
+              InputProps={{readOnly: true}}
+              sx={{backgroundColor: 'white'}}
+            />
+
+            <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>
+              <TextField
+                label="Inicio"
+                type="time"
+                value={times.start}
+                onChange={(e) => setTimes({...times, start: e.target.value})}
+                fullWidth
+                size="small"
+                InputProps={{readOnly: isContinuing}}
+                disabled={isContinuing}
+                sx={{backgroundColor: 'white'}}
+              />
+              <TextField
+                label="Finaliza"
+                type="time"
+                value={times.end}
+                onChange={(e) => setTimes({...times, end: e.target.value})}
+                fullWidth
+                size="small"
+                InputProps={{readOnly: isContinuing}}
+                disabled={isContinuing}
+                sx={{backgroundColor: 'white'}}
+              />
             </Stack>
+          </Stack>
+
+          <Stack direction={{xs: 'column-reverse', sm: 'row'}} spacing={2}
+                 sx={{justifyContent: 'center', mt: 4}}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon/>}
+              onClick={() => navigate('/')}
+              sx={{color: '#12457d', borderColor: '#12457d'}}
+            >
+              Atrás
+            </Button>
+            <Button
+              variant="contained"
+              endIcon={<ArrowForwardIcon/>}
+              onClick={handleNext}
+              disabled={!selectedPosition}
+              sx={{
+                backgroundColor: '#2c2c2c',
+                '&:hover': {backgroundColor: '#1a1a1a'}
+              }}
+            >
+              Siguiente
+            </Button>
           </Stack>
         </Paper>
       </Box>

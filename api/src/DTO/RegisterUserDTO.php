@@ -71,6 +71,24 @@ class RegisterUserDTO {
       throw new ApiException(ErrorType::missingField("second_last_name"));
     }
 
+    // Length limits mirror the USERS columns, so an over-long value is rejected
+    // with a clear message instead of bubbling up as an ORA-12899 database error.
+    if (strlen($this->firstName) > 25) {
+      throw new ApiException(ErrorType::invalidField("first_name", "No puede exceder los 25 caracteres"));
+    }
+
+    if ($this->secondName !== null && strlen($this->secondName) > 55) {
+      throw new ApiException(ErrorType::invalidField("second_name", "No puede exceder los 55 caracteres"));
+    }
+
+    if (strlen($this->firstLastName) > 55) {
+      throw new ApiException(ErrorType::invalidField("first_last_name", "No puede exceder los 55 caracteres"));
+    }
+
+    if (strlen($this->secondLastName) > 55) {
+      throw new ApiException(ErrorType::invalidField("second_last_name", "No puede exceder los 55 caracteres"));
+    }
+
     if (empty($this->password) === TRUE) {
       throw new ApiException(ErrorType::missingField("password"));
     }

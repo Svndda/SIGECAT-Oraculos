@@ -1,19 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { Box, Pagination } from '@mui/material';
 import { userService } from '../../../services/userService';
-import { jobClassService } from '../../../services/jobClassService';
 import type { AdminUser } from '../../../services/userService';
-import type { JobClass } from '../../../services/jobClassService';
-import type { ServiceError } from '../../../services/common';
+import type { PageMeta, ServiceError } from '../../../services/common';
 import UserToolbar from '../../../features/admin/user/UserToolbar';
 import UserList from '../../../features/admin/user/UserList';
 import UserFormModal from '../../../features/admin/user/UserFormModal';
 import ChangeRoleModal from '../../../features/admin/user/ChangeRoleModal';
-import AssignClassModal from '../../../features/admin/user/AssignClassModal';
-import ModalError from '../../../components/modals/ModalError';
-import ModalSuccess from '../../../components/modals/ModalSuccess';
+import { useSnackbar } from '../../../context/SnackbarContext';
 import { validateInstitutionalEmail } from '../../../utils/validation';
 import ModalAlert from '../../../components/modals/ModalAlert';
+
+const LIMIT = 10;
 
 const EMPTY_FORM = {
   first_name: '',
@@ -27,8 +25,10 @@ const EMPTY_FORM = {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [meta, setMeta] = useState<PageMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [jobClasses, setJobClasses] = useState<JobClass[]>([]);
+  const [appliedFilter, setAppliedFilter] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Estados para modales
@@ -38,55 +38,41 @@ export default function UsersPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [assignTarget, setAssignTarget] = useState<AdminUser | null>(null);
-  const [selectedClassId, setSelectedClassId] = useState('');
   const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('employee');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [viewTarget, setViewTarget] = useState<AdminUser | null>(null);
 
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const snackbar = useSnackbar();
 
-  // Carga inicial
+  // Debounce the search box into the applied (server-side) filter.
   useEffect(() => {
+    const t = setTimeout(() => {
+      setAppliedFilter(search.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const loadUsers = useCallback(() => {
     setLoading(true);
-    Promise.all([
-      userService.getUsers().then(setUsers),
-      jobClassService.getJobClasses().then(setJobClasses),
-    ]).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    return userService.getUsersPage({ page, limit: LIMIT, filter: appliedFilter })
+      .then((res) => {
+        setUsers(res.data);
+        setMeta(res.meta);
+      })
+      .catch((error) => {
+        const e = error as ServiceError;
+        snackbar.error(e.message ?? 'Error del servidor al cargar usuarios.');
+      })
+      .finally(() => setLoading(false));
+  }, [page, appliedFilter, snackbar]);
 
-  const className = (id?: string) => jobClasses.find((c) => c.id === id)?.name ?? '—';
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
 
-  const filtered = useMemo(() =>
-    users.filter((u) =>
-      `${u.first_name} ${u.last_name} ${u.email} ${u.role}`
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    ), [users, search]);
-
-  // Handlers para asignar clase
-  const openAssign = (user: AdminUser) => {
-    setAssignTarget(user);
-    setSelectedClassId(user.job_class_id ?? '');
-  };
-  const handleAssign = async () => {
-    if (!assignTarget || !selectedClassId) return;
-    setIsSubmitting(true);
-    try {
-      await userService.assignJobClass(assignTarget.id, selectedClassId);
-      setUsers((prev) => prev.map((u) => (u.id === assignTarget.id ? { ...u, job_class_id: selectedClassId } : u)));
-      setAssignTarget(null);
-      setSuccessMsg('Clase ocupacional asignada correctamente.');
-      setSuccessOpen(true);
-    } catch (error) {
-      const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al asignar', message: e.message ?? 'Error del servidor.' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const totalPages = meta?.total_pages ?? 1;
 
   // Handlers para cambiar rol
   const openRole = (user: AdminUser) => {
@@ -98,13 +84,12 @@ export default function UsersPage() {
     setIsSubmitting(true);
     try {
       await userService.changeRole(roleTarget.id, selectedRole);
-      setUsers((prev) => prev.map((u) => (u.id === roleTarget.id ? { ...u, role: selectedRole } : u)));
       setRoleTarget(null);
-      setSuccessMsg('Rol actualizado correctamente.');
-      setSuccessOpen(true);
+      await loadUsers();
+      snackbar.success('Rol actualizado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al cambiar rol', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -116,24 +101,46 @@ export default function UsersPage() {
     setIsSubmitting(true);
     try {
       await userService.deleteUser(deleteTarget.id);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
-      setSuccessMsg('Usuario eliminado correctamente.');
-      setSuccessOpen(true);
+      // If we just removed the last row on a page beyond the first, step back.
+      if (users.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await loadUsers();
+      }
+      snackbar.success('Usuario eliminado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al eliminar', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Formulario de creación
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setFormErrors({});
     setShowPassword(false);
+    setViewTarget(null);
     setFormOpen(true);
+  };
+
+  const openView = (user: AdminUser) => {
+    setForm({
+      ...EMPTY_FORM,
+      first_name: user.first_name,
+      first_last_name: user.last_name,
+      email: user.email,
+      role: user.role,
+    });
+    setFormErrors({});
+    setViewTarget(user);
+    setFormOpen(true);
+  };
+
+  const closeModal = () => {
+    setFormOpen(false);
+    setViewTarget(null);
   };
   const validateForm = (): boolean => {
     const errors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {};
@@ -151,7 +158,7 @@ export default function UsersPage() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const created = await userService.registerUser({
+      await userService.registerUser({
         first_name: form.first_name,
         second_name: form.second_name || undefined,
         first_last_name: form.first_last_name,
@@ -160,13 +167,16 @@ export default function UsersPage() {
         role: form.role as 'admin' | 'employee',
         password: form.password,
       });
-      setUsers((prev) => [created, ...prev]);
-      setFormOpen(false);
-      setSuccessMsg('Usuario creado correctamente.');
-      setSuccessOpen(true);
+      closeModal();
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        await loadUsers();
+      }
+      snackbar.success('Usuario creado correctamente.');
     } catch (error) {
       const e = error as ServiceError;
-      setModalError({ open: true, title: 'Error al registrar usuario', message: e.message ?? 'Error del servidor.' });
+      snackbar.error(e.message ?? 'Error del servidor.');
     } finally {
       setIsSubmitting(false);
     }
@@ -182,36 +192,36 @@ export default function UsersPage() {
       <UserToolbar search={search} onSearchChange={setSearch} onAddClick={openCreate} />
 
       <UserList
-        users={filtered}
+        users={users}
         loading={loading}
-        onAssignClass={openAssign}
         onChangeRole={openRole}
         onDelete={setDeleteTarget}
-        className={className}
+        onView={openView}
       />
 
-      {/* Modales usando componentes específicos */}
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, value) => setPage(value)}
+            color="primary"
+            shape="rounded"
+          />
+        </Box>
+      )}
+
       <UserFormModal
         open={formOpen}
+        viewMode={!!viewTarget}
         form={form}
         formErrors={formErrors}
         isSubmitting={isSubmitting}
         showPassword={showPassword}
         onTogglePasswordVisibility={() => setShowPassword((p) => !p)}
-        onClose={() => setFormOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirmCreate}
         onChange={handleFormChange}
-      />
-
-      <AssignClassModal
-        open={!!assignTarget}
-        targetUser={assignTarget}
-        selectedClassId={selectedClassId}
-        jobClasses={jobClasses}
-        isSubmitting={isSubmitting}
-        onSelectClass={setSelectedClassId}
-        onClose={() => setAssignTarget(null)}
-        onConfirm={handleAssign}
       />
 
       <ChangeRoleModal
@@ -224,7 +234,6 @@ export default function UsersPage() {
         onConfirm={handleChangeRole}
       />
 
-      {/* Modal de confirmación de eliminación (puedes usar ModalAlert directamente o crear un componente DeleteConfirmModal) */}
       <ModalAlert
         open={!!deleteTarget}
         title="Eliminar usuario"
@@ -235,18 +244,6 @@ export default function UsersPage() {
         onConfirm={handleDelete}
       />
 
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={successOpen}
-        title="Operación exitosa"
-        message={successMsg}
-        onClose={() => setSuccessOpen(false)}
-      />
     </Box>
   );
 }

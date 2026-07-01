@@ -1,4 +1,5 @@
-import { TextField, MenuItem, Stack } from '@mui/material';
+import { TextField, Stack } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import ModalForm from '../../../components/modals/ModalForm';
 import type { OrgOption } from '../../../services/common';
 
@@ -14,6 +15,7 @@ interface UnitFormState {
 interface UnitFormModalProps {
   open: boolean;
   isEditing: boolean;
+  viewMode?: boolean;
   form: UnitFormState;
   formErrors: Partial<Record<keyof UnitFormState, string>>;
   assignmentOptions: OrgOption[];
@@ -31,6 +33,7 @@ const ASSIGNMENT_TYPES: { value: AssignmentType; label: string }[] = [
 export default function UnitFormModal({
   open,
   isEditing,
+  viewMode = false,
   form,
   formErrors,
   assignmentOptions,
@@ -39,14 +42,22 @@ export default function UnitFormModal({
   onConfirm,
   onFieldChange,
 }: UnitFormModalProps) {
+  const selectedAssignmentType = ASSIGNMENT_TYPES.find((t) => t.value === form.assignmentType) ?? null;
+  const selectedAssignment = assignmentOptions.find((o) => o.id === form.assignmentId) ?? null;
+  const title = viewMode ? 'Ver Unidad' : isEditing ? 'Editar Unidad' : 'Añadir Unidad';
+  const MAX_NAME = 110;
+  const MAX_DESC = 255;
+
   return (
     <ModalForm
       open={open}
-      title={isEditing ? 'Editar Unidad' : 'Añadir Unidad'}
+      title={title}
       onClose={onClose}
-      onConfirm={onConfirm}
-      confirmLabel={isEditing ? 'Guardar cambios' : 'Confirmar'}
-      isSubmitting={isSubmitting}
+      onConfirm={viewMode ? onClose : onConfirm}
+      confirmLabel={viewMode ? 'Cerrar' : isEditing ? 'Guardar cambios' : 'Confirmar'}
+      isSubmitting={viewMode ? false : isSubmitting}
+      confirmDisabled={!form.name || !form.assignmentType || !form.assignmentId ||
+        !form.description}
     >
       <Stack spacing={2.5} sx={{ pt: 1 }}>
         <TextField
@@ -56,53 +67,55 @@ export default function UnitFormModal({
           size="small"
           fullWidth
           error={!!formErrors.name}
-          helperText={formErrors.name}
+          helperText={formErrors.name || `${form.name.length}/${MAX_NAME} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_NAME, step: 1 }}
           required
+          disabled={viewMode}
         />
-        <TextField
-          select
-          label="Tipo de asignación"
-          value={form.assignmentType}
-          onChange={(e) => {
-            onFieldChange('assignmentType', e.target.value);
-            onFieldChange('assignmentId', ''); // reset entity when type changes
+        <Autocomplete
+          options={ASSIGNMENT_TYPES}
+          getOptionLabel={(t) => t.label}
+          value={selectedAssignmentType}
+          disabled={isEditing || viewMode}
+          onChange={(_, selected) => {
+            onFieldChange('assignmentType', selected?.value ?? '');
+            onFieldChange('assignmentId', '');
           }}
           size="small"
           fullWidth
-          disabled={isEditing}
-          error={!!formErrors.assignmentType}
-          helperText={isEditing ? 'El tipo de asignación no se puede cambiar.' : formErrors.assignmentType}
-          required
-        >
-          {ASSIGNMENT_TYPES.map((t) => (
-            <MenuItem key={t.value} value={t.value}>
-              {t.label}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="Entidad"
-          value={form.assignmentId}
-          onChange={(e) => onFieldChange('assignmentId', e.target.value)}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Tipo de asignación"
+              required
+              error={!!formErrors.assignmentType}
+              helperText={isEditing ? 'El tipo de asignación no se puede cambiar.' : formErrors.assignmentType}
+            />
+          )}
+        />
+        <Autocomplete
+          options={assignmentOptions}
+          getOptionLabel={(o) => o.name}
+          value={selectedAssignment}
+          disabled={!form.assignmentType || viewMode}
+          onChange={(_, selected) => onFieldChange('assignmentId', selected?.id ?? '')}
           size="small"
           fullWidth
-          disabled={!form.assignmentType}
-          error={!!formErrors.assignmentId}
-          helperText={
-            formErrors.assignmentId ??
-            (form.assignmentType && assignmentOptions.length === 0
-              ? 'No hay entidades de este tipo registradas.'
-              : '')
-          }
-          required
-        >
-          {assignmentOptions.map((o) => (
-            <MenuItem key={o.id} value={o.id}>
-              {o.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Entidad"
+              required
+              error={!!formErrors.assignmentId}
+              helperText={
+                formErrors.assignmentId ??
+                (form.assignmentType && assignmentOptions.length === 0
+                  ? 'No hay entidades de este tipo registradas.'
+                  : '')
+              }
+            />
+          )}
+        />
         <TextField
           label="Descripción"
           value={form.description}
@@ -111,6 +124,10 @@ export default function UnitFormModal({
           fullWidth
           multiline
           rows={3}
+          disabled={viewMode}
+          error={!!formErrors.description}
+          helperText={formErrors.description || `${form.description.length}/${MAX_DESC} caracteres`}
+          inputProps={{ min: 0, maxLength: MAX_DESC, step: 1 }}
         />
       </Stack>
     </ModalForm>

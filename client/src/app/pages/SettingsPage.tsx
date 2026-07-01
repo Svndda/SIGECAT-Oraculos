@@ -9,171 +9,111 @@ import {
   Stack,
   CircularProgress,
   Grid,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
-import { jobPositionService } from '../../services/jobPositionService.ts';
-import { userService, type UpdateProfilePayload } from '../../services/userService.ts';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { userService } from '../../services/userService.ts';
 import { authService } from '../../services/authService.ts';
 import type { ServiceError } from '../../services/common.ts';
-import ModalError from '../../components/modals/ModalError.tsx';
-import ModalSuccess from '../../components/modals/ModalSuccess.tsx';
-import { validateInstitutionalEmail } from '../../utils/validation.ts';
-
-// Función para dividir "Juan Carlos" → { first_name: "Juan", second_name: "Carlos" }
-const splitFullName = (fullName: string) => {
-  const parts = fullName.trim().split(/\s+/);
-  return {
-    first_name: parts[0] || '',
-    second_name: parts.slice(1).join(' ') || '',
-  };
-};
-
-// Dividir "González Pérez" → { first_last_name: "González", second_last_name: "Pérez" }
-const splitFullLastName = (fullLastName: string) => {
-  const parts = fullLastName.trim().split(/\s+/);
-  return {
-    first_last_name: parts[0] || '',
-    second_last_name: parts.slice(1).join(' ') || '',
-  };
-};
+import { useSnackbar } from '../../context/SnackbarContext';
+import { validatePassword } from '../../utils/validation.ts';
+import PasswordStrengthFeedback from '../../components/PasswordStrengthFeedback.tsx';
 
 export default function SettingsPage() {
   const [loadingInitial, setLoadingInitial] = useState(true);
-  
-  // Estados para Información Personal
-  const [profileForm, setProfileForm] = useState({
+
+  const [profileInfo, setProfileInfo] = useState({
     first_name: '',
-    second_name: '',
-    first_last_name: '',
-    second_last_name: '',
+    last_name: '',
     email: '',
   });
-  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
 
-  // Estados para Número de Plaza
-  const [plazaNumber, setPlazaNumber] = useState('');
-  const [isSubmittingPlaza, setIsSubmittingPlaza] = useState(false);
-
-  // Estados para Contraseña
   const [passwords, setPasswords] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  // Modales y Errores
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
-  const [modalSuccess, setModalSuccess] = useState({ open: false, title: '', message: '' });
+  const snackbar = useSnackbar();
 
-  // Cargar perfil al inicio
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const profile = await userService.getProfile();
-        // Descomponer el nombre completo y apellidos completos
-        const { first_name, second_name } = splitFullName(profile.first_name);
-        const { first_last_name, second_last_name } = splitFullLastName(profile.last_name);
-        setProfileForm({
-          first_name,
-          second_name,
-          first_last_name,
-          second_last_name,
+        setProfileInfo({
+          first_name: profile.first_name,
+          last_name: [profile.first_last_name, profile.second_last_name]
+            .filter(Boolean)
+            .join(' '),
           email: profile.email,
         });
       } catch (err) {
         const serviceError = err as ServiceError;
-        setModalError({ open: true, title: 'Error', message: serviceError.message ?? 'No se pudo cargar el perfil.' });
+        snackbar.error(serviceError.message ?? 'No se pudo cargar el perfil.');
       } finally {
         setLoadingInitial(false);
       }
     };
     loadProfile();
-  }, []);
+  }, [snackbar]);
 
-  // Handlers de Información Personal
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profileForm.first_name.trim() || !profileForm.first_last_name.trim() || !profileForm.second_last_name.trim()) {
-       setModalError({ open: true, title: 'Validación', message: 'Los nombres y apellidos son requeridos.' });
-       return;
-    }
-    const emailErr = validateInstitutionalEmail(profileForm.email);
-    if (emailErr) {
-       setModalError({ open: true, title: 'Validación', message: emailErr });
-       return;
-    }
-
-    setIsSubmittingProfile(true);
-    try {
-      const payload: UpdateProfilePayload = {
-        first_name: profileForm.first_name,
-        second_name: profileForm.second_name || undefined,
-        first_last_name: profileForm.first_last_name,
-        second_last_name: profileForm.second_last_name,
-        email: profileForm.email,
-      };
-      await userService.updateProfile(payload);
-      setModalSuccess({ open: true, title: 'Perfil actualizado', message: 'Su información personal ha sido actualizada correctamente.' });
-    } catch (err) {
-      const serviceError = err as ServiceError;
-      setModalError({ open: true, title: 'Error al actualizar perfil', message: serviceError.message ?? 'Error del servidor.' });
-    } finally {
-      setIsSubmittingProfile(false);
-    }
-  };
-
-  // Handlers de Número de Plaza
-  const handlePlazaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!plazaNumber.trim()) {
-      setModalError({ open: true, title: 'Validación', message: 'El número de plaza es requerido.' });
-      return;
-    }
-    setIsSubmittingPlaza(true);
-    try {
-      await jobPositionService.updateJobPosition(plazaNumber);
-      setModalSuccess({ open: true, title: 'Número de plaza actualizado', message: 'Su número de plaza ha sido actualizado correctamente.' });
-      setPlazaNumber('');
-    } catch (err) {
-      const serviceError = err as ServiceError;
-      setModalError({ open: true, title: 'Error al actualizar', message: serviceError.message ?? 'Error del servidor.' });
-    } finally {
-      setIsSubmittingPlaza(false);
-    }
-  };
-
-  // Handlers de Contraseña
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswords({ ...passwords, [e.target.name]: e.target.value });
   };
 
+  const passwordsMatch =
+    passwords.confirmPassword === '' ||
+    passwords.newPassword === passwords.confirmPassword;
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!passwords.currentPassword || !passwords.newPassword || !passwords.confirmPassword) {
-      setModalError({ open: true, title: 'Validación', message: 'Todos los campos de contraseña son requeridos.' });
+      snackbar.error('Todos los campos de contraseña son requeridos.');
       return;
     }
+
+    const pwdError = validatePassword(passwords.newPassword);
+    if (pwdError) {
+      snackbar.error(pwdError);
+      return;
+    }
+
     if (passwords.newPassword !== passwords.confirmPassword) {
-      setModalError({ open: true, title: 'Validación', message: 'Las contraseñas nuevas no coinciden.' });
+      snackbar.error('Las contraseñas nuevas no coinciden.');
       return;
     }
-    
+
     setIsSubmittingPassword(true);
     try {
       await authService.changePassword(passwords.currentPassword, passwords.newPassword);
-      setModalSuccess({ open: true, title: 'Contraseña actualizada', message: 'Su contraseña ha sido cambiada de forma segura.' });
+      snackbar.success('Su contraseña ha sido cambiada de forma segura.');
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       const serviceError = err as ServiceError;
-      setModalError({ open: true, title: 'Error de seguridad', message: serviceError.message ?? 'Error al cambiar la contraseña.' });
+      snackbar.error(serviceError.message ?? 'Error al cambiar la contraseña.');
     } finally {
       setIsSubmittingPassword(false);
     }
   };
+
+  const eyeButton = (show: boolean, setShow: (v: boolean) => void, label: string) => (
+    <InputAdornment position="end">
+      <IconButton
+        size="small"
+        onClick={() => setShow(!show)}
+        edge="end"
+        aria-label={show ? `Ocultar ${label}` : `Mostrar ${label}`}
+      >
+        {show ? <VisibilityOff /> : <Visibility />}
+      </IconButton>
+    </InputAdornment>
+  );
 
   if (loadingInitial) {
     return (
@@ -190,7 +130,7 @@ export default function SettingsPage() {
           Ajustes de Cuenta
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-          Administre su información personal, credenciales de acceso y asignaciones.
+          Revise su información personal y gestione sus credenciales de acceso.
         </Typography>
 
         <Stack spacing={4}>
@@ -198,50 +138,20 @@ export default function SettingsPage() {
             <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 3, color: '#12457d' }}>
               Información Personal
             </Typography>
-            <Box component="form" onSubmit={handleProfileSubmit} noValidate>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Primer Nombre</Typography>
-                  <TextField fullWidth size="small" name="first_name" value={profileForm.first_name} onChange={handleProfileChange} />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Segundo Nombre</Typography>
-                  <TextField fullWidth size="small" name="second_name" value={profileForm.second_name} onChange={handleProfileChange} />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Primer Apellido</Typography>
-                  <TextField fullWidth size="small" name="first_last_name" value={profileForm.first_last_name} onChange={handleProfileChange} />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Segundo Apellido</Typography>
-                  <TextField fullWidth size="small" name="second_last_name" value={profileForm.second_last_name} onChange={handleProfileChange} />
-                </Grid>
-                <Grid size={12}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Correo Institucional</Typography>
-                  <TextField fullWidth size="small" name="email" type="email" value={profileForm.email} onChange={handleProfileChange} />
-                </Grid>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Nombre</Typography>
+                <Typography variant="body1" sx={{ color: '#1a1a1a' }}>{profileInfo.first_name}</Typography>
               </Grid>
-              <Button type="submit" variant="contained" disabled={isSubmittingProfile} sx={{ mt: 3, backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' } }}>
-                {isSubmittingProfile ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Guardar Información'}
-              </Button>
-            </Box>
-          </Paper>
-
-          <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 4 }, border: '1px solid #ebebeb', borderRadius: 2 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 3, color: '#12457d' }}>
-              Asignación Laboral
-            </Typography>
-            <Box component="form" onSubmit={handlePlazaSubmit} noValidate>
-              <Stack spacing={2.5}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Número de plaza</Typography>
-                  <TextField fullWidth value={plazaNumber} onChange={(e) => setPlazaNumber(e.target.value)} placeholder="00333" size="small" />
-                </Box>
-                <Button type="submit" variant="contained" disabled={isSubmittingPlaza} sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' }, alignSelf: 'flex-start' }}>
-                  {isSubmittingPlaza ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Actualizar Plaza'}
-                </Button>
-              </Stack>
-            </Box>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Apellidos</Typography>
+                <Typography variant="body1" sx={{ color: '#1a1a1a' }}>{profileInfo.last_name}</Typography>
+              </Grid>
+              <Grid size={12}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Correo Institucional</Typography>
+                <Typography variant="body1" sx={{ color: '#1a1a1a' }}>{profileInfo.email}</Typography>
+              </Grid>
+            </Grid>
           </Paper>
 
           <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 4 }, border: '1px solid #ebebeb', borderRadius: 2 }}>
@@ -252,17 +162,49 @@ export default function SettingsPage() {
               <Stack spacing={2.5}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Contraseña Actual</Typography>
-                  <TextField fullWidth type="password" size="small" name="currentPassword" value={passwords.currentPassword} onChange={handlePasswordChange} />
+                  <TextField
+                    fullWidth
+                    type={showCurrent ? 'text' : 'password'}
+                    size="small"
+                    name="currentPassword"
+                    value={passwords.currentPassword}
+                    onChange={handlePasswordChange}
+                    slotProps={{ input: { endAdornment: eyeButton(showCurrent, setShowCurrent, 'contraseña actual') } }}
+                  />
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Nueva Contraseña</Typography>
-                  <TextField fullWidth type="password" size="small" name="newPassword" value={passwords.newPassword} onChange={handlePasswordChange} />
+                  <TextField
+                    fullWidth
+                    type={showNew ? 'text' : 'password'}
+                    size="small"
+                    name="newPassword"
+                    value={passwords.newPassword}
+                    onChange={handlePasswordChange}
+                    slotProps={{ input: { endAdornment: eyeButton(showNew, setShowNew, 'nueva contraseña') } }}
+                  />
+                  <PasswordStrengthFeedback password={passwords.newPassword} />
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600, color: '#12457d' }}>Confirmar Nueva Contraseña</Typography>
-                  <TextField fullWidth type="password" size="small" name="confirmPassword" value={passwords.confirmPassword} onChange={handlePasswordChange} />
+                  <TextField
+                    fullWidth
+                    type={showConfirm ? 'text' : 'password'}
+                    size="small"
+                    name="confirmPassword"
+                    value={passwords.confirmPassword}
+                    onChange={handlePasswordChange}
+                    error={!passwordsMatch}
+                    helperText={!passwordsMatch ? 'Las contraseñas no coinciden.' : undefined}
+                    slotProps={{ input: { endAdornment: eyeButton(showConfirm, setShowConfirm, 'confirmación de contraseña') } }}
+                  />
                 </Box>
-                <Button type="submit" variant="contained" disabled={isSubmittingPassword} sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' }, alignSelf: 'flex-start' }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSubmittingPassword}
+                  sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' }, alignSelf: 'flex-start' }}
+                >
                   {isSubmittingPassword ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Cambiar Contraseña'}
                 </Button>
               </Stack>
@@ -270,19 +212,6 @@ export default function SettingsPage() {
           </Paper>
         </Stack>
       </Box>
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((p) => ({ ...p, open: false }))}
-      />
-      <ModalSuccess
-        open={modalSuccess.open}
-        title={modalSuccess.title}
-        message={modalSuccess.message}
-        onClose={() => setModalSuccess((p) => ({ ...p, open: false }))}
-      />
     </Container>
   );
 }

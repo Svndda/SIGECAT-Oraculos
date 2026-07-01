@@ -7,6 +7,7 @@ use Http\ErrorType;
 use Core\ErrorHandler;
 use Core\GlobalErrorHandler;
 use Router\SimpleRouter;
+use Services\Logger;
 
 $basePath = realpath(__DIR__ . '/../');
 $srcPath = $basePath . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
@@ -24,6 +25,9 @@ $safeRequire = function (string $path) {
 // CORS Rules
 $safeRequire($configPath . 'cors.php');
 
+// Baseline security response headers
+$safeRequire($configPath . 'headers.php');
+
 // Initial configurations
 $safeRequire($configPath . 'init.php');
 
@@ -39,6 +43,13 @@ $file = realpath($srcPath . str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.p
 GlobalErrorHandler::register();
 
 $db = $safeRequire($configPath . 'database.php');
+
+// Wire the system-wide logger to the shared connection and capture the outcome
+// of every request on shutdown (after Response::* has set the final status).
+if ($db instanceof PDO) {
+  Logger::init($db);
+  register_shutdown_function([Logger::class, 'logRequest']);
+}
 
 $safeRequire($configPath . 'session.php');
 if (function_exists('validateSessionToken')) {

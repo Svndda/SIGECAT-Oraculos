@@ -14,7 +14,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import ModalError from '../../../components/modals/ModalError';
+import { useSnackbar } from '../../../context/SnackbarContext';
 import Header from '../../../components/Header';
 import { validateInstitutionalEmail } from '../../../utils/validation';
 import type { ServiceError } from '../../../services/authService';
@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState({ open: false, title: '', message: '' });
+  const snackbar = useSnackbar();
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -45,15 +45,16 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      const user = await login(email, password);
+      if (user?.is_password_temp) {
+        navigate('/cambiar-contrasena', { replace: true });
+      } else {
+        navigate('/');
+      }
       navigate('/');
     } catch (error) {
       const serviceError = error as ServiceError;
-      setModalError({
-        open: true,
-        title: 'Error al iniciar sesión',
-        message: serviceError.message ?? 'Error desconocido.',
-      });
+      snackbar.error(serviceError.message ?? 'Error desconocido.');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,13 +166,6 @@ export default function LoginPage() {
           </Stack>
         </Paper>
       </Box>
-
-      <ModalError
-        open={modalError.open}
-        title={modalError.title}
-        message={modalError.message}
-        onClose={() => setModalError((prev) => ({ ...prev, open: false }))}
-      />
     </Box>
   );
 }

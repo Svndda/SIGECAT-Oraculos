@@ -59,8 +59,9 @@ class SectionController {
    */
   public function show(string $sectionId): void {
     try {
-      $status = trim((string) ($_GET['status'] ?? 'active'));
-      $this->authService->requireAdmin();
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $section = $this->sectionService->getById($sectionId, $status);
 
@@ -78,12 +79,13 @@ class SectionController {
    */
   public function index(): void {
     try {
+      $auth = $this->authService->requireAuth();
+      $isAdmin = ($auth['role'] ?? '') === 'admin';
+
       $page   = max(1, (int) ($_GET['page']   ?? 1));
       $limit  = min(100, max(1, (int) ($_GET['limit']  ?? 10)));
       $filter = trim((string) ($_GET['filter'] ?? ''));
-      $status = trim((string) ($_GET['status'] ?? 'active'));
-
-      $this->authService->requireAdmin();
+      $status = $isAdmin ? trim((string) ($_GET['status'] ?? 'active')) : 'active';
 
       $result = $this->sectionService->getSections($page, $limit, $filter, $status);
 

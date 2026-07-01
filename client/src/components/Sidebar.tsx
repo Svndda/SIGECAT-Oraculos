@@ -14,30 +14,50 @@ import {
   useTheme,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import CorporateFareIcon from '@mui/icons-material/CorporateFare';
 import BusinessIcon from '@mui/icons-material/Business';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import WorkIcon from '@mui/icons-material/Work';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import EventNoteIcon from '@mui/icons-material/EventNote';
+import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ModalAlert from './modals/ModalAlert';
+import {DocumentScannerRounded, Engineering, ReceiptLongRounded} from "@mui/icons-material";
+import CategoryIcon from '@mui/icons-material/Category';
 
 const OPEN_WIDTH = 240;
 const CLOSED_WIDTH = 64;
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrador',
+  EMPLOYEE: 'Funcionario',
+};
+
 const ALL_NAV_ITEMS = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/', adminOnly: false },
+  { label: 'Panel', icon: <DashboardIcon fontSize="small" />, route: '/panel', adminOnly: true },
   { label: 'Usuarios', icon: <PeopleIcon fontSize="small" />, route: '/usuarios', adminOnly: true },
+  { label: 'Declaraciones', icon: <DocumentScannerRounded fontSize="small" />, route: '/declaraciones', adminOnly: true },
   { label: 'Áreas', icon: <CorporateFareIcon fontSize="small" />, route: '/areas', adminOnly: true },
   { label: 'Departamentos', icon: <BusinessIcon fontSize="small" />, route: '/departamentos', adminOnly: true },
   { label: 'Secciones', icon: <ViewModuleIcon fontSize="small" />, route: '/secciones', adminOnly: true },
   { label: 'Unidades', icon: <AccountTreeIcon fontSize="small" />, route: '/unidades', adminOnly: true },
+  { label: 'Cargos', icon: <Engineering fontSize="small" />, route: '/cargos', adminOnly: true },
+  { label: 'Clases Ocupacionales', icon: <CategoryIcon fontSize="small" />, route: '/clases-ocupacionales', adminOnly: true },
+  { label: 'Funciones', icon: <AssignmentIcon fontSize="small" />, route: '/funciones', adminOnly: true },
+  { label: 'Funciones Personalizadas', icon: <AssignmentIndIcon fontSize="small" />, route: '/funciones-personalizadas', adminOnly: true },
+  { label: 'Tipos de Licencia', icon: <EventNoteIcon fontSize="small" />, route: '/tipos-de-licencia', adminOnly: true },
   { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
+  { label: 'Registros', icon: <ReceiptLongRounded fontSize="small" />, route: '/registros', adminOnly: true },
 ];
 
 interface SidebarProps {
@@ -76,26 +96,25 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const renderContent = (showLabels: boolean) => (
     <>
       <Box
-        onClick={() => handleNavigate('/ajustes')}
         sx={{
           px: 1.5,
           py: 2,
           minHeight: 72,
           display: 'flex',
           alignItems: 'center',
-          cursor: 'pointer',
-          transition: 'background-color 0.2s ease',
-          '&:hover': { backgroundColor: '#f5f5f5' },
         }}
       >
         {showLabels ? (
           <>
-            <Avatar sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }} />
-            <Box sx={{ flex: 1, overflow: 'hidden', mx: 1.5 }}>
+            <Avatar
+              sx={{ width: 38, height: 38, bgcolor: '#bdbdbd', flexShrink: 0 }}
+              alt={user ? `${user.first_name} ${user.last_name}` : 'Usuario'}
+            />
+            <Box sx={{ flex: 1, minWidth: 0, mx: 1.5 }}>
               <Typography variant="caption" sx={{ color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }} display="block">
-                Usuario
+                {user ? (ROLE_LABELS[user.role] ?? user.role) : ''}
               </Typography>
-              <Typography variant="subtitle2" fontWeight="bold" noWrap>
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ wordBreak: 'break-word', lineHeight: 1.3 }}>
                 {user ? `${user.first_name} ${user.last_name}` : ''}
               </Typography>
             </Box>
@@ -106,6 +125,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 if (isMobile) onMobileClose();
                 else setCollapsed(true);
               }}
+              aria-label={isMobile ? 'Cerrar menú' : 'Contraer menú'}
               sx={{ flexShrink: 0, color: '#666' }}
             >
               <ChevronLeftIcon fontSize="small" />
@@ -118,6 +138,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               e.stopPropagation();
               setCollapsed(false);
             }}
+            aria-label="Expandir menú"
             sx={{ mx: 'auto', color: '#666' }}
           >
             <ChevronRightIcon fontSize="small" />
@@ -166,6 +187,33 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       <Divider />
 
       <List sx={{ py: 1 }}>
+        <ListItemButton
+          selected={location.pathname === '/ajustes'}
+          onClick={() => handleNavigate('/ajustes')}
+          sx={{
+            borderRadius: 1,
+            mx: 1,
+            mb: 0.5,
+            justifyContent: showLabels ? 'flex-start' : 'center',
+            px: showLabels ? 1.5 : 1,
+            '&.Mui-selected': { backgroundColor: '#f0f0f0' },
+            '&.Mui-selected:hover': { backgroundColor: '#e8e8e8' },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: showLabels ? 34 : 'auto', color: location.pathname === '/ajustes' ? '#12457d' : '#555' }}>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          {showLabels && (
+            <ListItemText
+              primary="Ajustes"
+              primaryTypographyProps={{
+                variant: 'body2',
+                fontWeight: location.pathname === '/ajustes' ? 600 : 400,
+                color: location.pathname === '/ajustes' ? '#12457d' : 'text.primary',
+              }}
+            />
+          )}
+        </ListItemButton>
         <ListItemButton
           onClick={() => setConfirmOpen(true)}
           sx={{

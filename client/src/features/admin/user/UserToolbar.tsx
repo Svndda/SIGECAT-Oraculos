@@ -44,7 +44,7 @@ export default function UserToolbar({ search, onSearchChange, onAddClick }: User
             fontSize: '0.9rem',
           }}
         >
-          Añadir Usuario
+          Registrar Usuario
         </Button>
       </Box>
     </>

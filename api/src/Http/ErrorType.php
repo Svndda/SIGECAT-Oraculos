@@ -277,6 +277,16 @@ final class ErrorType implements JsonSerializable
 	 * @param string $detail Technical detail (use with caution in production).
 	 * @return self
 	 */
+	/**
+	 * Triggered when a client exceeds the allowed request rate for an endpoint.
+	 *
+	 * @return self
+	 */
+	public static function tooManyRequests(): self
+	{
+		return new self('TOO_MANY_REQUESTS', 'Demasiadas solicitudes. Intente de nuevo más tarde.');
+	}
+
 	public static function internal(string $detail = 'Unexpected error'): self
 	{
 		return new self('INTERNAL_ERROR', $detail);
@@ -295,6 +305,7 @@ final class ErrorType implements JsonSerializable
 			'FORBIDDEN_ACCESS' => 403,
 			'INVALID_JSON', 'INVALID_FIELD', 'MISSING_FIELD', 'INVALID_EMAIL', 'WEAK_PASSWORD' => 400,
 			'CONFLICT_ERROR', 'EMAIL_ALREADY_IN_USE' => 409,
+			'TOO_MANY_REQUESTS' => 429,
 			default => 500,
 		};
 	}

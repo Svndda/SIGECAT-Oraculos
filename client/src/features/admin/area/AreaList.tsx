@@ -1,13 +1,21 @@
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import {
+  Tooltip,
+  Typography,
+} from '@mui/material';
+
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Area } from '../../../services/areaService';
+import { truncateText } from '../../../utils/text';
 
 interface AreaListProps {
   areas: Area[];
   loading: boolean;
   onEdit: (area: Area) => void;
   onDelete: (area: Area) => void;
+  onView: (area: Area) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -15,11 +23,22 @@ function formatDate(dateStr: string): string {
   return dateStr.split(' ')[0];
 }
 
-export default function AreaList({ areas, loading, onEdit, onDelete }: AreaListProps) {
+export default function AreaList({ areas, loading, onEdit, onDelete, onView }: AreaListProps) {
   const columns: DataColumn<Area>[] = [
-    { label: 'Nombre', flex: '0 0 26%', primary: true, render: (a) => a.name },
-    { label: 'Descripción', flex: '1', truncate: true, render: (a) => a.description ?? '—' },
-    { label: 'Fecha de creación', flex: '0 0 20%', meta: true, render: (a) => formatDate(a.created_at) },
+    {
+      label: 'Nombre',
+      flex: '1',
+      primary: true,
+      truncate: true,
+      render: (a) => (
+        <Tooltip title={a.name} arrow>
+          <Typography variant="body2" fontWeight={600} noWrap>
+            {truncateText(a.name)}
+          </Typography>
+        </Tooltip>
+      ),
+    },
+    { label: 'Fecha de creación', flex: '1', meta: true, render: (a) => formatDate(a.created_at) },
   ];
 
   return (
@@ -29,6 +48,7 @@ export default function AreaList({ areas, loading, onEdit, onDelete }: AreaListP
       getKey={(area) => area.area_id}
       loading={loading}
       actions={[
+        { icon: <VisibilityIcon fontSize="small" />, label: 'Ver', color: 'info.main', onClick: onView },
         { icon: <EditIcon fontSize="small" />, label: 'Editar', color: '#1a2b4a', onClick: onEdit },
         { icon: <DeleteOutlineIcon fontSize="small" />, label: 'Eliminar', color: '#9e9e9e', onClick: onDelete },
       ]}
