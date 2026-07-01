@@ -1,0 +1,10 @@
+.git
+**/node_modules
+client/dist
+api/vendor
+# Oracle Instant Client and wallet are mounted at runtime, never copied in.
+instantclient-basic-linux.x64-*
+Wallet_*.zip
+*.rpm
+**/.env*
+api/config/oci_config.php

@@ -1,0 +1,38 @@
+# Local SIGECAT stack: web client + PHP/Oracle API.
+#
+# Credentials are never baked into the images. Mount them from the host:
+#   - WALLET_DIR : the Oracle wallet directory (cwallet.sso, sqlnet.ora, ...).
+#   - OCI_CONFIG : config/oci_config.php with the DB user/password/TNS name.
+# Both default to their usual location in this repo; override via a .env file
+# or the shell environment.
+#
+# Note: inside the wallet, sqlnet.ora's WALLET_LOCATION DIRECTORY must point to
+# the in-container path (/opt/oracle/wallet), not a host path.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      TNS_ADMIN: /opt/oracle/wallet
+      # Optional: provide DB credentials via the environment instead of the
+      # mounted oci_config.php. When empty, the app falls back to that file.
+      DB_USERNAME: ${DB_USERNAME:-}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_TNS_NAME: ${DB_TNS_NAME:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+    volumes:
+      - ${WALLET_DIR:-./instantclient-basic-linux.x64-21.12.0.0.0dbru.el9/instantclient_21_12/network/admin}:/opt/oracle/wallet:ro
+      - ${OCI_CONFIG:-./api/config/oci_config.php}:/app/api/config/oci_config.php:ro
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api

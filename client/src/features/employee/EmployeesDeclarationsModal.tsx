@@ -39,6 +39,15 @@ import {
 } from '../../services/officialFunctionService';
 import html2canvas from "html2canvas";
 import {jsPDF} from "jspdf";
+import {
+  restTimeService,
+  REST_TYPE_LABELS,
+  type RestTimeResponse
+} from '../../services/restTimeService';
+import {
+  licenseService,
+  type LicenseResponse
+} from '../../services/licenseService';
 
 interface EmployeeDeclarationDetailModalProps {
   open: boolean;
@@ -91,6 +100,21 @@ function calcWeeklyShiftHours(
   return dailyHours * 5;
 }
 
+function sumDurationsInHours(entries: {
+  starts_at: string;
+  ends_at: string
+}[]): number {
+  let totalMinutes = 0;
+  for (const e of entries) {
+    const start = new Date(e.starts_at);
+    const end = new Date(e.ends_at);
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
+      totalMinutes += (end.getTime() - start.getTime()) / 60000;
+    }
+  }
+  return Math.round((totalMinutes / 60) * 100) / 100;
+}
+
 function resolveFunctionLabel(
   jf: JobFunction,
   officialFnsForJob: OfficialFunction[],
@@ -118,14 +142,17 @@ export default function EmployeeDeclarationDetailModal(
   }: EmployeeDeclarationDetailModalProps) {
   const [officialFnsForJob, setOfficialFnsForJob] = useState<OfficialFunction[]>([]);
   const [loadingOfficialFns, setLoadingOfficialFns] = useState(false);
+  const [restTimes, setRestTimes] = useState<RestTimeResponse[]>([]);
+  const [licenseTimes, setLicenseTimes] = useState<LicenseResponse[]>([]);
+  const [loadingExtra, setLoadingExtra] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handleExportPDF = async () => {
     const element = contentRef.current;
     if (!element) return;
 
+    // Temporarily adjust styles to capture full content without scroll
     const originalStyle = element.style.cssText;
-
     element.style.overflow = "visible";
     element.style.maxHeight = "none";
     element.style.height = "auto";
@@ -147,33 +174,82 @@ export default function EmployeeDeclarationDetailModal(
       }
     });
 
-    element.style.cssText = originalStyle;
+    // Restore original styles
+    element.style.cssText = originalStyle
+    ;
+    canvas.toDataURL("image/png");
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
 
-    const imgData = canvas.toDataURL("image/png");
-
+    // PDF setup
     const pdf = new jsPDF("p", "mm", "a4");
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10; // margins in mm
+    const usableWidth = pdfWidth - 2 * margin;
+    const usableHeight = pdfHeight - 2 * margin;
 
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    // Scale to fit width, maintain aspect ratio
+    const scale = usableWidth / imgWidth;
+    const scaledImgHeight = imgHeight * scale;
+    const totalPages = Math.ceil(scaledImgHeight / usableHeight);
+
+    // Create a temporary canvas for slicing
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    for (let page = 0; page < totalPages; page++) {
+      // Source y offset in pixels (original image coordinates)
+      const srcY = page * (usableHeight / scale);
+      // Height of slice in pixels (original image coordinates)
+      const sliceHeight = Math.min(usableHeight / scale, imgHeight - srcY);
+
+      // Set temp canvas size to original image width and slice height (in pixels)
+      tempCanvas.width = imgWidth;
+      tempCanvas.height = sliceHeight;
+
+      // Draw the portion of the image onto temp canvas
+      tempCtx!.drawImage(canvas, 0, srcY, imgWidth, sliceHeight, 0, 0, imgWidth, sliceHeight);
+
+      // Convert temp canvas to data URL
+      const pageImgData = tempCanvas.toDataURL("image/png");
+
+      // Add page (except first, which is already there)
+      if (page > 0) {
+        pdf.addPage();
+      }
+
+      // Add image to PDF, centered with margin
+      // We need to scale the image to fit usableWidth, and its height will be scaled accordingly
+      const pageImgWidth = usableWidth;
+      const pageImgHeight = sliceHeight * scale; // this should be <= usableHeight
+      pdf.addImage(pageImgData, "PNG", margin, margin, pageImgWidth, pageImgHeight);
+    }
+
     pdf.save(`declaracion_plaza#${job_position?.job_position_number || 'export'}.pdf`);
   };
 
   useEffect(() => {
     let isMounted = true;
     const jobId = declaration?.job_position?.job_id;
+    const declId = declaration?.declaration_id;
 
     if (!open || !jobId) {
       setTimeout(() => {
-        if (isMounted) setOfficialFnsForJob([]);
+        if (isMounted) {
+          setOfficialFnsForJob([]);
+          setRestTimes([]);
+          setLicenseTimes([]);
+        }
       }, 0);
       return;
     }
 
-    setTimeout(() => {
-      if (isMounted) setLoadingOfficialFns(true);
-    }, 0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoadingOfficialFns(true);
+    setLoadingExtra(true);
 
+    // Fetch official functions
     officialFunctionService
       .getOfficialFunctions({job_id: jobId, limit: 100})
       .then((r) => {
@@ -192,10 +268,39 @@ export default function EmployeeDeclarationDetailModal(
         }
       });
 
+    // Fetch rest times and license times if declaration id exists
+    if (declId) {
+      Promise.all([
+        restTimeService.getRestTimesByDeclaration(declId),
+        licenseService.getLicensesByDeclaration(declId),
+      ])
+        .then(([rests, licenses]) => {
+          if (isMounted) {
+            setRestTimes(rests);
+            setLicenseTimes(licenses);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setRestTimes([]);
+            setLicenseTimes([]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) {
+            setLoadingExtra(false);
+          }
+        });
+    } else {
+      setRestTimes([]);
+      setLicenseTimes([]);
+      setLoadingExtra(false);
+    }
+
     return () => {
       isMounted = false;
     };
-  }, [open, declaration?.job_position?.job_id]);
+  }, [open, declaration?.job_position?.job_id, declaration?.declaration_id]);
 
   if (!declaration && !loading) return null;
 
@@ -214,7 +319,10 @@ export default function EmployeeDeclarationDetailModal(
   const translatedStatus = current_status ? STATUS_TRANSLATIONS[current_status] : '';
   const statusColor = current_status ? STATUS_COLORS[current_status] : '#757575';
 
-  const totalDeclaredHours = calcTotalDeclaredHours(job_functions);
+  const baseFunctionHours = calcTotalDeclaredHours(job_functions);
+  const restHours = sumDurationsInHours(restTimes);
+  const licenseHours = sumDurationsInHours(licenseTimes);
+  const totalDeclaredHours = baseFunctionHours + restHours + licenseHours;
   const weeklyShiftHours = calcWeeklyShiftHours(shift_starts_at, shift_ends_at);
   const shiftHoursKnown = weeklyShiftHours > 0;
   const isHoursExceeded = shiftHoursKnown && totalDeclaredHours > weeklyShiftHours;
@@ -232,6 +340,8 @@ export default function EmployeeDeclarationDetailModal(
 
   const showFunctionsSection =
     job_functions.length > 0 || catalogFunctions.length > 0 || loadingOfficialFns;
+
+  const hasExtraEntries = restTimes.length > 0 || licenseTimes.length > 0 || loadingExtra;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -619,6 +729,115 @@ export default function EmployeeDeclarationDetailModal(
                   </TableBody>
                 </Table>
               </TableContainer>
+            </Paper>
+          )}
+
+          {hasExtraEntries && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                bgcolor: 'background.default',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Stack spacing={2}>
+                <Typography variant="overline" color="text.secondary"
+                            sx={{letterSpacing: 1}}>
+                  Descansos y Licencias
+                </Typography>
+
+                {loadingExtra ? (
+                  <Box sx={{display: 'flex', justifyContent: 'center', py: 2}}>
+                    <CircularProgress size={24}/>
+                  </Box>
+                ) : (
+                  <>
+                    {restTimes.length > 0 && (
+                      <>
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          Descansos
+                        </Typography>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{
+                                '& th': {
+                                  fontWeight: 600,
+                                  color: 'text.secondary'
+                                }
+                              }}>
+                                <TableCell>Tipo</TableCell>
+                                <TableCell>Inicio</TableCell>
+                                <TableCell>Fin</TableCell>
+                                <TableCell>Duración (min)</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {restTimes.map((rt) => {
+                                const start = new Date(rt.starts_at);
+                                const end = new Date(rt.ends_at);
+                                const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+                                return (
+                                  <TableRow key={rt.rest_time_id}>
+                                    <TableCell>{REST_TYPE_LABELS[rt.rest_type]}</TableCell>
+                                    <TableCell>{formatOracleTime(rt.starts_at)}</TableCell>
+                                    <TableCell>{formatOracleTime(rt.ends_at)}</TableCell>
+                                    <TableCell>{minutes}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                        <Divider/>
+                      </>
+                    )}
+
+                    {licenseTimes.length > 0 && (
+                      <>
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          Licencias
+                        </Typography>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{
+                                '& th': {
+                                  fontWeight: 600,
+                                  color: 'text.secondary'
+                                }
+                              }}>
+                                <TableCell>Tipo</TableCell>
+                                <TableCell>Inicio</TableCell>
+                                <TableCell>Fin</TableCell>
+                                <TableCell>Duración (min)</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {licenseTimes.map((lic) => {
+                                const start = new Date(lic.starts_at);
+                                const end = new Date(lic.ends_at);
+                                const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+                                return (
+                                  <TableRow key={lic.license_time_id}>
+                                    <TableCell>{lic.license_type_name || '—'}</TableCell>
+                                    <TableCell>{formatOracleTime(lic.starts_at)}</TableCell>
+                                    <TableCell>{formatOracleTime(lic.ends_at)}</TableCell>
+                                    <TableCell>{minutes}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </>
+                    )}
+                  </>
+                )}
+              </Stack>
             </Paper>
           )}
 

@@ -24,7 +24,9 @@ export interface CreateCustomFunctionPayload {
 }
 
 export const customFunctionService = {
-  async getCustomFunctions(params: ListParams = {}): Promise<Paginated<CustomFunction>> {
+  async getCustomFunctions(
+    params: ListParams & { mine?: boolean } = {}
+  ): Promise<Paginated<CustomFunction>> {
     try {
       const res = await apiClient.get<{ data: CustomFunction[]; meta: PageMeta }>(
         '/custom-functions',

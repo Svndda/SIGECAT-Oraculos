@@ -1,0 +1,2025 @@
+# Generated from api/config/routes.php. Regenerate when routes change.
+openapi: 3.0.3
+info:
+  title: SIGECAT API
+  version: 1.0.0
+  description: 'REST API for SIGECAT, the workload/work-shift declaration system.
+
+
+    All responses use a standard envelope `{ data, meta, errors }`. Authentication is a Bearer access
+    token obtained from `POST /auth/login`. List endpoints accept `page`, `limit` and `filter`; soft-deletable
+    resources also accept `status` (admin only).'
+  license:
+    name: Proprietary
+servers:
+- url: http://localhost:8000/api/public
+  description: Local development
+tags:
+- name: Auth
+  description: Login, token refresh, logout and password recovery.
+- name: Users
+  description: User accounts, roles and self-service profile.
+- name: Job positions
+  description: Job positions (plazas).
+- name: Areas
+  description: 'Organizational structure: areas.'
+- name: Sections
+  description: 'Organizational structure: sections.'
+- name: Job classes
+  description: Occupational classes catalogue.
+- name: Declarations
+  description: Work-shift declarations and their status workflow.
+- name: Jobs
+  description: Job types catalogue.
+- name: Departments
+  description: 'Organizational structure: departments.'
+- name: Units
+  description: 'Organizational structure: units.'
+- name: Rest times
+  description: Rest periods declared within a shift.
+- name: Official functions
+  description: Official function catalogue, per job.
+- name: Custom functions
+  description: Employee-defined ad-hoc functions.
+- name: Job functions
+  description: Functions reported on a declaration.
+- name: License types
+  description: Catalogue of permit/license types.
+- name: Licenses
+  description: Licenses declared within a shift.
+- name: System logs
+  description: Administrative audit trail.
+paths:
+  /auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Rotate the refresh token for a new token pair
+      operationId: auth_refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Authenticate with email and password
+      operationId: auth_login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Revoke the current session
+      operationId: auth_logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/password-recovery/request:
+    post:
+      tags:
+      - Auth
+      summary: Request a password-recovery email
+      operationId: passwordrecovery_request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /auth/password-recovery/reset:
+    post:
+      tags:
+      - Auth
+      summary: Reset the password with an emailed token
+      operationId: passwordrecovery_reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /users/register:
+    post:
+      tags:
+      - Users
+      summary: Register a user (admin)
+      operationId: user_register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me:
+    patch:
+      tags:
+      - Users
+      summary: Update the authenticated user
+      operationId: user_update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Users
+      summary: Get the authenticated user
+      operationId: user_show
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/me/job-positions:
+    get:
+      tags:
+      - Job positions
+      summary: List the authenticated user's job positions
+      operationId: jobposition_getByUser
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/password:
+    patch:
+      tags:
+      - Users
+      summary: Change the authenticated user's password
+      operationId: user_changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users:
+    get:
+      tags:
+      - Users
+      summary: List users
+      operationId: user_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/{id}:
+    get:
+      tags:
+      - Users
+      summary: Get a user by id
+      operationId: user_getById
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Users
+      summary: Delete a user
+      operationId: user_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/{id}/role:
+    patch:
+      tags:
+      - Users
+      summary: Change a user's role (admin)
+      operationId: user_changeRole
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/{id}/restore:
+    post:
+      tags:
+      - Users
+      summary: Restore a soft-deleted user (admin)
+      operationId: user_restore
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /areas:
+    post:
+      tags:
+      - Areas
+      summary: Create a area
+      operationId: area_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Areas
+      summary: List areas
+      operationId: area_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /areas/{id}:
+    get:
+      tags:
+      - Areas
+      summary: Get a area by id
+      operationId: area_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Areas
+      summary: Update a area
+      operationId: area_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Areas
+      summary: Delete a area
+      operationId: area_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /areas/{id}/restore:
+    post:
+      tags:
+      - Areas
+      summary: Restore a soft-deleted area
+      operationId: area_restore
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /sections:
+    post:
+      tags:
+      - Sections
+      summary: Create a section
+      operationId: section_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Sections
+      summary: List sections
+      operationId: section_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /sections/{id}:
+    get:
+      tags:
+      - Sections
+      summary: Get a section by id
+      operationId: section_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Sections
+      summary: Update a section
+      operationId: section_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Sections
+      summary: Delete a section
+      operationId: section_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /sections/{id}/restore:
+    post:
+      tags:
+      - Sections
+      summary: Restore a soft-deleted section
+      operationId: section_restore
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /job-classes:
+    get:
+      tags:
+      - Job classes
+      summary: List job classes
+      operationId: jobclass_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /job-class:
+    post:
+      tags:
+      - Job classes
+      summary: Create a job class
+      operationId: jobclass_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Job classes
+      summary: List job classes
+      operationId: jobclass_index_job-class
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /job-class/{id}:
+    get:
+      tags:
+      - Job classes
+      summary: Get a job class by id
+      operationId: jobclass_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Job classes
+      summary: Update a job class
+      operationId: jobclass_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Job classes
+      summary: Delete a job class
+      operationId: jobclass_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /declarations:
+    post:
+      tags:
+      - Declarations
+      summary: Create a declaration
+      operationId: declarations_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Declarations
+      summary: List declarations (admin)
+      operationId: declarations_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /declarations/me:
+    get:
+      tags:
+      - Declarations
+      summary: List the authenticated user's declarations
+      operationId: declarations_getMyDeclarations
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /declarations/status/incomplete:
+    get:
+      tags:
+      - Declarations
+      summary: Check for an incomplete declaration
+      operationId: declarations_checkIncomplete
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /declarations/{id}:
+    get:
+      tags:
+      - Declarations
+      summary: Get a declaration by id
+      operationId: declarations_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /declarations/{id}/history:
+    get:
+      tags:
+      - Declarations
+      summary: Get a declaration status history
+      operationId: declarations_getHistory
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /declarations/{id}/status:
+    post:
+      tags:
+      - Declarations
+      summary: Change a declaration status
+      operationId: declarations_changeStatus
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /declarations/{id}/justification:
+    put:
+      tags:
+      - Declarations
+      summary: Update a declaration justification
+      operationId: declarations_updateJustification
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /jobs:
+    post:
+      tags:
+      - Jobs
+      summary: Create a job
+      operationId: job_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Jobs
+      summary: List jobs
+      operationId: job_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /jobs/{id}:
+    get:
+      tags:
+      - Jobs
+      summary: Get a job by id
+      operationId: job_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Jobs
+      summary: Update a job
+      operationId: job_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Jobs
+      summary: Delete a job
+      operationId: job_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /job-positions:
+    post:
+      tags:
+      - Job positions
+      summary: Create a job position
+      operationId: jobposition_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Job positions
+      summary: List job positions
+      operationId: jobposition_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /job-positions/{id}:
+    patch:
+      tags:
+      - Job positions
+      summary: Update a job position
+      operationId: jobposition_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Job positions
+      summary: Delete a job position
+      operationId: jobposition_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /departments:
+    post:
+      tags:
+      - Departments
+      summary: Create a department
+      operationId: department_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Departments
+      summary: List departments
+      operationId: department_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /departments/{id}:
+    get:
+      tags:
+      - Departments
+      summary: Get a department by id
+      operationId: department_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Departments
+      summary: Update a department
+      operationId: department_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Departments
+      summary: Delete a department
+      operationId: department_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /departments/{id}/restore:
+    post:
+      tags:
+      - Departments
+      summary: Restore a soft-deleted department
+      operationId: department_restore
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /units:
+    post:
+      tags:
+      - Units
+      summary: Create a unit
+      operationId: unit_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Units
+      summary: List units
+      operationId: unit_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /units/{id}:
+    get:
+      tags:
+      - Units
+      summary: Get a unit by id
+      operationId: unit_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Units
+      summary: Update a unit
+      operationId: unit_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Units
+      summary: Delete a unit
+      operationId: unit_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /units/{id}/restore:
+    post:
+      tags:
+      - Units
+      summary: Restore a soft-deleted unit
+      operationId: unit_restore
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /rest-time:
+    post:
+      tags:
+      - Rest times
+      summary: Create a rest time
+      operationId: resttime_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Rest times
+      summary: List rest times
+      operationId: resttime_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /rest-time/{id}:
+    get:
+      tags:
+      - Rest times
+      summary: Get a rest time by id
+      operationId: resttime_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Rest times
+      summary: Update a rest time
+      operationId: resttime_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Rest times
+      summary: Delete a rest time
+      operationId: resttime_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /official-functions:
+    post:
+      tags:
+      - Official functions
+      summary: Create a official function
+      operationId: officialfunction_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Official functions
+      summary: List official functions
+      operationId: officialfunction_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /official-functions/{id}:
+    get:
+      tags:
+      - Official functions
+      summary: Get a official function by id
+      operationId: officialfunction_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Official functions
+      summary: Update a official function
+      operationId: officialfunction_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Official functions
+      summary: Delete a official function
+      operationId: officialfunction_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /custom-functions:
+    post:
+      tags:
+      - Custom functions
+      summary: Create a custom function
+      operationId: customfunction_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Custom functions
+      summary: List custom functions
+      operationId: customfunction_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /custom-functions/{id}:
+    get:
+      tags:
+      - Custom functions
+      summary: Get a custom function by id
+      operationId: customfunction_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /job-functions:
+    post:
+      tags:
+      - Job functions
+      summary: Create a job function
+      operationId: jobfunction_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Job functions
+      summary: List job functions
+      operationId: jobfunction_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /job-functions/{id}:
+    get:
+      tags:
+      - Job functions
+      summary: Get a job function by id
+      operationId: jobfunction_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Job functions
+      summary: Update a job function
+      operationId: jobfunction_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Job functions
+      summary: Delete a job function
+      operationId: jobfunction_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /license-type:
+    post:
+      tags:
+      - License types
+      summary: Create a license type
+      operationId: licensetype_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - License types
+      summary: List license types
+      operationId: licensetype_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /license-type/{id}:
+    get:
+      tags:
+      - License types
+      summary: Get a license type by id
+      operationId: licensetype_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - License types
+      summary: Update a license type
+      operationId: licensetype_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - License types
+      summary: Delete a license type
+      operationId: licensetype_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /license:
+    post:
+      tags:
+      - Licenses
+      summary: Create a license
+      operationId: license_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Licenses
+      summary: List licenses
+      operationId: license_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /license/{id}:
+    get:
+      tags:
+      - Licenses
+      summary: Get a license by id
+      operationId: license_show
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+      - Licenses
+      summary: Update a license
+      operationId: license_update
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Licenses
+      summary: Delete a license
+      operationId: license_delete
+      parameters:
+      - $ref: '#/components/parameters/IdPath'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /logs:
+    get:
+      tags:
+      - System logs
+      summary: List system logs (admin)
+      operationId: log_index
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Status'
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedSuccess'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /logs/facets:
+    get:
+      tags:
+      - System logs
+      summary: List system-log filter facets (admin)
+      operationId: log_facets
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Access token from POST /auth/login
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Resource id (ULID).
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    Filter:
+      name: filter
+      in: query
+      schema:
+        type: string
+      description: Case-insensitive name search.
+    Status:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum:
+        - active
+        - deleted
+        - all
+        default: active
+      description: Soft-delete scope (admin only).
+  schemas:
+    PageMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: INVALID_FIELD
+        message:
+          type: string
+    Envelope:
+      type: object
+      properties:
+        data:
+          description: Response payload (object, array or null).
+        meta:
+          type: object
+          nullable: true
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiError'
+    PaginatedEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiError'
+    ErrorResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          nullable: true
+        meta:
+          type: object
+          nullable: true
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiError'
+  responses:
+    Success:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+    PaginatedSuccess:
+      description: Paginated list
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PaginatedEnvelope'
+    ValidationError:
+      description: Invalid or missing fields
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

@@ -22,6 +22,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import WorkIcon from '@mui/icons-material/Work';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import EventNoteIcon from '@mui/icons-material/EventNote';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -52,6 +53,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Clases Ocupacionales', icon: <CategoryIcon fontSize="small" />, route: '/clases-ocupacionales', adminOnly: true },
   { label: 'Funciones', icon: <AssignmentIcon fontSize="small" />, route: '/funciones', adminOnly: true },
   { label: 'Funciones Personalizadas', icon: <AssignmentIndIcon fontSize="small" />, route: '/funciones-personalizadas', adminOnly: true },
+  { label: 'Tipos de Licencia', icon: <EventNoteIcon fontSize="small" />, route: '/tipos-de-licencia', adminOnly: true },
   { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
   { label: 'Registros', icon: <ReceiptLongRounded fontSize="small" />, route: '/registros', adminOnly: true },
 ];

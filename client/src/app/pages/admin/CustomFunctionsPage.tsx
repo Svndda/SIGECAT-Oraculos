@@ -36,24 +36,23 @@ export default function CustomFunctionsPage() {
   }, [search, appliedFilter]);
 
   useEffect(() => {
-    let isSubscribed = true;
-    setLoading(true);
+    let active = true;
     customFunctionService.getCustomFunctions({ page, limit: LIMIT, filter: appliedFilter })
       .then((res) => {
-        if (!isSubscribed) return;
+        if (!active) return;
         setFunctions(res.data ?? []);
         setMeta(res.meta);
       })
       .catch((error) => {
-        if (!isSubscribed) return;
+        if (!active) return;
         const e = error as ServiceError;
         snackbar.error(e.message ?? 'Error del servidor al cargar funciones personalizadas.');
       })
       .finally(() => {
-        if (isSubscribed) setLoading(false);
+        if (active) setLoading(false);
       });
-    return () => { isSubscribed = false; };
-  }, [page, appliedFilter]);
+    return () => { active = false; };
+  }, [page, appliedFilter, snackbar]);
 
   const totalPages = meta?.total_pages ?? 1;
 

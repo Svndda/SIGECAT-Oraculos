@@ -94,7 +94,7 @@ final class UserRepository extends Repository {
       'SELECT user_id, role, email,
               first_name, second_name, first_last_name, second_last_name,
               password_hash, is_active, is_password_temp,
-              failed_logging_attempts, created_at, created_by,
+              failed_logging_attempts, last_failed_attempt_at, created_at, created_by,
               is_deleted, deleted_at, deleted_by
        FROM USERS
        WHERE email = :email' . $this->statusCondition($status) . '
@@ -300,7 +300,8 @@ final class UserRepository extends Repository {
     try {
       $stmt = $this->db->prepare(
         "UPDATE USERS
-         SET failed_logging_attempts = failed_logging_attempts + 1
+         SET failed_logging_attempts = failed_logging_attempts + 1,
+             last_failed_attempt_at = CURRENT_TIMESTAMP
          WHERE user_id = :user_id"
       );
       $stmt->execute([':user_id' => $userId]);

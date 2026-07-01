@@ -8,8 +8,6 @@ export interface SnackbarState {
   severity: SnackbarSeverity;
 }
 
-export const EMPTY_SNACKBAR: SnackbarState = { open: false, message: '', severity: 'success' };
-
 interface AppSnackbarProps {
   state: SnackbarState;
   onClose: () => void;

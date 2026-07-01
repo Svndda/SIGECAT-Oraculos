@@ -25,8 +25,12 @@ const processQueue = (error: unknown = null) => {
   failedQueue = [];
 };
 
+// Base URL is configurable per environment via VITE_API_BASE_URL (set at build
+// time); defaults to the local API for development.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/public';
+
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000/api/public',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -52,6 +56,7 @@ apiClient.interceptors.response.use(
         try {
           response.data = JSON.parse(match[0]);
         } catch {
+          // Not valid JSON: leave response.data as the original string.
         }
       }
     }

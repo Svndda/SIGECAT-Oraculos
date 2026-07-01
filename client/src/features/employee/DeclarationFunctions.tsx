@@ -146,7 +146,7 @@ export default function DeclarationFunctions() {
         const [declaration, off, cus] = await Promise.all([
           declarationService.getDeclarationById(declId),
           officialFunctionService.getOfficialFunctions({ limit: 100, status: 'active' }),
-          customFunctionService.getCustomFunctions({ limit: 100 }),
+          customFunctionService.getCustomFunctions({ limit: 100, mine: true }),
         ]);
         if (!active) return;
 
@@ -343,16 +343,16 @@ export default function DeclarationFunctions() {
                        sx={{ border: '1px solid #e0e0e0', borderRadius: 1, '&:before': { display: 'none' } }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1, gap: 1 }}>
-                  <Typography sx={{ fontWeight: 500 }}>{item.name}</Typography>
+                  <Typography sx={{ fontWeight: 500, flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{item.name}</Typography>
                   {report ? (
-                    <Stack direction="row" spacing={0.5} alignItems="center" onClick={(e) => e.stopPropagation()}>
+                    <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0} onClick={(e) => e.stopPropagation()}>
                       <Chip size="small" color="primary" variant="outlined" label={`${report.startTime}–${report.endTime} · ${report.frequency}`} />
                       <IconButton size="small" onClick={() => openReport(item)} sx={{ color: '#1a2b4a' }}><EditIcon fontSize="small" /></IconButton>
                       <IconButton size="small" onClick={() => removeReport(item)} sx={{ color: '#d32f2f' }}><DeleteOutlineIcon fontSize="small" /></IconButton>
                     </Stack>
                   ) : (
                     <Button size="small" variant="outlined" onClick={(e) => { e.stopPropagation(); openReport(item); }}
-                            sx={{ textTransform: 'none' }}>
+                            sx={{ textTransform: 'none', flexShrink: 0 }}>
                       Reportar función
                     </Button>
                   )}

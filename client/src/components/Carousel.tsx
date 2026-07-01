@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, IconButton, styled } from '@mui/material';
 import { ArrowBackIosNew, ArrowForwardIos } from '@mui/icons-material';
 
-const CarouselContainer = styled(Box)(({ /*theme*/ }) => ({
+const CarouselContainer = styled(Box)(() => ({
   position: 'relative',
   width: '100%',
   overflow: 'hidden',
@@ -28,7 +28,7 @@ const Slide = styled(Box, {
   },
 }));
 
-const NavButton = styled(IconButton)(({ /*theme*/ }) => ({
+const NavButton = styled(IconButton)(() => ({
   position: 'absolute',
   top: '50%',
   transform: 'translateY(-50%)',

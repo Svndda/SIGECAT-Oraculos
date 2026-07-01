@@ -49,6 +49,15 @@ import {
   officialFunctionService,
   type OfficialFunction,
 } from '../../../services/officialFunctionService';
+import {
+  restTimeService,
+  REST_TYPE_LABELS,
+  type RestTimeResponse
+} from '../../../services/restTimeService';
+import {
+  licenseService,
+  type LicenseResponse
+} from '../../../services/licenseService';
 
 interface AdminDeclarationDetailModalProps {
   open: boolean;
@@ -97,6 +106,21 @@ function calcWeeklyShiftHours(
   return dailyHours * 5;
 }
 
+function sumDurationsInHours(entries: {
+  starts_at: string;
+  ends_at: string
+}[]): number {
+  let totalMinutes = 0;
+  for (const e of entries) {
+    const start = new Date(e.starts_at);
+    const end = new Date(e.ends_at);
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
+      totalMinutes += (end.getTime() - start.getTime()) / 60000;
+    }
+  }
+  return Math.round((totalMinutes / 60) * 100) / 100;
+}
+
 type FunctionLabel = {
   label: string;
   chipColor: 'primary' | 'secondary' | 'warning' | 'default';
@@ -140,6 +164,9 @@ export default function DeclarationsDetailsModal(
 
   const [officialFnsForJob, setOfficialFnsForJob] = useState<OfficialFunction[]>([]);
   const [loadingOfficialFns, setLoadingOfficialFns] = useState(false);
+  const [restTimes, setRestTimes] = useState<RestTimeResponse[]>([]);
+  const [licenseTimes, setLicenseTimes] = useState<LicenseResponse[]>([]);
+  const [loadingExtra, setLoadingExtra] = useState(false);
 
   useEffect(() => {
     if (declaration) setLocalDeclaration(declaration);
@@ -157,17 +184,21 @@ export default function DeclarationsDetailsModal(
   useEffect(() => {
     let isMounted = true;
     const jobId = localDeclaration?.job_position?.job_id;
+    const declId = localDeclaration?.declaration_id;
 
     if (!open || !jobId) {
       setTimeout(() => {
-        if (isMounted) setOfficialFnsForJob([]);
+        if (isMounted) {
+          setOfficialFnsForJob([]);
+          setRestTimes([]);
+          setLicenseTimes([]);
+        }
       }, 0);
       return;
     }
 
-    setTimeout(() => {
-      if (isMounted) setLoadingOfficialFns(true);
-    }, 0);
+    setLoadingOfficialFns(true);
+    setLoadingExtra(true);
 
     officialFunctionService
       .getOfficialFunctions({job_id: jobId, limit: 100})
@@ -187,10 +218,38 @@ export default function DeclarationsDetailsModal(
         }
       });
 
+    if (declId) {
+      Promise.all([
+        restTimeService.getRestTimesByDeclaration(declId),
+        licenseService.getLicensesByDeclaration(declId),
+      ])
+        .then(([rests, licenses]) => {
+          if (isMounted) {
+            setRestTimes(rests);
+            setLicenseTimes(licenses);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setRestTimes([]);
+            setLicenseTimes([]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) {
+            setLoadingExtra(false);
+          }
+        });
+    } else {
+      setRestTimes([]);
+      setLicenseTimes([]);
+      setLoadingExtra(false);
+    }
+
     return () => {
       isMounted = false;
     };
-  }, [open, localDeclaration?.job_position?.job_id]);
+  }, [open, localDeclaration?.job_position?.job_id, localDeclaration?.declaration_id]);
 
   const validNextStatuses = useMemo(() => {
     if (!localDeclaration) return [];
@@ -266,7 +325,10 @@ export default function DeclarationsDetailsModal(
   );
   const canChangeStatus = isStatusEligibleForChange && validNextStatuses.length > 0;
 
-  const totalDeclaredHours = calcTotalDeclaredHours(job_functions);
+  const baseFunctionHours = calcTotalDeclaredHours(job_functions);
+  const restHours = sumDurationsInHours(restTimes);
+  const licenseHours = sumDurationsInHours(licenseTimes);
+  const totalDeclaredHours = baseFunctionHours + restHours + licenseHours;
   const weeklyShiftHours = calcWeeklyShiftHours(shift_starts_at, shift_ends_at);
   const shiftHoursKnown = weeklyShiftHours > 0;
   const isHoursExceeded = shiftHoursKnown && totalDeclaredHours > weeklyShiftHours;
@@ -283,6 +345,8 @@ export default function DeclarationsDetailsModal(
 
   const showFunctionsSection =
     job_functions.length > 0 || catalogFunctions.length > 0 || loadingOfficialFns;
+
+  const hasExtraEntries = restTimes.length > 0 || licenseTimes.length > 0 || loadingExtra;
 
   return (
     <>
@@ -818,6 +882,116 @@ export default function DeclarationsDetailsModal(
                       </Table>
                     </TableContainer>
                   )}
+                </Paper>
+              )}
+
+              {hasExtraEntries && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: 3,
+                    bgcolor: 'background.default',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Stack spacing={2}>
+                    <Typography variant="overline" color="text.secondary"
+                                sx={{letterSpacing: 1}}>
+                      Descansos y Licencias
+                    </Typography>
+
+                    {loadingExtra ? (
+                      <Box
+                        sx={{display: 'flex', justifyContent: 'center', py: 2}}>
+                        <CircularProgress size={24}/>
+                      </Box>
+                    ) : (
+                      <>
+                        {restTimes.length > 0 && (
+                          <>
+                            <Typography variant="subtitle2" fontWeight={600}>
+                              Descansos
+                            </Typography>
+                            <TableContainer>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow sx={{
+                                    '& th': {
+                                      fontWeight: 600,
+                                      color: 'text.secondary'
+                                    }
+                                  }}>
+                                    <TableCell>Tipo</TableCell>
+                                    <TableCell>Inicio</TableCell>
+                                    <TableCell>Fin</TableCell>
+                                    <TableCell>Duración (min)</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {restTimes.map((rt) => {
+                                    const start = new Date(rt.starts_at);
+                                    const end = new Date(rt.ends_at);
+                                    const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+                                    return (
+                                      <TableRow key={rt.rest_time_id}>
+                                        <TableCell>{REST_TYPE_LABELS[rt.rest_type]}</TableCell>
+                                        <TableCell>{formatOracleTime(rt.starts_at)}</TableCell>
+                                        <TableCell>{formatOracleTime(rt.ends_at)}</TableCell>
+                                        <TableCell>{minutes}</TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                            <Divider/>
+                          </>
+                        )}
+
+                        {licenseTimes.length > 0 && (
+                          <>
+                            <Typography variant="subtitle2" fontWeight={600}>
+                              Licencias
+                            </Typography>
+                            <TableContainer>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow sx={{
+                                    '& th': {
+                                      fontWeight: 600,
+                                      color: 'text.secondary'
+                                    }
+                                  }}>
+                                    <TableCell>Tipo</TableCell>
+                                    <TableCell>Inicio</TableCell>
+                                    <TableCell>Fin</TableCell>
+                                    <TableCell>Duración (min)</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {licenseTimes.map((lic) => {
+                                    const start = new Date(lic.starts_at);
+                                    const end = new Date(lic.ends_at);
+                                    const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+                                    return (
+                                      <TableRow key={lic.license_time_id}>
+                                        <TableCell>{lic.license_type_name || '—'}</TableCell>
+                                        <TableCell>{formatOracleTime(lic.starts_at)}</TableCell>
+                                        <TableCell>{formatOracleTime(lic.ends_at)}</TableCell>
+                                        <TableCell>{minutes}</TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Stack>
                 </Paper>
               )}
 
