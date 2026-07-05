@@ -1,3 +1,4 @@
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import {Typography, Tooltip, Box} from '@mui/material';
 
@@ -13,6 +14,7 @@ interface AdminDeclarationsListProps {
   declarations: Declaration[];
   loading: boolean;
   onView: (declaration: Declaration) => void;
+  onDownloadCsv: (declaration: Declaration) => void;
 }
 
 export default function DeclarationsList(
@@ -20,6 +22,7 @@ export default function DeclarationsList(
     declarations,
     loading,
     onView,
+    onDownloadCsv,
   }: AdminDeclarationsListProps) {
   const columns: DataColumn<Declaration>[] = [
       {
@@ -110,6 +113,12 @@ export default function DeclarationsList(
           label: 'Ver detalles',
           color: 'primary.main',
           onClick: onView,
+        },
+        {
+          icon: <DownloadOutlinedIcon fontSize="small"/>,
+          label: 'Descargar CSV',
+          color: '#666',
+          onClick: onDownloadCsv,
         },
       ]}
       emptyMessage="No se encontraron declaraciones."
