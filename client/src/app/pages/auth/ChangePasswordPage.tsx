@@ -12,9 +12,11 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import type { ServiceError } from '../../../services/authService';
 import { useSnackbar } from '../../../context/SnackbarContext';
+import { useAuth } from '../../../context/AuthContext';
 import { validatePassword } from '../../../utils/validation';
 import PasswordStrengthFeedback from '../../../components/PasswordStrengthFeedback';
 
@@ -32,6 +34,8 @@ export default function ChangePasswordPage() {
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const snackbar = useSnackbar();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
@@ -51,10 +55,9 @@ export default function ChangePasswordPage() {
     setIsSubmitting(true);
     try {
       await authService.changePassword(currentPassword, newPassword);
-      snackbar.success('Su contraseña ha sido cambiada exitosamente.');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      await logout();
+      snackbar.success('Contraseña actualizada. Inicie sesión de nuevo.');
+      navigate('/login', { replace: true });
     } catch (error) {
       const serviceError = error as ServiceError;
       const message =

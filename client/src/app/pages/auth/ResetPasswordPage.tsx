@@ -16,6 +16,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import type { ServiceError } from '../../../services/authService';
+import { tokenStorage } from '../../../services/tokenStorage';
 import { useSnackbar } from '../../../context/SnackbarContext';
 import Header from '../../../components/Header';
 import { validatePassword } from '../../../utils/validation';
@@ -51,8 +52,11 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
     try {
       await authService.resetPassword(token, newPassword, confirmPassword);
+      // The backend already revokes every token for this user on reset; clear
+      // any stale local session so this browser doesn't hold onto dead tokens.
+      tokenStorage.clear();
       snackbar.success('Su contraseña ha sido actualizada exitosamente. Puede iniciar sesión con su nueva contraseña.');
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (error) {
       const serviceError = error as ServiceError;
       snackbar.error(serviceError.message ?? 'Error del servidor. Intente de nuevo más tarde.');
