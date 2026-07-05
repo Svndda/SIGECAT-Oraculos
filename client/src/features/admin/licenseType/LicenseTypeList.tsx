@@ -5,7 +5,6 @@ import { Tooltip, Typography } from '@mui/material';
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { LicenseType } from '../../../services/licenseTypeService';
-import { truncateText } from '../../../utils/text';
 
 interface LicenseTypeListProps {
   licenseTypes: LicenseType[];
@@ -30,12 +29,12 @@ export default function LicenseTypeList({ licenseTypes, loading, onEdit, onDelet
       render: (lt) => (
         <Tooltip title={lt.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(lt.name)}
+            {lt.name}
           </Typography>
         </Tooltip>
       ),
     },
-    { label: 'Fecha de creación', flex: '1', meta: true, render: (lt) => formatDate(lt.created_at) },
+    { label: 'Fecha de creación', flex: '0 0 160px', meta: true, render: (lt) => formatDate(lt.created_at) },
   ];
 
   return (
