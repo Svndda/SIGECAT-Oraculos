@@ -28,6 +28,20 @@ in-container path, otherwise the TLS handshake to Oracle fails:
 WALLET_LOCATION = (SOURCE = (METHOD = FILE) (METHOD_DATA = (DIRECTORY = "/opt/oracle/wallet")))
 ```
 
+### Email (optional)
+
+Outgoing email (e.g. password recovery) uses Gmail SMTP by default. Provide
+credentials via the environment in your `.env`, instead of baking
+`mail_config.php` into the image (it's excluded from the build context):
+
+```env
+SMTP_USER=your-project-gmail-address@gmail.com
+SMTP_PASS=your-16-char-app-password
+```
+
+See `api/config/mail_config.example.php` for the full list of overridable
+settings and how to generate a Gmail App Password.
+
 ## Run
 
 ```bash
