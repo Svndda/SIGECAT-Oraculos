@@ -184,12 +184,12 @@ class OfficialFunctionService
     $offset = ($page - 1) * $limit;
     $jobId = ($jobId !== null && trim($jobId) !== '') ? $jobId : null;
 
-    $total = $this->repository->countOfficialFunctions($filter, $status, $jobId);
-    $rows  = $this->repository->getOfficialFunctions($offset, $limit, $filter, $status, $jobId);
+    $result = $this->repository->getOfficialFunctions($offset, $limit, $filter, $status, $jobId);
+    $total  = $result['total'];
 
     $data = array_map(
       static fn(array $row) => OfficialFunctionResponseDTO::fromArray($row)->toArray(),
-      $rows
+      $result['data']
     );
 
     return [

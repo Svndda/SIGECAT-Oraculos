@@ -88,6 +88,57 @@ final class UserRepository extends Repository {
     return $row !== false ? $row : null;
   }
 
+  /**
+   * Bulk-fetches users by ID, keyed by user_id. Used to avoid an N+1 lookup
+   * when enriching a page of list results (e.g. the admin declarations list).
+   *
+   * @param list<string> $userIds
+   * @return array<string, array<string, mixed>>
+   */
+  public function findByIds(
+    array $userIds,
+    string $status = 'active',
+    bool $includeSensitiveInfo = false
+  ): array {
+    $ids = array_values(array_unique($userIds));
+    if (count($ids) === 0) {
+      return [];
+    }
+
+    $columns = [
+      'user_id', 'role', 'email', 'first_name', 'second_name',
+      'first_last_name', 'second_last_name', 'created_at', 'created_by'
+    ];
+    if ($includeSensitiveInfo) {
+      $columns = array_merge($columns, [
+        'password_hash', 'is_active', 'is_password_temp',
+        'failed_logging_attempts', 'is_deleted', 'deleted_at', 'deleted_by'
+      ]);
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach ($ids as $i => $id) {
+      $key = ':id' . $i;
+      $placeholders[] = $key;
+      $params[$key] = $id;
+    }
+
+    $stmt = $this->db->prepare(sprintf(
+      'SELECT %s FROM USERS WHERE user_id IN (%s)%s',
+      implode(', ', $columns),
+      implode(', ', $placeholders),
+      $this->statusCondition($status)
+    ));
+    $stmt->execute($params);
+
+    $byId = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $byId[$row['user_id']] = $row;
+    }
+    return $byId;
+  }
+
   /** @return array<string, mixed>|null */
   public function findByEmail(string $email, string $status = 'active'): ?array {
     $stmt = $this->db->prepare(
@@ -214,16 +265,22 @@ final class UserRepository extends Repository {
     }
   }
 
-  /** @return array<int, array<string, mixed>> */
+  /**
+   * Fetches a page of users along with the total matching row count, in a
+   * single round trip (COUNT(*) OVER()) instead of a separate COUNT(*) query.
+   *
+   * @return array{data: list<array<string, mixed>>, total: int}
+   */
   public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
   {
     $sql = '
         SELECT user_id, role, email, first_name, second_name, first_last_name, second_last_name,
                is_active, is_password_temp, failed_logging_attempts, created_at, created_by,
-               is_deleted, deleted_at, deleted_by
+               is_deleted, deleted_at, deleted_by,
+               COUNT(*) OVER() AS total_count
         FROM USERS
-        WHERE (UPPER(first_name) LIKE UPPER(:filter) 
-           OR UPPER(first_last_name) LIKE UPPER(:filter) 
+        WHERE (UPPER(first_name) LIKE UPPER(:filter)
+           OR UPPER(first_last_name) LIKE UPPER(:filter)
            OR UPPER(email) LIKE UPPER(:filter))' . $this->statusCondition($status) . '
         ORDER BY created_at DESC
         OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
@@ -235,24 +292,7 @@ final class UserRepository extends Repository {
     $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  public function countAll(string $filter = '', string $status = 'active'): int
-  {
-    $sql = '
-        SELECT COUNT(*) as total 
-        FROM USERS 
-        WHERE (UPPER(first_name) LIKE UPPER(:filter) 
-           OR UPPER(first_last_name) LIKE UPPER(:filter) 
-           OR UPPER(email) LIKE UPPER(:filter))' . $this->statusCondition($status);
-
-    $stmt = $this->db->prepare($sql);
-    $stmt->bindValue(':filter', '%' . $filter . '%');
-    $stmt->execute();
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row !== false ? (int) ($row['total'] ?? $row['TOTAL'] ?? 0) : 0;
+    return $this->splitWindowedTotal($stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
   public function delete(string $userId, string $deletedBy): void

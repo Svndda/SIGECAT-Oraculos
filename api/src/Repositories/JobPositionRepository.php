@@ -157,6 +157,45 @@ final class JobPositionRepository extends Repository
   }
 
   /**
+   * Bulk-fetches job positions by ID, keyed by job_position_id. Used to avoid
+   * an N+1 lookup when enriching a page of list results.
+   *
+   * @param list<string> $jobPositionIds
+   * @return array<string, array<string, mixed>>
+   */
+  public function findByIds(array $jobPositionIds, string $status = 'active'): array
+  {
+    $ids = array_values(array_unique($jobPositionIds));
+    if (count($ids) === 0) {
+      return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach ($ids as $i => $id) {
+      $key = ':id' . $i;
+      $placeholders[] = $key;
+      $params[$key] = $id;
+    }
+
+    $stmt = $this->db->prepare(
+      'SELECT job_position_id, area_id, department_id, section_id, unit_id,
+              job_id, job_position_number, description,
+              user_id, job_shift, created_at, created_by, is_deleted, deleted_at
+         FROM JOB_POSITIONS
+        WHERE job_position_id IN (' . implode(', ', $placeholders) . ')'
+        . $this->statusCondition($status)
+    );
+    $stmt->execute($params);
+
+    $byId = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $byId[$row['job_position_id']] = $row;
+    }
+    return $byId;
+  }
+
+  /**
    * Whether an active job position already uses the given number.
    */
   public function existsByNumber(string $name, ?string $excludeId = null): bool

@@ -115,12 +115,12 @@ class AreaService {
     $status = $this->normalizeStatus($status);
 
     $offset = ($page - 1) * $limit;
-    $total  = $this->areaRepository->countAreas($filter, $status);
-    $rows   = $this->areaRepository->getAreas($offset, $limit, $filter, $status);
+    $result = $this->areaRepository->getAreasPaginated($offset, $limit, $filter, $status);
+    $total  = $result['total'];
 
     $data = array_map(
       static fn(array $row) => AreaResponseDTO::fromArray($row)->toArray(),
-      $rows
+      $result['data']
     );
 
     return [

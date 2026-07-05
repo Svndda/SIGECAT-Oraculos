@@ -182,14 +182,14 @@ class UserService
     $status = $this->normalizeStatus($status);
     $offset = ($page - 1) * $limit;
 
-    $total = $this->userRepository->countAll($filter, $status);
-    $users = $this->userRepository->findAllPaginated(
+    $result = $this->userRepository->findAllPaginated(
       $limit, $offset, $filter, $status
     );
+    $total = $result['total'];
 
     $data = array_map(
       static fn(array $row) => UserResponseDTO::fromArray($row)->toArray(),
-      $users
+      $result['data']
     );
 
     return [

@@ -142,11 +142,18 @@ final class LicenseTypeRepository extends Repository
     }
   }
 
-  /** @return array<int, array<string, mixed>> */
+  /**
+   * Fetches a page of license types along with the total matching row count,
+   * in a single round trip (COUNT(*) OVER()) instead of a separate COUNT(*)
+   * query.
+   *
+   * @return array{data: list<array<string, mixed>>, total: int}
+   */
   public function getLicenseTypes(int $offset, int $limit, string $filter = '', string $status = 'active'): array
   {
     $stmt = $this->db->prepare(
-      'SELECT license_type_id, name, created_at, created_by, is_deleted, deleted_at
+      'SELECT license_type_id, name, created_at, created_by, is_deleted, deleted_at,
+              COUNT(*) OVER() AS total_count
          FROM LICENSE_TYPES
         WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
         ORDER BY name ASC
@@ -156,17 +163,6 @@ final class LicenseTypeRepository extends Repository
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  public function countLicenseTypes(string $filter = '', string $status = 'active'): int
-  {
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS total FROM LICENSE_TYPES
-        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status)
-    );
-    $stmt->execute([':filter' => '%' . $filter . '%']);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
+    return $this->splitWindowedTotal($stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 }
