@@ -19,6 +19,8 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   formatOracleDate,
@@ -146,6 +148,8 @@ export default function EmployeeDeclarationDetailModal(
   const [licenseTimes, setLicenseTimes] = useState<LicenseResponse[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleExportPDF = async () => {
     const element = contentRef.current;
@@ -344,13 +348,20 @@ export default function EmployeeDeclarationDetailModal(
   const hasExtraEntries = restTimes.length > 0 || licenseTimes.length > 0 || loadingExtra;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+            PaperProps={{
+              sx: {
+                m: {xs: 1, sm: 4},
+                width: {xs: 'calc(100% - 16px)', sm: 'auto'}
+              }
+            }}>
       <DialogTitle sx={{pb: 1, pt: 2}}>
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
           spacing={2}
+          flexWrap="wrap"
         >
           <Typography variant="h6" fontWeight={600}>
             Detalles de la Declaración
@@ -589,146 +600,235 @@ export default function EmployeeDeclarationDetailModal(
                 </Stack>
               </Stack>
 
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{
-                      '& th': {
-                        fontWeight: 600,
-                        color: 'text.secondary'
-                      }
-                    }}>
-                      <TableCell>Función</TableCell>
-                      <TableCell>Tiempo</TableCell>
-                      <TableCell>Frecuencia</TableCell>
-                      <TableCell>Extras</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {job_functions.map((jf: JobFunction) => {
-                      const {
-                        label,
-                        chipColor
-                      } = resolveFunctionLabel(jf, officialFnsForJob);
-                      return (
-                        <TableRow
-                          key={jf.job_function_id}
-                          sx={{
-                            '&:nth-of-type(odd)': {bgcolor: 'action.hover'},
-                            '&:last-child td, &:last-child th': {border: 0},
-                          }}
-                        >
-                          <TableCell>
-                            <Stack spacing={0.5}>
-                              <Stack direction="row" spacing={1}
-                                     alignItems="center">
-                                <Chip
-                                  label={label}
-                                  size="small"
-                                  color={chipColor}
-                                  variant="outlined"
-                                  sx={{
-                                    fontSize: '0.65rem',
-                                    height: 20,
-                                    flexShrink: 0
-                                  }}
-                                />
-                                <Typography variant="body2" fontWeight={500}>
-                                  {jf.function_name || '—'}
-                                </Typography>
-                              </Stack>
-                              <Typography variant="caption"
-                                          color="text.secondary">
-                                {jf.function_description || 'Sin descripción'}
-                              </Typography>
-                              {jf.justification && (
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  sx={{fontStyle: 'italic'}}
-                                >
-                                  Justif: {jf.justification}
-                                </Typography>
-                              )}
-                            </Stack>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {formatOracleTime(jf.starts_at)} –{' '}
-                              {formatOracleTime(jf.ends_at)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={jf.frequency || '—'}
-                              size="small"
-                              variant="outlined"
-                              sx={{fontSize: '0.7rem', height: 22}}
-                            />
-                          </TableCell>
-                          <TableCell>{jf.overtime ? 'Sí' : 'No'}</TableCell>
-                        </TableRow>
-                      );
-                    })}
+              {isMobile ? (
+                <Stack spacing={1.5}>
+                  {job_functions.map((jf: JobFunction) => {
+                    const {label, chipColor} = resolveFunctionLabel(jf, officialFnsForJob);
+                    return (
+                      <Paper
+                        key={jf.job_function_id}
+                        elevation={0}
+                        sx={{p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider'}}
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 0.5}}>
+                          <Chip
+                            label={label}
+                            size="small"
+                            color={chipColor}
+                            variant="outlined"
+                            sx={{fontSize: '0.65rem', height: 20}}
+                          />
+                          <Typography variant="body2" fontWeight={500}>
+                            {jf.function_name || '—'}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" sx={{display: 'block'}}>
+                          {jf.function_description || 'Sin descripción'}
+                        </Typography>
+                        {jf.justification && (
+                          <Typography variant="caption" color="text.secondary"
+                                      sx={{fontStyle: 'italic', display: 'block'}}>
+                            Justif: {jf.justification}
+                          </Typography>
+                        )}
+                        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1}}>
+                          <Typography variant="caption">
+                            <strong>Horario:</strong>{' '}
+                            {formatOracleTime(jf.starts_at)} - {formatOracleTime(jf.ends_at)}
+                          </Typography>
+                          <Typography variant="caption">
+                            <strong>Frecuencia:</strong> {jf.frequency || '—'}
+                          </Typography>
+                          <Typography variant="caption">
+                            <strong>Extras:</strong> {jf.overtime ? 'Sí' : 'No'}
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    );
+                  })}
 
-                    {loadingOfficialFns && (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{py: 3}}>
-                          <Stack direction="row" justifyContent="center"
-                                 alignItems="center" spacing={1}>
-                            <CircularProgress size={16}/>
-                            <Typography variant="caption"
-                                        color="text.secondary">
-                              Cargando funciones del cargo…
-                            </Typography>
-                          </Stack>
-                        </TableCell>
+                  {!loadingOfficialFns && catalogFunctions.map((fn) => (
+                    <Paper
+                      key={fn.id}
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'action.hover',
+                        opacity: 0.8
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 0.5}}>
+                        <Chip
+                          label="Propia del Cargo"
+                          size="small"
+                          color="info"
+                          variant="outlined"
+                          sx={{fontSize: '0.65rem', height: 20}}
+                        />
+                        <Typography variant="body2" fontWeight={500}>
+                          {fn.name}
+                        </Typography>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" sx={{display: 'block'}}>
+                        {fn.description || 'Sin descripción'}
+                      </Typography>
+                    </Paper>
+                  ))}
+
+                  {loadingOfficialFns && (
+                    <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} sx={{py: 2}}>
+                      <CircularProgress size={16}/>
+                      <Typography variant="caption" color="text.secondary">
+                        Cargando funciones del cargo…
+                      </Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              ) : (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{
+                        '& th': {
+                          fontWeight: 600,
+                          color: 'text.secondary'
+                        }
+                      }}>
+                        <TableCell>Función</TableCell>
+                        <TableCell>Tiempo</TableCell>
+                        <TableCell>Frecuencia</TableCell>
+                        <TableCell>Extras</TableCell>
                       </TableRow>
-                    )}
-
-                    {!loadingOfficialFns &&
-                      catalogFunctions.map((fn) => (
-                        <TableRow
-                          key={fn.id}
-                          sx={{
-                            bgcolor: 'action.hover',
-                            opacity: 0.8,
-                            '&:last-child td, &:last-child th': {border: 0},
-                          }}
-                        >
-                          <TableCell>
-                            <Stack spacing={0.5}>
-                              <Stack direction="row" spacing={1}
-                                     alignItems="center">
-                                <Chip
-                                  label="Propia del Cargo"
-                                  size="small"
-                                  color="info"
-                                  variant="outlined"
-                                  sx={{
-                                    fontSize: '0.65rem',
-                                    height: 20,
-                                    flexShrink: 0
-                                  }}
-                                />
-                                <Typography variant="body2" fontWeight={500}>
-                                  {fn.name}
+                    </TableHead>
+                    <TableBody>
+                      {job_functions.map((jf: JobFunction) => {
+                        const {
+                          label,
+                          chipColor
+                        } = resolveFunctionLabel(jf, officialFnsForJob);
+                        return (
+                          <TableRow
+                            key={jf.job_function_id}
+                            sx={{
+                              '&:nth-of-type(odd)': {bgcolor: 'action.hover'},
+                              '&:last-child td, &:last-child th': {border: 0},
+                            }}
+                          >
+                            <TableCell>
+                              <Stack spacing={0.5}>
+                                <Stack direction="row" spacing={1}
+                                       alignItems="center">
+                                  <Chip
+                                    label={label}
+                                    size="small"
+                                    color={chipColor}
+                                    variant="outlined"
+                                    sx={{
+                                      fontSize: '0.65rem',
+                                      height: 20,
+                                      flexShrink: 0
+                                    }}
+                                  />
+                                  <Typography variant="body2" fontWeight={500}>
+                                    {jf.function_name || '—'}
+                                  </Typography>
+                                </Stack>
+                                <Typography variant="caption"
+                                            color="text.secondary">
+                                  {jf.function_description || 'Sin descripción'}
                                 </Typography>
+                                {jf.justification && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{fontStyle: 'italic'}}
+                                  >
+                                    Justif: {jf.justification}
+                                  </Typography>
+                                )}
                               </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {formatOracleTime(jf.starts_at)} –{' '}
+                                {formatOracleTime(jf.ends_at)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={jf.frequency || '—'}
+                                size="small"
+                                variant="outlined"
+                                sx={{fontSize: '0.7rem', height: 22}}
+                              />
+                            </TableCell>
+                            <TableCell>{jf.overtime ? 'Sí' : 'No'}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+
+                      {loadingOfficialFns && (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center" sx={{py: 3}}>
+                            <Stack direction="row" justifyContent="center"
+                                   alignItems="center" spacing={1}>
+                              <CircularProgress size={16}/>
                               <Typography variant="caption"
                                           color="text.secondary">
-                                {fn.description || 'Sin descripción'}
+                                Cargando funciones del cargo…
                               </Typography>
                             </Stack>
                           </TableCell>
-                          <TableCell>—</TableCell>
-                          <TableCell>—</TableCell>
-                          <TableCell>—</TableCell>
                         </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      )}
+
+                      {!loadingOfficialFns &&
+                        catalogFunctions.map((fn) => (
+                          <TableRow
+                            key={fn.id}
+                            sx={{
+                              bgcolor: 'action.hover',
+                              opacity: 0.8,
+                              '&:last-child td, &:last-child th': {border: 0},
+                            }}
+                          >
+                            <TableCell>
+                              <Stack spacing={0.5}>
+                                <Stack direction="row" spacing={1}
+                                       alignItems="center">
+                                  <Chip
+                                    label="Propia del Cargo"
+                                    size="small"
+                                    color="info"
+                                    variant="outlined"
+                                    sx={{
+                                      fontSize: '0.65rem',
+                                      height: 20,
+                                      flexShrink: 0
+                                    }}
+                                  />
+                                  <Typography variant="body2" fontWeight={500}>
+                                    {fn.name}
+                                  </Typography>
+                                </Stack>
+                                <Typography variant="caption"
+                                            color="text.secondary">
+                                  {fn.description || 'Sin descripción'}
+                                </Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Paper>
           )}
 
