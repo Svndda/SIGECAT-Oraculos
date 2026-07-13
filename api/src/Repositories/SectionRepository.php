@@ -260,48 +260,21 @@ final class SectionRepository extends Repository
   }
 
   /**
-   * Counts the total number of sections matching the filter and status.
-   *
-   * @param string $filter Search filter (applies to name, case-insensitive).
-   * @param string $status One of 'active', 'deleted', 'all'.
-   * @return int Total count.
-   */
-  public function countSections(string $filter = '', string $status = 'active'): int
-  {
-    $sql = '
-        SELECT COUNT(*) AS total
-        FROM SECTIONS
-        WHERE 1 = 1' . $this->statusCondition($status);
-
-    // Add name filter if provided
-    if ($filter !== '') {
-      $sql .= ' AND UPPER(name) LIKE UPPER(:filter)';
-    }
-
-    $stmt = $this->db->prepare($sql);
-
-    if ($filter !== '') {
-      $stmt->bindValue(':filter', '%' . $filter . '%');
-    }
-
-    $stmt->execute();
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
-  }
-
-  /**
-   * Returns a paginated list of sections with optional filter and status.
+   * Returns a paginated list of sections along with the total matching row
+   * count, in a single round trip (COUNT(*) OVER()) instead of a separate
+   * COUNT(*) query.
    *
    * @param int $offset Number of records to skip.
    * @param int $limit  Maximum number of records to return.
    * @param string $filter Search filter (name).
    * @param string $status One of 'active', 'deleted', 'all'.
-   * @return array<int, array<string, mixed>>
+   * @return array{data: list<array<string, mixed>>, total: int}
    */
   public function getSections(int $offset, int $limit, string $filter = '', string $status = 'active'): array
   {
     $sql = '
-        SELECT section_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at
+        SELECT section_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at,
+               COUNT(*) OVER() AS total_count
         FROM SECTIONS
         WHERE 1 = 1' . $this->statusCondition($status);
 
@@ -320,7 +293,7 @@ final class SectionRepository extends Repository
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return $this->splitWindowedTotal($stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
   /**

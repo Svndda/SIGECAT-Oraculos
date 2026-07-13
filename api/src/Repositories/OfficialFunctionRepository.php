@@ -194,13 +194,20 @@ final class OfficialFunctionRepository extends Repository
     return (int) ($row['cnt'] ?? $row['CNT'] ?? 0);
   }
 
-  /** @return array<int, array<string, mixed>> */
+  /**
+   * Fetches a page of official functions along with the total matching row
+   * count, in a single round trip (COUNT(*) OVER()) instead of a separate
+   * COUNT(*) query.
+   *
+   * @return array{data: list<array<string, mixed>>, total: int}
+   */
   public function getOfficialFunctions(int $offset, int $limit, string $filter = '', string $status = 'active', ?string $jobId = null): array
   {
     $jobCondition = $jobId !== null ? ' AND job_id = :job_id' : '';
     $stmt = $this->db->prepare(
       'SELECT official_function_id, name, description, job_id,
-              expected_time, created_at, created_by, is_deleted, deleted_at
+              expected_time, created_at, created_by, is_deleted, deleted_at,
+              COUNT(*) OVER() AS total_count
          FROM OFFICIAL_FUNCTIONS
         WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . $jobCondition . '
         ORDER BY created_at DESC
@@ -213,22 +220,6 @@ final class OfficialFunctionRepository extends Repository
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  public function countOfficialFunctions(string $filter = '', string $status = 'active', ?string $jobId = null): int
-  {
-    $jobCondition = $jobId !== null ? ' AND job_id = :job_id' : '';
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS total FROM OFFICIAL_FUNCTIONS
-        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . $jobCondition
-    );
-    $params = [':filter' => '%' . $filter . '%'];
-    if ($jobId !== null) {
-      $params[':job_id'] = $jobId;
-    }
-    $stmt->execute($params);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
+    return $this->splitWindowedTotal($stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 }
