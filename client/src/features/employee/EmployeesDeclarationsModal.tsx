@@ -25,7 +25,6 @@ import {
 import {
   formatOracleDate,
   formatOracleTime,
-  parseOracleToTimeInput,
 } from '../../services/common';
 import {
   STATUS_COLORS,
@@ -39,8 +38,6 @@ import {
   officialFunctionService,
   type OfficialFunction,
 } from '../../services/officialFunctionService';
-import html2canvas from "html2canvas";
-import {jsPDF} from "jspdf";
 import {
   restTimeService,
   REST_TYPE_LABELS,
@@ -50,6 +47,14 @@ import {
   licenseService,
   type LicenseResponse
 } from '../../services/licenseService';
+import {
+  calcTotalDeclaredHours,
+  calcWeeklyShiftHours,
+  sumDurationsInHours,
+  exportDeclarationCsv,
+  exportElementToPdf,
+  declarationPdfFilename,
+} from '../../utils/declarationExport';
 
 interface EmployeeDeclarationDetailModalProps {
   open: boolean;
@@ -62,60 +67,6 @@ type FunctionLabel = {
   label: string;
   chipColor: 'primary' | 'secondary' | 'warning' | 'default';
 };
-
-function calcTotalDeclaredHours(jobFunctions: JobFunction[]): number {
-  let total = 0;
-  for (const jf of jobFunctions) {
-    if (!jf.starts_at || !jf.ends_at) continue;
-    const start = parseOracleToTimeInput(jf.starts_at);
-    const end = parseOracleToTimeInput(jf.ends_at);
-    if (!start || !end) continue;
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-    if (dailyHours < 0) dailyHours += 24;
-    let multiplier = 0;
-    const freq = jf.frequency?.toLowerCase() || '';
-    if (freq.includes('diario') || freq === 'diario') multiplier = 5;
-    else if (freq.includes('semanal') || freq === 'semanal') multiplier = 1;
-    else if (freq.includes('quincenal')) multiplier = 2;
-    else if (freq.includes('mensual')) multiplier = 4;
-    else if (freq.includes('anual')) multiplier = 0.02;
-    else multiplier = 1; // por defecto semanal
-    total += dailyHours * multiplier;
-  }
-  return Math.round(total * 100) / 100;
-}
-
-function calcWeeklyShiftHours(
-  startOracle: string | undefined,
-  endOracle: string | undefined,
-): number {
-  if (!startOracle || !endOracle) return 0;
-  const startHHMM = parseOracleToTimeInput(startOracle);
-  const endHHMM = parseOracleToTimeInput(endOracle);
-  if (!startHHMM || !endHHMM) return 0;
-  const [sh, sm] = startHHMM.split(':').map(Number);
-  const [eh, em] = endHHMM.split(':').map(Number);
-  let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-  if (dailyHours < 0) dailyHours += 24;
-  return dailyHours * 5;
-}
-
-function sumDurationsInHours(entries: {
-  starts_at: string;
-  ends_at: string
-}[]): number {
-  let totalMinutes = 0;
-  for (const e of entries) {
-    const start = new Date(e.starts_at);
-    const end = new Date(e.ends_at);
-    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
-      totalMinutes += (end.getTime() - start.getTime()) / 60000;
-    }
-  }
-  return Math.round((totalMinutes / 60) * 100) / 100;
-}
 
 function resolveFunctionLabel(
   jf: JobFunction,
@@ -153,84 +104,8 @@ export default function EmployeeDeclarationDetailModal(
 
   const handleExportPDF = async () => {
     const element = contentRef.current;
-    if (!element) return;
-
-    // Temporarily adjust styles to capture full content without scroll
-    const originalStyle = element.style.cssText;
-    element.style.overflow = "visible";
-    element.style.maxHeight = "none";
-    element.style.height = "auto";
-
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
-      onclone: (clonedDoc) => {
-        const clonedElement = clonedDoc.getElementById(
-          "declaration-content"
-        );
-        if (clonedElement) {
-          clonedElement.style.overflow = "visible";
-          clonedElement.style.maxHeight = "none";
-        }
-      }
-    });
-
-    // Restore original styles
-    element.style.cssText = originalStyle
-    ;
-    canvas.toDataURL("image/png");
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
-
-    // PDF setup
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10; // margins in mm
-    const usableWidth = pdfWidth - 2 * margin;
-    const usableHeight = pdfHeight - 2 * margin;
-
-    // Scale to fit width, maintain aspect ratio
-    const scale = usableWidth / imgWidth;
-    const scaledImgHeight = imgHeight * scale;
-    const totalPages = Math.ceil(scaledImgHeight / usableHeight);
-
-    // Create a temporary canvas for slicing
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-
-    for (let page = 0; page < totalPages; page++) {
-      // Source y offset in pixels (original image coordinates)
-      const srcY = page * (usableHeight / scale);
-      // Height of slice in pixels (original image coordinates)
-      const sliceHeight = Math.min(usableHeight / scale, imgHeight - srcY);
-
-      // Set temp canvas size to original image width and slice height (in pixels)
-      tempCanvas.width = imgWidth;
-      tempCanvas.height = sliceHeight;
-
-      // Draw the portion of the image onto temp canvas
-      tempCtx!.drawImage(canvas, 0, srcY, imgWidth, sliceHeight, 0, 0, imgWidth, sliceHeight);
-
-      // Convert temp canvas to data URL
-      const pageImgData = tempCanvas.toDataURL("image/png");
-
-      // Add page (except first, which is already there)
-      if (page > 0) {
-        pdf.addPage();
-      }
-
-      // Add image to PDF, centered with margin
-      // We need to scale the image to fit usableWidth, and its height will be scaled accordingly
-      const pageImgWidth = usableWidth;
-      const pageImgHeight = sliceHeight * scale; // this should be <= usableHeight
-      pdf.addImage(pageImgData, "PNG", margin, margin, pageImgWidth, pageImgHeight);
-    }
-
-    pdf.save(`declaracion_plaza#${job_position?.job_position_number || 'export'}.pdf`);
+    if (!element || !declaration) return;
+    await exportElementToPdf(element, declarationPdfFilename(declaration));
   };
 
   useEffect(() => {
@@ -346,6 +221,11 @@ export default function EmployeeDeclarationDetailModal(
     job_functions.length > 0 || catalogFunctions.length > 0 || loadingOfficialFns;
 
   const hasExtraEntries = restTimes.length > 0 || licenseTimes.length > 0 || loadingExtra;
+
+  const handleExportCSV = () => {
+    if (!declaration) return;
+    exportDeclarationCsv(declaration, restTimes, licenseTimes, officialFnsForJob);
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
@@ -1014,6 +894,14 @@ export default function EmployeeDeclarationDetailModal(
       </DialogContent>
 
       <DialogActions sx={{p: 2}}>
+        <Button
+          onClick={handleExportCSV}
+          variant="outlined"
+          color="primary"
+          sx={{borderRadius: 20, mr: 1}}
+        >
+          Descargar CSV
+        </Button>
         <Button
           onClick={handleExportPDF}
           variant="outlined"

@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 
 import {
   Box,
@@ -42,7 +42,6 @@ import type {ServiceError} from '../../../services/common';
 import {
   formatOracleDate,
   formatOracleTime,
-  parseOracleToTimeInput
 } from '../../../services/common';
 import ModalForm from '../../../components/modals/ModalForm';
 import {
@@ -58,6 +57,14 @@ import {
   licenseService,
   type LicenseResponse
 } from '../../../services/licenseService';
+import {
+  calcTotalDeclaredHours,
+  calcWeeklyShiftHours,
+  sumDurationsInHours,
+  exportDeclarationCsv,
+  exportElementToPdf,
+  declarationPdfFilename,
+} from '../../../utils/declarationExport';
 
 interface AdminDeclarationDetailModalProps {
   open: boolean;
@@ -65,60 +72,6 @@ interface AdminDeclarationDetailModalProps {
   onClose: () => void;
   onStatusChange: () => void;
   loading: boolean;
-}
-
-function calcTotalDeclaredHours(jobFunctions: JobFunction[]): number {
-  let total = 0;
-  for (const jf of jobFunctions) {
-    if (!jf.starts_at || !jf.ends_at) continue;
-    const start = parseOracleToTimeInput(jf.starts_at);
-    const end = parseOracleToTimeInput(jf.ends_at);
-    if (!start || !end) continue;
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-    if (dailyHours < 0) dailyHours += 24;
-    let multiplier = 0;
-    const freq = jf.frequency?.toLowerCase() || '';
-    if (freq.includes('diario') || freq === 'diario') multiplier = 5;
-    else if (freq.includes('semanal') || freq === 'semanal') multiplier = 1;
-    else if (freq.includes('quincenal')) multiplier = 2;
-    else if (freq.includes('mensual')) multiplier = 4;
-    else if (freq.includes('anual')) multiplier = 0.02;
-    else multiplier = 1; // por defecto semanal
-    total += dailyHours * multiplier;
-  }
-  return Math.round(total * 100) / 100;
-}
-
-function calcWeeklyShiftHours(
-  startOracle: string | undefined,
-  endOracle: string | undefined,
-): number {
-  if (!startOracle || !endOracle) return 0;
-  const startHHMM = parseOracleToTimeInput(startOracle);
-  const endHHMM = parseOracleToTimeInput(endOracle);
-  if (!startHHMM || !endHHMM) return 0;
-  const [sh, sm] = startHHMM.split(':').map(Number);
-  const [eh, em] = endHHMM.split(':').map(Number);
-  let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-  if (dailyHours < 0) dailyHours += 24;
-  return dailyHours * 5;
-}
-
-function sumDurationsInHours(entries: {
-  starts_at: string;
-  ends_at: string
-}[]): number {
-  let totalMinutes = 0;
-  for (const e of entries) {
-    const start = new Date(e.starts_at);
-    const end = new Date(e.ends_at);
-    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
-      totalMinutes += (end.getTime() - start.getTime()) / 60000;
-    }
-  }
-  return Math.round((totalMinutes / 60) * 100) / 100;
 }
 
 type FunctionLabel = {
@@ -167,6 +120,18 @@ export default function DeclarationsDetailsModal(
   const [restTimes, setRestTimes] = useState<RestTimeResponse[]>([]);
   const [licenseTimes, setLicenseTimes] = useState<LicenseResponse[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPDF = async () => {
+    const element = contentRef.current;
+    if (!element || !localDeclaration) return;
+    await exportElementToPdf(element, declarationPdfFilename(localDeclaration));
+  };
+
+  const handleExportCSV = () => {
+    if (!localDeclaration) return;
+    exportDeclarationCsv(localDeclaration, restTimes, licenseTimes, officialFnsForJob);
+  };
 
   useEffect(() => {
     if (declaration) setLocalDeclaration(declaration);
@@ -411,7 +376,7 @@ export default function DeclarationsDetailsModal(
           </Stack>
         </DialogTitle>
 
-        <DialogContent dividers sx={{pt: 3}}>
+        <DialogContent dividers sx={{pt: 3}} ref={contentRef} id="declaration-content">
           {loading ? (
             <Box sx={{display: 'flex', justifyContent: 'center', py: 6}}>
               <CircularProgress size={40}/>
@@ -1071,6 +1036,22 @@ export default function DeclarationsDetailsModal(
         </DialogContent>
 
         <DialogActions sx={{p: 2}}>
+          <Button
+            onClick={handleExportCSV}
+            variant="outlined"
+            color="primary"
+            sx={{borderRadius: 20, mr: 1}}
+          >
+            Descargar CSV
+          </Button>
+          <Button
+            onClick={handleExportPDF}
+            variant="outlined"
+            color="primary"
+            sx={{borderRadius: 20, mr: 1}}
+          >
+            Descargar PDF
+          </Button>
           <Button onClick={onClose} variant="contained" color="primary"
                   sx={{borderRadius: 20}}>
             Cerrar

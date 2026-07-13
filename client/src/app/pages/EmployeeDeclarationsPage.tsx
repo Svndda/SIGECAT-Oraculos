@@ -22,6 +22,9 @@ import type {
 } from '../../services/common';
 import type {Declaration} from '../../services/declarationsService';
 import {declarationService} from '../../services/declarationsService';
+import {restTimeService} from '../../services/restTimeService';
+import {licenseService} from '../../services/licenseService';
+import {exportDeclarationCsv} from '../../utils/declarationExport';
 
 const LIMIT = 10;
 
@@ -90,6 +93,23 @@ export default function EmployeeDeclarationsPage() {
     }
   };
 
+  const handleDownloadCsv = async (declaration: Declaration) => {
+    try {
+      const fullDeclaration = await declarationService.getDeclarationById(
+        declaration.declaration_id,
+        true
+      );
+      const [restTimes, licenseTimes] = await Promise.all([
+        restTimeService.getRestTimesByDeclaration(declaration.declaration_id),
+        licenseService.getLicensesByDeclaration(declaration.declaration_id),
+      ]);
+      exportDeclarationCsv(fullDeclaration, restTimes, licenseTimes);
+    } catch (error) {
+      const e = error as ServiceError;
+      snackbar.error(e.message ?? 'Error al descargar la declaración.');
+    }
+  };
+
   const closeDetail = () => {
     setDetailOpen(false);
     setSelectedDeclaration(null);
@@ -111,6 +131,7 @@ export default function EmployeeDeclarationsPage() {
         declarations={declarations}
         loading={loading}
         onView={openDetail}
+        onDownloadCsv={handleDownloadCsv}
       />
 
       {totalPages > 1 && (
