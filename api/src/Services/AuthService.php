@@ -92,13 +92,25 @@ final class AuthService
       }
     }
 
-    if (!password_verify($dto->password, (string) $user['password_hash'])) {
+    $storedHash = (string) $user['password_hash'];
+    if (!password_verify($dto->password, $storedHash)) {
       $this->userRepository->incrementFailedAttempts($userId);
       Logger::warning('security', 'Credenciales inválidas en inicio de sesión', 'auth.login_failed', [
         'user_id' => $userId,
         'email'   => $dto->email,
       ]);
       throw new ApiException(ErrorType::from('INVALID_CREDENTIALS', 'Credenciales inválidas'), 401);
+    }
+
+    // Transparently migrate older hashes (e.g. bcrypt) to the current
+    // algorithm now that the plaintext password is available. Not a
+    // password-change event, so it doesn't touch is_password_temp or
+    // failed_logging_attempts.
+    if (password_needs_rehash($storedHash, PASSWORD_ARGON2ID)) {
+      $this->userRepository->updatePasswordHashById(
+        $userId,
+        password_hash($dto->password, PASSWORD_ARGON2ID)
+      );
     }
 
     // Reset attempts on successful login

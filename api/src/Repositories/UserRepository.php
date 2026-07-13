@@ -350,4 +350,29 @@ final class UserRepository extends Repository {
       throw $e;
     }
   }
+
+  /**
+   * Silently updates only the password hash, without touching
+   * is_password_temp or failed_logging_attempts. Used to transparently
+   * migrate a user's stored hash to a stronger algorithm after a
+   * successful login, which is not a password-change event.
+   */
+  public function updatePasswordHashById(string $userId, string $hashedPassword): void {
+    $this->beginTransaction();
+    try {
+      $stmt = $this->db->prepare(
+        'UPDATE USERS
+         SET password_hash = :password_hash
+         WHERE user_id = :user_id'
+      );
+      $stmt->execute([
+        ':password_hash' => $hashedPassword,
+        ':user_id'       => $userId,
+      ]);
+      $this->commit();
+    } catch (PDOException $e) {
+      $this->rollBack();
+      throw $e;
+    }
+  }
 }
