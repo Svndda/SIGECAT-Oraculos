@@ -24,6 +24,15 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-}
       DB_TNS_NAME: ${DB_TNS_NAME:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      # Optional: provide SMTP credentials via the environment instead of the
+      # mounted mail_config.php. When empty, the app falls back to that file.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
     volumes:
       - ${WALLET_DIR:-./instantclient-basic-linux.x64-21.12.0.0.0dbru.el9/instantclient_21_12/network/admin}:/opt/oracle/wallet:ro
       - ${OCI_CONFIG:-./api/config/oci_config.php}:/app/api/config/oci_config.php:ro

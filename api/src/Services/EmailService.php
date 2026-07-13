@@ -38,20 +38,29 @@ class EmailService {
     $mail = new PHPMailer(true);
 
     try {
-      $mail->isSMTP();
-      $mail->Host       = \MailConfig::SMTP_HOST;
-      $mail->SMTPAuth   = true;
-      $mail->Username   = \MailConfig::SMTP_USER;
-      $mail->Password   = \MailConfig::SMTP_PASS;
-      // Allow a runtime override (SMTP_ENCRYPTION=ssl|tls), defaulting to config.
+      // Every setting can be overridden via the environment (e.g. in
+      // docker-compose or a deployment host), falling back to mail_config.php
+      // for local development.
+      $host       = getenv('SMTP_HOST') ?: \MailConfig::SMTP_HOST;
+      $port       = getenv('SMTP_PORT') ?: \MailConfig::SMTP_PORT;
+      $user       = getenv('SMTP_USER') ?: \MailConfig::SMTP_USER;
+      $pass       = getenv('SMTP_PASS') ?: \MailConfig::SMTP_PASS;
       $encryption = getenv('SMTP_ENCRYPTION') ?: \MailConfig::SMTP_ENCRYPTION;
+      $fromAddress = getenv('MAIL_FROM_ADDRESS') ?: \MailConfig::FROM_ADDRESS;
+      $fromName    = getenv('MAIL_FROM_NAME') ?: \MailConfig::FROM_NAME;
+
+      $mail->isSMTP();
+      $mail->Host       = $host;
+      $mail->SMTPAuth   = true;
+      $mail->Username   = $user;
+      $mail->Password   = $pass;
       $mail->SMTPSecure = $encryption === 'ssl'
         ? PHPMailer::ENCRYPTION_SMTPS
         : PHPMailer::ENCRYPTION_STARTTLS;
-      $mail->Port       = \MailConfig::SMTP_PORT;
+      $mail->Port       = (int) $port;
       $mail->CharSet    = 'UTF-8';
 
-      $mail->setFrom(\MailConfig::FROM_ADDRESS, \MailConfig::FROM_NAME);
+      $mail->setFrom($fromAddress, $fromName);
       $mail->addAddress($toEmail, $toName);
 
       $resetLink = $this->buildResetLink($rawToken);
