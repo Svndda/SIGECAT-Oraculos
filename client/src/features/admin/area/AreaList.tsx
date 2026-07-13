@@ -8,6 +8,7 @@ import {
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Area } from '../../../services/areaService';
+import { truncateText } from '../../../utils/text';
 
 interface AreaListProps {
   areas: Area[];

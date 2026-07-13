@@ -8,6 +8,7 @@ import {
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Unit } from '../../../services/unitService';
+import { truncateText } from '../../../utils/text';
 
 interface UnitListProps {
   units: Unit[];

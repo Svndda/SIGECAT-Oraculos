@@ -4,6 +4,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { AdminUser } from '../../../services/userService';
+import { truncateText } from '../../../utils/text';
 
 interface UserListProps {
   users: AdminUser[];
