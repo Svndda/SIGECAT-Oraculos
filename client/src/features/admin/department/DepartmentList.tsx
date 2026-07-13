@@ -8,7 +8,6 @@ import {
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Department } from '../../../services/departmentService';
-import { truncateText } from '../../../utils/text';
 
 interface DepartmentListProps {
   departments: Department[];
@@ -36,13 +35,13 @@ export default function DepartmentList(
       render: (d) => (
         <Tooltip title={d.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(d.name, 28)}
+            {d.name}
           </Typography>
         </Tooltip>
       ),
     },
-    { label: 'Área', flex: '1', render: (d) => areaMap.get(d.area_id) ?? 'Cargando Área...' },
-    { label: 'Fecha de creación', flex: '1', meta: true, render: (d) => formatDate(d.created_at) },
+    { label: 'Área', flex: '1', truncate: true, render: (d) => areaMap.get(d.area_id) ?? 'Cargando Área...' },
+    { label: 'Fecha de creación', flex: '0 0 160px', meta: true, render: (d) => formatDate(d.created_at) },
   ];
 
   return (
