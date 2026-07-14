@@ -14,8 +14,11 @@ use Http\ErrorType;
  * derived from the target declaration, never from the payload. Exactly one of
  * official_function_id / custom_function_id must be provided (XOR).
  *
- * The overtime and the justification requirement depend on the declaration's
- * shift window, so they are resolved by JobFunctionService.
+ * overtime_minutes is optional ("¿Es tiempo extra?" + how many minutes). Unlike
+ * an update, every field here is known up front - there is no existing row to
+ * merge against - so the overtime/justification requirement
+ * (CHK_JOB_FUNC_OVER_JUST: overtime_minutes set => justification required) is
+ * enforced directly by this DTO instead of being deferred to the service.
  *
  * @package DTO
  */
@@ -29,12 +32,8 @@ final class CreateJobFunctionDTO
   public readonly ?string $customFunctionId;
   public readonly string $frequency;
   public readonly ?string $justification;
-
-  /** Normalized 'Y-m-d H:i:s' strings (null when missing or unparseable). */
-  public readonly ?string $startsAt;
-  public readonly ?string $endsAt;
-  public readonly bool $startsAtProvided;
-  public readonly bool $endsAtProvided;
+  public int $durationMinutes;
+  public int $overtimeMinutes;
 
   private function __construct(
     string $declarationId,
@@ -42,20 +41,16 @@ final class CreateJobFunctionDTO
     ?string $customFunctionId,
     string $frequency,
     ?string $justification,
-    ?string $startsAt,
-    ?string $endsAt,
-    bool $startsAtProvided,
-    bool $endsAtProvided
+    int $durationMinutes,
+    ?int $overtimeMinutes
   ) {
     $this->declarationId = $declarationId;
     $this->officialFunctionId = $officialFunctionId;
     $this->customFunctionId = $customFunctionId;
     $this->frequency = $frequency;
     $this->justification = $justification;
-    $this->startsAt = $startsAt;
-    $this->endsAt = $endsAt;
-    $this->startsAtProvided = $startsAtProvided;
-    $this->endsAtProvided = $endsAtProvided;
+    $this->durationMinutes = $durationMinutes;
+    $this->overtimeMinutes = $overtimeMinutes;
   }
 
   /** @param array<string, mixed> $data */
@@ -76,10 +71,8 @@ final class CreateJobFunctionDTO
       isset($data['frequency']) && trim((string) $data['frequency']) !== ''
         ? (string) $data['frequency'] : 'Diario',
       $opt('justification'),
-      CreateRestTimeDTO::normalizeTimestamp($data['starts_at'] ?? null),
-      CreateRestTimeDTO::normalizeTimestamp($data['ends_at'] ?? null),
-      isset($data['starts_at']) && $data['starts_at'] !== '',
-      isset($data['ends_at']) && $data['ends_at'] !== ''
+      $data['duration_minutes'] ?? null,
+      $data['overtime_minutes'] ?? null
     );
   }
 
@@ -109,21 +102,9 @@ final class CreateJobFunctionDTO
       );
     }
 
-    if (!$this->startsAtProvided) {
-      throw new ApiException(ErrorType::missingField('starts_at'));
-    }
-    if ($this->startsAt === null) {
-      throw new ApiException(ErrorType::invalidField('starts_at', 'El formato de fecha y hora no es válido'));
-    }
-    if (!$this->endsAtProvided) {
-      throw new ApiException(ErrorType::missingField('ends_at'));
-    }
-    if ($this->endsAt === null) {
-      throw new ApiException(ErrorType::invalidField('ends_at', 'El formato de fecha y hora no es válido'));
-    }
-    if ($this->endsAt <= $this->startsAt) {
+    if ($this->durationMinutes <= 0) {
       throw new ApiException(
-        ErrorType::invalidField('ends_at', 'La hora de fin debe ser posterior a la de inicio')
+        ErrorType::invalidField('duration_minutes', 'La duración debe ser un número entero mayor a 0')
       );
     }
 
@@ -131,6 +112,26 @@ final class CreateJobFunctionDTO
       throw new ApiException(
         ErrorType::invalidField('justification', 'La justificación no puede exceder los 255 caracteres')
       );
+    }
+
+    if ($this->overtimeMinutes !== null && $this->overtimeMinutes !== '') {
+      if (!is_numeric($this->overtimeMinutes) || (int) $this->overtimeMinutes != $this->overtimeMinutes) {
+        throw new ApiException(
+          ErrorType::invalidField('overtime_minutes', 'El tiempo extra debe ser un número entero')
+        );
+      }
+      $this->overtimeMinutes = (int) $this->overtimeMinutes;
+      if ($this->overtimeMinutes <= 0) {
+        throw new ApiException(
+          ErrorType::invalidField('overtime_minutes', 'El tiempo extra debe ser un número entero mayor a 0')
+        );
+      }
+
+      if ($this->justification === null) {
+        throw new ApiException(
+          ErrorType::invalidField('justification', 'Debe justificar el tiempo extra reportado')
+        );
+      }
     }
   }
 }

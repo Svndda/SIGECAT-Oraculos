@@ -12,19 +12,13 @@ use PDOException;
  *
  * Data access for JOB_FUNCTIONS: the functions declared on a DECLARATION. Each
  * row links a declaration, its job position and owner to exactly one official
- * or custom function, over a [starts_at, ends_at] range. The table has no
- * soft-delete, so deletion is physical.
+ * or custom function, with a duration in minutes and an optional overtime
+ * duration in minutes.
  *
  * @package Repositories
  */
 final class JobFunctionRepository extends Repository
 {
-  /** SQL expression turning a canonical 'Y-m-d H:i:s' bind into a TIMESTAMP. */
-  private const TS = "TO_TIMESTAMP(:%s, 'YYYY-MM-DD HH24:MI:SS')";
-
-  /** Columns that must be bound through TO_TIMESTAMP on write. */
-  private const TIMESTAMP_COLUMNS = ['starts_at', 'ends_at'];
-
   public function __construct(PDO $db)
   {
     parent::__construct($db);
@@ -32,10 +26,9 @@ final class JobFunctionRepository extends Repository
 
   private function selectColumns(): string
   {
-    return "job_function_id, user_id, job_position_id, declaration_id,
-            official_function_id, custom_function_id, overtime, justification, frequency,
-            TO_CHAR(starts_at, 'YYYY-MM-DD HH24:MI:SS') AS starts_at,
-            TO_CHAR(ends_at,   'YYYY-MM-DD HH24:MI:SS') AS ends_at";
+    return 'job_function_id, user_id, job_position_id, declaration_id,
+            official_function_id, custom_function_id, overtime_minutes, justification, frequency,
+            duration_minutes';
   }
 
   /**
@@ -49,12 +42,7 @@ final class JobFunctionRepository extends Repository
     $values['job_function_id'] = $newId;
 
     $columns = array_keys($values);
-    $placeholders = array_map(
-      static fn(string $c): string => in_array($c, self::TIMESTAMP_COLUMNS, true)
-        ? sprintf(self::TS, 'v_' . $c)
-        : ':v_' . $c,
-      $columns
-    );
+    $placeholders = array_map(static fn(string $c): string => ':v_' . $c, $columns);
 
     $sql = 'INSERT INTO JOB_FUNCTIONS (' . implode(', ', $columns) . ')
             VALUES (' . implode(', ', $placeholders) . ')';
@@ -91,14 +79,12 @@ final class JobFunctionRepository extends Repository
     $assignments = [];
     $params = [':v_job_function_id' => $jobFunctionId];
     foreach ($values as $col => $val) {
-      $assignments[] = in_array($col, self::TIMESTAMP_COLUMNS, true)
-        ? "$col = " . sprintf(self::TS, 'v_' . $col)
-        : "$col = :v_$col";
+      $assignments[] = "$col = :v_$col";
       $params[':v_' . $col] = $val;
     }
 
     $sql = 'UPDATE JOB_FUNCTIONS SET ' . implode(', ', $assignments)
-         . ' WHERE job_function_id = :v_job_function_id';
+      . ' WHERE job_function_id = :v_job_function_id';
 
     $this->beginTransaction();
     try {
@@ -148,7 +134,7 @@ final class JobFunctionRepository extends Repository
       'SELECT ' . $this->selectColumns() . '
          FROM JOB_FUNCTIONS
         WHERE declaration_id = :declaration_id
-        ORDER BY starts_at ASC
+        ORDER BY job_function_id ASC
         OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
     );
     $stmt->bindValue(':declaration_id', $declarationId);
@@ -175,7 +161,7 @@ final class JobFunctionRepository extends Repository
       'SELECT ' . $this->selectColumns() . '
          FROM JOB_FUNCTIONS
         WHERE user_id = :user_id
-        ORDER BY starts_at DESC
+        ORDER BY job_function_id DESC
         OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY'
     );
     $stmt->bindValue(':user_id', $userId);

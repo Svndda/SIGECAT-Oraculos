@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Services;
 
-use DateTimeImmutable;
 use DTO\CreateRestTimeDTO;
 use DTO\UpdateRestTimeDTO;
 use Http\ApiException;
@@ -87,10 +86,9 @@ class RestTimeService
     $this->assertIncomplete((string) $existing['declaration_id']);
 
     $restType = $dto->restType ?? (string) $existing['rest_type'];
-    $startsAt = $dto->startsAtProvided ? (string) $dto->startsAt : (string) $existing['starts_at'];
-    $endsAt   = $dto->endsAtProvided ? (string) $dto->endsAt : (string) $existing['ends_at'];
+    $durationMinutes = $dto->durationMinutes ?? (int) $existing['duration_minutes'];
 
-    $this->assertRange($restType, $startsAt, $endsAt);
+    $this->assertDuration($restType, $durationMinutes);
 
     $this->restTimeRepository->update($restTimeId, $dto);
 
@@ -226,28 +224,21 @@ class RestTimeService
   }
 
   /**
-   * Ensures the [starts_at, ends_at] range is ordered and within the maximum
-   * duration allowed for the rest type (mirrors CHK_REST_TIMES_DURATION).
+   * Ensures duration_minutes is within the maximum allowed for the rest type
+   * (mirrors CHK_REST_TIMES_DURATION). Format and positivity are already
+   * checked by the DTO; this only covers the per-type cap, which depends on
+   * the effective rest_type after merging a partial update against the
+   * existing row.
    *
    * @throws ApiException
    */
-  private function assertRange(string $restType, string $startsAt, string $endsAt): void
+  private function assertDuration(string $restType, int $durationMinutes): void
   {
-    $start = new DateTimeImmutable($startsAt);
-    $end   = new DateTimeImmutable($endsAt);
-
-    if ($end <= $start) {
-      throw new ApiException(
-        ErrorType::invalidField('ends_at', 'La hora de fin debe ser posterior a la de inicio')
-      );
-    }
-
-    $minutes = ($end->getTimestamp() - $start->getTimestamp()) / 60;
     $maxMinutes = CreateRestTimeDTO::maxMinutesFor($restType);
-    if ($minutes > $maxMinutes) {
+    if ($durationMinutes > $maxMinutes) {
       throw new ApiException(
         ErrorType::invalidField(
-          'ends_at',
+          'duration_minutes',
           "La duración del descanso '{$restType}' no puede exceder los {$maxMinutes} minutos"
         )
       );

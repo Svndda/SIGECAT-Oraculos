@@ -15,55 +15,46 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Supports partial updates (rest_type, starts_at, ends_at are all optional).
+ * - Supports partial updates (rest_type and duration_minutes are both
+ *   optional).
  * - Validates the format of each field only when it is present.
  * - At least one updatable field must be provided.
  *
- * The cross-field rules (ends_at after starts_at and the per-type maximum
- * duration) depend on the effective values after the merge, so they are
- * enforced by RestTimeService against the existing row.
+ * The per-type maximum duration depends on the effective rest_type after the
+ * merge, so it is enforced by RestTimeService against the existing row.
  *
  * @package DTO
  */
 final class UpdateRestTimeDTO
 {
   public ?string $restType;
-  public bool $startsAtProvided;
-  public bool $endsAtProvided;
 
-  /** Normalized 'Y-m-d H:i:s' strings (null when missing or unparseable). */
-  public ?string $startsAt;
-  public ?string $endsAt;
+  /**
+   * Requested new duration in minutes, or null when the client did not send
+   * this field at all (meaning: leave it unchanged). Holds the raw scalar
+   * until validate() checks its format and normalizes it to a plain int.
+   */
+  public int|string|null $durationMinutes;
 
   private function __construct(
     ?string $restType,
-    ?string $startsAt,
-    ?string $endsAt,
-    bool $startsAtProvided,
-    bool $endsAtProvided
+    int|string|null $durationMinutes
   ) {
     $this->restType = $restType;
-    $this->startsAt = $startsAt;
-    $this->endsAt = $endsAt;
-    $this->startsAtProvided = $startsAtProvided;
-    $this->endsAtProvided = $endsAtProvided;
+    $this->durationMinutes = $durationMinutes;
   }
 
   /**
    * @param array{
    *     rest_type?: string,
-   *     starts_at?: string,
-   *     ends_at?: string
+   *     duration_minutes?: int|string
    * } $data
    */
   public static function fromArray(array $data): self
   {
     return new self(
       isset($data['rest_type']) ? (string) $data['rest_type'] : null,
-      CreateRestTimeDTO::normalizeTimestamp($data['starts_at'] ?? null),
-      CreateRestTimeDTO::normalizeTimestamp($data['ends_at'] ?? null),
-      isset($data['starts_at']) && $data['starts_at'] !== '',
-      isset($data['ends_at']) && $data['ends_at'] !== ''
+      $data['duration_minutes'] ?? null
     );
   }
 
@@ -78,24 +69,31 @@ final class UpdateRestTimeDTO
           ErrorType::invalidField(
             'rest_type',
             'El tipo de descanso debe ser uno de: '
-              . implode(', ', CreateRestTimeDTO::ALLOWED_REST_TYPES)
+            . implode(', ', CreateRestTimeDTO::ALLOWED_REST_TYPES)
           )
         );
       }
     }
 
-    if ($this->startsAtProvided && $this->startsAt === null) {
-      throw new ApiException(
-        ErrorType::invalidField('starts_at', 'El formato de fecha y hora no es válido')
-      );
-    }
-    if ($this->endsAtProvided && $this->endsAt === null) {
-      throw new ApiException(
-        ErrorType::invalidField('ends_at', 'El formato de fecha y hora no es válido')
-      );
+    if ($this->durationMinutes !== null && $this->durationMinutes !== '') {
+      if (!is_numeric($this->durationMinutes) || (int) $this->durationMinutes != $this->durationMinutes) {
+        throw new ApiException(
+          ErrorType::invalidField('duration_minutes', 'La duración debe ser un número entero')
+        );
+      }
+
+      $this->durationMinutes = (int) $this->durationMinutes;
+
+      if ($this->durationMinutes <= 0) {
+        throw new ApiException(
+          ErrorType::invalidField('duration_minutes', 'La duración debe ser un número entero mayor a 0')
+        );
+      }
+    } else {
+      $this->durationMinutes = null;
     }
 
-    if ($this->restType === null && !$this->startsAtProvided && !$this->endsAtProvided) {
+    if ($this->restType === null && $this->durationMinutes === null) {
       throw new ApiException(
         ErrorType::invalidField('rest_time', 'Debe proporcionar al menos un campo para actualizar')
       );
