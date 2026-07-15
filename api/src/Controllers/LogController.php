@@ -51,6 +51,7 @@ final class LogController
         'search'    => $_GET['search']    ?? null,
         'date_from' => $_GET['date_from'] ?? null,
         'date_to'   => $_GET['date_to']   ?? null,
+        'scope'     => $_GET['scope']     ?? null,
       ];
 
       $result = $this->logService->list($filters, $page, $limit);

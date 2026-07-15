@@ -153,6 +153,15 @@ final class LogRepository extends Repository
     $conditions = [];
     $params = [];
 
+    // The admin "Bitácora" asks for the business slice only: exclude the
+    // technical/server events (HTTP request tracing, rate limiting, unhandled
+    // exceptions) that share this table. This is a read-side filter — the rows
+    // are still written; they are simply not surfaced in the business view.
+    if (($filters['scope'] ?? '') === 'business') {
+      $conditions[] = "action IS NOT NULL AND action NOT IN
+        ('http.request', 'rate_limit.error', 'rate_limit.exceeded', 'unhandled.exception')";
+    }
+
     if (!empty($filters['level'])) {
       $conditions[] = 'log_level = :log_level';
       $params[':log_level'] = $filters['level'];

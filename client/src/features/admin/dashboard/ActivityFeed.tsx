@@ -1,20 +1,13 @@
 import { Box, Chip, Divider, Typography } from '@mui/material';
 import { formatOracleDate } from '../../../services/common';
-import type { LogLevel, SystemLog } from '../../../services/logService';
-
-const LEVEL_COLORS: Record<LogLevel, 'default' | 'info' | 'warning' | 'error'> = {
-  DEBUG: 'default',
-  INFO: 'info',
-  WARNING: 'warning',
-  ERROR: 'error',
-  CRITICAL: 'error',
-};
+import type { SystemLog } from '../../../services/logService';
+import { activityMeta, SEVERITY_META } from '../../../services/activityLog';
 
 interface ActivityFeedProps {
   logs: SystemLog[];
 }
 
-/** Compact, read-only rendering of the most recent system log entries. */
+/** Compact, read-only rendering of the most recent business activity. */
 export default function ActivityFeed({ logs }: ActivityFeedProps) {
   if (logs.length === 0) {
     return (
@@ -28,29 +21,31 @@ export default function ActivityFeed({ logs }: ActivityFeedProps) {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-      {logs.map((log, i) => (
-        <Box key={log.id}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.25 }}>
-            <Chip
-              size="small"
-              label={log.level}
-              color={LEVEL_COLORS[log.level]}
-              variant={log.level === 'DEBUG' ? 'outlined' : 'filled'}
-              sx={{ flexShrink: 0, minWidth: 72 }}
-            />
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="body2" sx={{ color: 'text.primary' }} title={log.message}>
-                {log.message}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {log.category}
-                {log.action ? ` · ${log.action}` : ''} · {formatOracleDate(log.created_at, true)}
-              </Typography>
+      {logs.map((log, i) => {
+        const meta = activityMeta(log);
+        const sev = SEVERITY_META[meta.severity];
+        return (
+          <Box key={log.id}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.25 }}>
+              <Chip
+                size="small"
+                label={sev.label}
+                color={sev.color}
+                sx={{ flexShrink: 0, minWidth: 64 }}
+              />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="body2" sx={{ color: 'text.primary' }} title={log.message}>
+                  {log.message}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {meta.actionLabel} · {meta.entityLabel} · {formatOracleDate(log.created_at, true)}
+                </Typography>
+              </Box>
             </Box>
+            {i < logs.length - 1 && <Divider />}
           </Box>
-          {i < logs.length - 1 && <Divider />}
-        </Box>
-      ))}
+        );
+      })}
     </Box>
   );
 }

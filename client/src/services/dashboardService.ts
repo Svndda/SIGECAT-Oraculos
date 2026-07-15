@@ -5,6 +5,7 @@ import { departmentService } from './departmentService';
 import { jobPositionService } from './jobPositionService';
 import { logService } from './logService';
 import type { SystemLog } from './logService';
+import { isBusinessEvent } from './activityLog';
 import { sectionService } from './sectionService';
 import { unitService } from './unitService';
 import { userService } from './userService';
@@ -148,13 +149,15 @@ export const dashboardService = {
       departmentService.getDepartmentsPage({ page: 1, limit: 1 }),
       sectionService.getSectionsPage({ page: 1, limit: 1 }),
       unitService.getUnits({ page: 1, limit: 1 }),
-      logService.list({ page: 1, limit: ACTIVITY_SIZE }),
+      logService.listRecent(200),
     ]);
 
     const users = settled(usersRes, []);
     const declarationsPage = settled(declarationsRes, { data: [], meta: { page: 1, limit: 0, total: 0, total_pages: 0 } });
     const jobPositionsPage = settled(jobPositionsRes, { data: [], meta: { page: 1, limit: 0, total: 0, total_pages: 0 } });
-    const activity = settled(activityRes, { data: [], meta: { page: 1, limit: 0, total: 0, total_pages: 0 } }).data;
+    const activity = settled(activityRes, [] as SystemLog[])
+      .filter(isBusinessEvent)
+      .slice(0, ACTIVITY_SIZE);
 
     const declarations = declarationsPage.data;
     const byStatus = emptyStatusCounts();

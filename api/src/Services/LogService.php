@@ -93,6 +93,11 @@ final class LogService
       $clean['level'] = $level;
     }
 
+    // Opt-in narrowing to business events only (excludes server/technical noise).
+    if (($filters['scope'] ?? '') === 'business') {
+      $clean['scope'] = 'business';
+    }
+
     return $clean;
   }
 }

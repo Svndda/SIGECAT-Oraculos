@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Box,
   Chip,
-  Collapse,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  Divider,
   FormControl,
   IconButton,
   InputLabel,
@@ -21,213 +24,210 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import CloseIcon from '@mui/icons-material/Close';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+
+import { logService, type SystemLog } from '../../../services/logService';
+import { userService, type AdminUser } from '../../../services/userService';
 import {
-  logService,
-  type LogFacets,
-  type LogLevel,
-  type SystemLog,
-} from '../../../services/logService';
-import type { ServiceError } from '../../../services/common';
+  activityMeta,
+  affectedLabel,
+  contextRows,
+  isBusinessEvent,
+  SEVERITY_META,
+  type Severity,
+} from '../../../services/activityLog';
+import { formatOracleDate, parseOracleDate, type ServiceError } from '../../../services/common';
 import { useSnackbar } from '../../../context/SnackbarContext';
-import { formatOracleDate } from '../../../services/common';
 
-const LEVEL_COLORS: Record<LogLevel, 'default' | 'info' | 'warning' | 'error'> = {
-  DEBUG: 'default',
-  INFO: 'info',
-  WARNING: 'warning',
-  ERROR: 'error',
-  CRITICAL: 'error',
-};
+const PAGE_SIZE = 15;
+/** How many recent log rows to sample and classify on the client. */
+const SAMPLE_SIZE = 500;
 
-const PAGE_SIZE = 20;
+interface Actor {
+  name: string;
+  email: string | null;
+}
 
-function LogRow({ log }: { log: SystemLog }) {
-  const [open, setOpen] = useState(false);
-
-  const hasDetail =
-    log.context !== null ||
-    log.ip_address !== null ||
-    log.http_path !== null ||
-    log.user_id !== null;
-
-  return (
-    <>
-      <TableRow hover>
-        <TableCell padding="checkbox">
-          {hasDetail && (
-            <IconButton
-              size="small"
-              onClick={() => setOpen((v) => !v)}
-              aria-label={open ? 'Ocultar detalle del registro' : 'Ver detalle del registro'}
-              aria-expanded={open}
-            >
-              {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-            </IconButton>
-          )}
-        </TableCell>
-        <TableCell>
-          <Chip
-            size="small"
-            label={log.level}
-            color={LEVEL_COLORS[log.level]}
-            variant={log.level === 'DEBUG' ? 'outlined' : 'filled'}
-          />
-        </TableCell>
-        <TableCell>{log.category}</TableCell>
-        <TableCell sx={{ maxWidth: 420 }}>
-          <Typography variant="body2" noWrap title={log.message}>
-            {log.message}
-          </Typography>
-        </TableCell>
-        <TableCell>{log.action ?? '—'}</TableCell>
-        <TableCell>
-          {log.http_method ? `${log.http_method} ${log.status_code ?? ''}` : '—'}
-        </TableCell>
-        <TableCell>{formatOracleDate(log.created_at, true)}</TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell sx={{ py: 0, borderBottom: open ? undefined : 'none' }} colSpan={7}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ py: 2, px: 1 }}>
-              <Stack spacing={0.5}>
-                {log.user_id && (
-                  <Typography variant="body2">
-                    <strong>Usuario:</strong> {log.user_id}
-                  </Typography>
-                )}
-                {log.ip_address && (
-                  <Typography variant="body2">
-                    <strong>IP:</strong> {log.ip_address}
-                  </Typography>
-                )}
-                {log.http_path && (
-                  <Typography variant="body2">
-                    <strong>Ruta:</strong> {log.http_method} {log.http_path}
-                  </Typography>
-                )}
-                {log.context && (
-                  <Box
-                    component="pre"
-                    sx={{
-                      mt: 1,
-                      p: 1.5,
-                      bgcolor: '#f5f5f5',
-                      borderRadius: 1,
-                      fontSize: 12,
-                      overflowX: 'auto',
-                    }}
-                  >
-                    {JSON.stringify(log.context, null, 2)}
-                  </Box>
-                )}
-              </Stack>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    </>
-  );
+/** Resolves the acting user of an entry from the id→user map. */
+function resolveActor(log: SystemLog, users: Map<string, AdminUser>): Actor {
+  if (!log.user_id) return { name: 'Sistema', email: null };
+  const user = users.get(log.user_id);
+  if (!user) return { name: 'Usuario eliminado', email: null };
+  return { name: `${user.first_name} ${user.last_name}`.trim(), email: user.email };
 }
 
 export default function LogsPage() {
   const snackbar = useSnackbar();
 
   const [logs, setLogs] = useState<SystemLog[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<Map<string, AdminUser>>(new Map());
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [selected, setSelected] = useState<SystemLog | null>(null);
 
-  const [facets, setFacets] = useState<LogFacets>({ levels: [], categories: [] });
-  const [level, setLevel] = useState<LogLevel | ''>('');
-  const [category, setCategory] = useState('');
+  const [action, setAction] = useState('');
+  const [entity, setEntity] = useState('');
+  const [severity, setSeverity] = useState<Severity | ''>('');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await logService.list({
-        page,
-        limit: PAGE_SIZE,
-        level: level || undefined,
-        category: category || undefined,
-        search: search.trim() || undefined,
-      });
-      setLogs(res.data);
-      setTotalPages(Math.max(1, res.meta.total_pages));
+      const [rows, userList] = await Promise.all([
+        logService.listRecent(SAMPLE_SIZE),
+        userService.getUsers().catch(() => [] as AdminUser[]),
+      ]);
+      setUsers(new Map(userList.map((u) => [u.id, u])));
+      setLogs(rows.filter(isBusinessEvent));
     } catch (e) {
       snackbar.error((e as ServiceError).message);
     } finally {
       setLoading(false);
     }
-  }, [page, level, category, search, snackbar]);
+  }, [snackbar]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    logService.facets().then(setFacets).catch(() => {});
-  }, []);
+  // Distinct action/entity options actually present in the sampled activity.
+  const { actionOptions, entityOptions } = useMemo(() => {
+    const actions = new Map<string, string>();
+    const entities = new Map<string, string>();
+    for (const log of logs) {
+      const meta = activityMeta(log);
+      if (meta.verb) actions.set(meta.verb, meta.actionLabel);
+      if (meta.entitySlug) entities.set(meta.entitySlug, meta.entityLabel);
+    }
+    const sortByLabel = (a: [string, string], b: [string, string]) => a[1].localeCompare(b[1]);
+    return {
+      actionOptions: [...actions.entries()].sort(sortByLabel),
+      entityOptions: [...entities.entries()].sort(sortByLabel),
+    };
+  }, [logs]);
 
-  // Reset to first page whenever a filter changes.
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
+
+    return logs.filter((log) => {
+      const meta = activityMeta(log);
+      if (action && meta.verb !== action) return false;
+      if (entity && meta.entitySlug !== entity) return false;
+      if (severity && meta.severity !== severity) return false;
+
+      if (term) {
+        const actor = resolveActor(log, users);
+        const haystack = `${log.message} ${actor.name} ${meta.entityLabel} ${affectedLabel(log) ?? ''}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+
+      if (from || to) {
+        const when = parseOracleDate(log.created_at);
+        if (when) {
+          if (from && when < from) return false;
+          if (to && when > to) return false;
+        }
+      }
+      return true;
+    });
+  }, [logs, users, action, entity, severity, search, dateFrom, dateTo]);
+
+  // Reset to the first page whenever a filter changes.
   useEffect(() => {
     setPage(1);
-  }, [level, category, search]);
+  }, [action, entity, severity, search, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
       <Typography variant="h5" fontWeight={600} gutterBottom>
-        Registros del sistema
+        Bitácora de actividad
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Bitácora de auditoría de toda la actividad del sistema: autenticación,
-        peticiones, errores y eventos de seguridad.
+        Registro de la actividad de negocio del sistema: creación, modificación y
+        eliminación de declaraciones, usuarios y catálogos, además de los inicios
+        de sesión.
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }} alignItems="center">
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Nivel</InputLabel>
-          <Select
-            label="Nivel"
-            value={level}
-            onChange={(e) => setLevel(e.target.value as LogLevel | '')}
-          >
-            <MenuItem value="">Todos</MenuItem>
-            {facets.levels.map((lv) => (
-              <MenuItem key={lv} value={lv}>{lv}</MenuItem>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1.5}
+        sx={{ mb: 2 }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        flexWrap="wrap"
+        useFlexGap
+      >
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Acción</InputLabel>
+          <Select label="Acción" value={action} onChange={(e) => setAction(e.target.value)}>
+            <MenuItem value="">Todas las acciones</MenuItem>
+            {actionOptions.map(([value, label]) => (
+              <MenuItem key={value} value={value}>{label}</MenuItem>
             ))}
           </Select>
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>Categoría</InputLabel>
+          <InputLabel>Entidad</InputLabel>
+          <Select label="Entidad" value={entity} onChange={(e) => setEntity(e.target.value)}>
+            <MenuItem value="">Todas las entidades</MenuItem>
+            {entityOptions.map(([value, label]) => (
+              <MenuItem key={value} value={value}>{label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Severidad</InputLabel>
           <Select
-            label="Categoría"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            label="Severidad"
+            value={severity}
+            onChange={(e) => setSeverity(e.target.value as Severity | '')}
           >
-            <MenuItem value="">Todas</MenuItem>
-            {facets.categories.map((cat) => (
-              <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+            <MenuItem value="">Todas las severidades</MenuItem>
+            {(['LOW', 'MEDIUM', 'HIGH'] as Severity[]).map((sev) => (
+              <MenuItem key={sev} value={sev}>{SEVERITY_META[sev].label}</MenuItem>
             ))}
           </Select>
         </FormControl>
 
         <TextField
           size="small"
-          label="Buscar en el mensaje"
+          label="Buscar por usuario o descripción"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          sx={{ flex: 1, minWidth: 200 }}
+          sx={{ flex: 1, minWidth: 220 }}
+        />
+
+        <TextField
+          size="small"
+          type="date"
+          label="Desde"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          size="small"
+          type="date"
+          label="Hasta"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          InputLabelProps={{ shrink: true }}
         />
 
         <Tooltip title="Actualizar">
           <span>
-            <IconButton onClick={() => void load()} disabled={loading} aria-label="Actualizar registros">
-              <RefreshIcon />
+            <IconButton onClick={() => void load()} disabled={loading} aria-label="Actualizar bitácora">
+              {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
             </IconButton>
           </span>
         </Tooltip>
@@ -237,26 +237,59 @@ export default function LogsPage() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox" />
-              <TableCell>Nivel</TableCell>
-              <TableCell>Categoría</TableCell>
-              <TableCell>Mensaje</TableCell>
+              <TableCell>Fecha y hora</TableCell>
+              <TableCell>Usuario</TableCell>
               <TableCell>Acción</TableCell>
-              <TableCell>Petición</TableCell>
-              <TableCell>Fecha</TableCell>
+              <TableCell>Entidad</TableCell>
+              <TableCell>Descripción</TableCell>
+              <TableCell align="center">Severidad</TableCell>
+              <TableCell align="center">Detalles</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {logs.length === 0 ? (
+            {pageItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                   <Typography variant="body2" color="text.secondary">
-                    {loading ? 'Cargando…' : 'No hay registros para los filtros seleccionados.'}
+                    {loading ? 'Cargando…' : 'No hay actividad para los filtros seleccionados.'}
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              logs.map((log) => <LogRow key={log.id} log={log} />)
+              pageItems.map((log) => {
+                const meta = activityMeta(log);
+                const actor = resolveActor(log, users);
+                const sev = SEVERITY_META[meta.severity];
+                return (
+                  <TableRow key={log.id} hover>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {formatOracleDate(log.created_at, true)}
+                    </TableCell>
+                    <TableCell>{actor.name}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={meta.actionLabel} variant="outlined" />
+                    </TableCell>
+                    <TableCell>{meta.entityLabel}</TableCell>
+                    <TableCell sx={{ maxWidth: 360 }}>
+                      <Typography variant="body2" noWrap title={log.message}>
+                        {log.message}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip size="small" label={sev.label} color={sev.color} />
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelected(log)}
+                        aria-label="Ver detalle del registro"
+                      >
+                        <VisibilityOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -270,6 +303,131 @@ export default function LogsPage() {
           color="primary"
         />
       </Box>
+
+      <ActivityDetailModal
+        log={selected}
+        actor={selected ? resolveActor(selected, users) : null}
+        onClose={() => setSelected(null)}
+      />
+    </Box>
+  );
+}
+
+interface ActivityDetailModalProps {
+  log: SystemLog | null;
+  actor: Actor | null;
+  onClose: () => void;
+}
+
+function ActivityDetailModal({ log, actor, onClose }: ActivityDetailModalProps) {
+  const meta = log ? activityMeta(log) : null;
+  const rows = log ? contextRows(log) : [];
+  const affected = log ? affectedLabel(log) : null;
+
+  return (
+    <Dialog open={log !== null} onClose={onClose} maxWidth="sm" fullWidth>
+      {log && meta && (
+        <DialogContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Typography variant="h6" fontWeight={600}>
+              Detalle del registro de actividad
+            </Typography>
+            <IconButton size="small" onClick={onClose} aria-label="Cerrar">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <Stack direction="row" spacing={2} justifyContent="space-around" sx={{ mb: 2 }}>
+            <SummaryItem label="Acción">
+              <Chip size="small" label={meta.actionLabel} variant="outlined" />
+            </SummaryItem>
+            <SummaryItem label="Entidad">
+              <Chip size="small" label={meta.entityLabel} variant="outlined" />
+            </SummaryItem>
+            <SummaryItem label="Severidad">
+              <Chip
+                size="small"
+                label={SEVERITY_META[meta.severity].label}
+                color={SEVERITY_META[meta.severity].color}
+              />
+            </SummaryItem>
+          </Stack>
+
+          <Divider sx={{ mb: 2 }} />
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+              mb: 2,
+            }}
+          >
+            <Field label="Fecha y hora" value={formatOracleDate(log.created_at, true)} />
+            <Field label="Usuario" value={actor?.name ?? '—'} />
+            <Field label="Entidad afectada" value={affected ?? '—'} />
+            <Field label="Correo electrónico" value={actor?.email ?? '—'} />
+          </Box>
+
+          <Field label="Descripción" value={log.message} sx={{ mb: rows.length ? 2 : 0 }} />
+
+          {rows.length > 0 && (
+            <>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Detalles del evento
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Campo</TableCell>
+                      <TableCell>Valor</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((r) => (
+                      <TableRow key={r.label}>
+                        <TableCell sx={{ fontWeight: 500, width: '40%' }}>{r.label}</TableCell>
+                        <TableCell sx={{ wordBreak: 'break-word' }}>{r.value}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </DialogContent>
+      )}
+    </Dialog>
+  );
+}
+
+function SummaryItem({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Box sx={{ textAlign: 'center' }}>
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+        {label}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+
+function Field({
+  label,
+  value,
+  sx,
+}: {
+  label: string;
+  value: string;
+  sx?: object;
+}) {
+  return (
+    <Box sx={sx}>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography variant="body2">{value}</Typography>
     </Box>
   );
 }

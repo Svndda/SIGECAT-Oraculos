@@ -57,7 +57,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Funciones Personalizadas', icon: <AssignmentIndIcon fontSize="small" />, route: '/funciones-personalizadas', adminOnly: true },
   { label: 'Tipos de Licencia', icon: <EventNoteIcon fontSize="small" />, route: '/tipos-de-licencia', adminOnly: true },
   { label: 'Plazas', icon: <WorkIcon fontSize="small" />, route: '/plazas', adminOnly: true },
-  { label: 'Registros', icon: <ReceiptLongRounded fontSize="small" />, route: '/registros', adminOnly: true },
+  { label: 'Bitácora', icon: <ReceiptLongRounded fontSize="small" />, route: '/registros', adminOnly: true },
 ];
 
 interface SidebarProps {

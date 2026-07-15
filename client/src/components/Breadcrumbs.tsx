@@ -37,7 +37,7 @@ const ROUTES: Record<string, RouteNode> = {
   '/licencias': {label: 'Licencias', parent: '/'},
   '/tipos-de-licencia': {label: 'Tipos de Licencia', parent: '/'},
   '/plazas': {label: 'Plazas', parent: '/'},
-  '/registros': {label: 'Registros  ', parent: '/'},
+  '/registros': {label: 'Bitácora', parent: '/'},
 
 };
 
