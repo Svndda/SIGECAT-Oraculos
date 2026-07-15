@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState, type MouseEvent as ReactMouseEvent} from 'react';
 import {
   Box,
   Divider,
@@ -41,6 +41,21 @@ export default function AccessibilityWidget() {
   } = useAccessibility();
   const [open, setOpen] = useState(false);
 
+  // Remember the user's last non-empty text selection. Opening the panel and
+  // clicking the "Leer selección" button both clear the live page selection
+  // (mousedown on a control collapses it), so reading window.getSelection() at
+  // click time usually finds nothing. We capture the selection as it happens and
+  // read the remembered value instead.
+  const lastSelectionRef = useRef('');
+  useEffect(() => {
+    const remember = () => {
+      const text = window.getSelection()?.toString() ?? '';
+      if (text.trim()) lastSelectionRef.current = text;
+    };
+    document.addEventListener('selectionchange', remember);
+    return () => document.removeEventListener('selectionchange', remember);
+  }, []);
+
   // Click-to-read: while TTS is on, reading the text of whatever the user clicks.
   useEffect(() => {
     if (!prefs.ttsEnabled || !isSpeechSupported()) return;
@@ -67,8 +82,11 @@ export default function AccessibilityWidget() {
   const fontPercent = Math.round(prefs.fontScale * 100);
 
   const readSelection = () => {
-    const selection = window.getSelection()?.toString() ?? '';
-    if (selection.trim()) speak(selection);
+    // Prefer a live selection, but fall back to the last remembered one since
+    // the click that triggered this usually just cleared the live selection.
+    const live = window.getSelection()?.toString() ?? '';
+    const text = live.trim() ? live : lastSelectionRef.current;
+    if (text.trim()) speak(text);
   };
 
   const switchRow = (label: string, checked: boolean, onChange: () => void) => (
@@ -170,6 +188,7 @@ export default function AccessibilityWidget() {
             <Stack direction="row" spacing={1} sx={{mt: 1}}>
               <Box
                 component="button"
+                onMouseDown={(e: ReactMouseEvent) => e.preventDefault()}
                 onClick={readSelection}
                 sx={btnStyle}
               >
