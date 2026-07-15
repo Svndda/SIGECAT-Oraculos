@@ -5,6 +5,10 @@ import {
   Drawer,
   Fab,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Switch,
   Tooltip,
@@ -41,6 +45,10 @@ export default function AccessibilityWidget() {
   } = useAccessibility();
   const [open, setOpen] = useState(false);
 
+  // Position + text for the "read aloud" right-click menu (null = closed).
+  const [ctxMenu, setCtxMenu] =
+    useState<{ mouseX: number; mouseY: number; text: string } | null>(null);
+
   // Remember the user's last non-empty text selection. Opening the panel and
   // clicking the "Leer selección" button both clear the live page selection
   // (mousedown on a control collapses it), so reading window.getSelection() at
@@ -72,6 +80,27 @@ export default function AccessibilityWidget() {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, [prefs.ttsEnabled]);
+
+  // Right-click "read aloud": when the user right-clicks with text selected,
+  // replace the native menu with a single "Leer en voz alta" option. A
+  // right-click keeps the selection intact (unlike a left-click on a control),
+  // so this is the most reliable way to read a selection. When nothing is
+  // selected we leave the browser's own context menu untouched.
+  useEffect(() => {
+    if (!isSpeechSupported()) return;
+
+    const onContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-a11y-widget]')) return;
+      const text = (window.getSelection()?.toString() ?? '').trim();
+      if (!text) return; // no selection → keep the native context menu
+      e.preventDefault();
+      setCtxMenu({ mouseX: e.clientX, mouseY: e.clientY, text });
+    };
+
+    document.addEventListener('contextmenu', onContextMenu);
+    return () => document.removeEventListener('contextmenu', onContextMenu);
+  }, []);
 
   // Stop any speech when the read-aloud mode is switched off.
   useEffect(() => {
@@ -216,6 +245,25 @@ export default function AccessibilityWidget() {
         </Box>
         </Box>
       </Drawer>
+
+      <Menu
+        open={ctxMenu !== null}
+        onClose={() => setCtxMenu(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={ctxMenu ? {top: ctxMenu.mouseY, left: ctxMenu.mouseX} : undefined}
+      >
+        <MenuItem
+          onClick={() => {
+            if (ctxMenu) speak(ctxMenu.text);
+            setCtxMenu(null);
+          }}
+        >
+          <ListItemIcon>
+            <VolumeUpIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Leer en voz alta</ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }
