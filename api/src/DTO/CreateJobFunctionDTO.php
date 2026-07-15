@@ -36,6 +36,10 @@ final class CreateJobFunctionDTO
     $this->overtimeMinutes = $overtimeMinutes;
   }
 
+  /**
+   * @param array<string, mixed> $data
+   * @return self
+   */
   public static function fromArray(array $data): self
   {
     $opt = static function (string $key) use ($data): ?string {
@@ -66,6 +70,9 @@ final class CreateJobFunctionDTO
     );
   }
 
+  /**
+   * @throws ApiException
+   */
   public function validate(): void
   {
     if (trim($this->declarationId) === '') {

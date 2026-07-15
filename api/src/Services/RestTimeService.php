@@ -23,6 +23,10 @@ class RestTimeService
     $this->declarationRepository = new DeclarationsRepository($this->pdo);
   }
 
+  /**
+   * @return array<string, mixed>|null
+   * @throws ApiException
+   */
   public function createRestTime(string $userId, CreateRestTimeDTO $dto): ?array
   {
     $dto->validate();
@@ -48,6 +52,10 @@ class RestTimeService
     return $this->getRestTimeById($restTimeId);
   }
 
+  /**
+   * @return array<string, mixed>|null
+   * @throws ApiException
+   */
   public function updateRestTime(string $userId, string $restTimeId, UpdateRestTimeDTO $dto): ?array
   {
     $dto->validate();
@@ -58,9 +66,10 @@ class RestTimeService
 
     $restType = $dto->restType ?? (string) $existing['rest_type'];
 
+    // Convert durationMinutes to int
     $rawDuration = $dto->durationMinutes;
     $durationMinutes = $rawDuration !== null && is_numeric($rawDuration)
-      ? (int) $rawDurationx
+      ? (int) $rawDuration
       : (int) $existing['duration_minutes'];
 
     $this->assertDuration($restType, $durationMinutes);
@@ -75,6 +84,9 @@ class RestTimeService
     return $this->getRestTimeById($restTimeId);
   }
 
+  /**
+   * @throws ApiException
+   */
   public function deleteRestTime(string $userId, string $restTimeId): void
   {
     $existing = $this->requireOwnedRestTime($userId, $restTimeId);
@@ -93,6 +105,10 @@ class RestTimeService
     ]);
   }
 
+  /**
+   * @return array{data: array<int, array<string, mixed>>, meta: array{page: int, limit: int, total: int, total_pages: int}}
+   * @throws ApiException
+   */
   public function getAllRestTimes(string $userId, bool $isAdmin, int $page = 1, int $limit = 10, string $filter = '', ?string $declarationId = null): array
   {
     $page = max(1, $page);
@@ -123,6 +139,10 @@ class RestTimeService
     ];
   }
 
+  /**
+   * @return array<string, mixed>|null
+   * @throws ApiException
+   */
   public function getRestTimeById(string $restTimeId): ?array
   {
     if (empty($restTimeId)) {
@@ -140,6 +160,10 @@ class RestTimeService
     return $restTime;
   }
 
+  /**
+   * @return array<string, mixed>
+   * @throws ApiException
+   */
   private function requireOwnedRestTime(string $userId, string $restTimeId): array
   {
     if (empty($restTimeId)) {
@@ -159,6 +183,9 @@ class RestTimeService
     return $existing;
   }
 
+  /**
+   * @throws ApiException
+   */
   private function assertIncomplete(string $declarationId): void
   {
     if ($this->declarationRepository->getCurrentStatus($declarationId) !== 'Incomplete') {
@@ -170,6 +197,11 @@ class RestTimeService
     }
   }
 
+  /**
+   * @param string $restType
+   * @param int $durationMinutes
+   * @throws ApiException
+   */
   private function assertDuration(string $restType, int $durationMinutes): void
   {
     $maxMinutes = CreateRestTimeDTO::maxMinutesFor($restType);

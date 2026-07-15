@@ -22,6 +22,10 @@ final class CreateLicenseDTO
     $this->durationMinutes = $durationMinutes;
   }
 
+  /**
+   * @param array<string, mixed> $data
+   * @return self
+   */
   public static function fromArray(array $data): self
   {
     $durationMinutes = isset($data['duration_minutes']) && is_numeric($data['duration_minutes'])
@@ -35,6 +39,9 @@ final class CreateLicenseDTO
     );
   }
 
+  /**
+   * @throws ApiException
+   */
   public function validate(): void
   {
     if ($this->declarationId === '') {

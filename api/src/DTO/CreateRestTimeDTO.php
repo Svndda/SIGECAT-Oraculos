@@ -26,6 +26,10 @@ final class CreateRestTimeDTO
     $this->durationMinutes = $durationMinutes;
   }
 
+  /**
+   * @param array<string, mixed> $data
+   * @return self
+   */
   public static function fromArray(array $data): self
   {
     $restType = isset($data['rest_type']) ? (string) $data['rest_type'] : '';
@@ -45,6 +49,9 @@ final class CreateRestTimeDTO
     return self::MAX_MINUTES[$restType] ?? 60;
   }
 
+  /**
+   * @throws ApiException
+   */
   public function validate(): void
   {
     if ($this->declarationId === '') {

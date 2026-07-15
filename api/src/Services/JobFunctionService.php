@@ -29,6 +29,10 @@ class JobFunctionService
     $this->declarationRepository = new DeclarationsRepository($this->pdo);
   }
 
+  /**
+   * @return array<string, mixed>
+   * @throws ApiException
+   */
   public function createJobFunction(string $userId, CreateJobFunctionDTO $dto): array
   {
     $dto->validate();
@@ -60,6 +64,10 @@ class JobFunctionService
     return $this->getJobFunctionById($userId, $id);
   }
 
+  /**
+   * @return array<string, mixed>
+   * @throws ApiException
+   */
   public function updateJobFunction(string $userId, string $jobFunctionId, UpdateJobFunctionDTO $dto): array
   {
     $dto->validate();
@@ -85,6 +93,7 @@ class JobFunctionService
     $frequency = $dto->frequency ?? (string) $existing['frequency'];
     $durationMinutes = $dto->durationMinutes ?? (int) $existing['duration_minutes'];
 
+    // Normalize overtimeMinutes to ?int
     $rawOvertime = $dto->overtimeMinutes;
     $overtimeMinutes = $rawOvertime !== null && is_numeric($rawOvertime)
       ? (int) $rawOvertime
@@ -116,6 +125,9 @@ class JobFunctionService
     return $this->getJobFunctionById($userId, $jobFunctionId);
   }
 
+  /**
+   * @throws ApiException
+   */
   public function deleteJobFunction(string $userId, string $jobFunctionId): void
   {
     $existing = $this->repository->findById($jobFunctionId);
@@ -138,6 +150,10 @@ class JobFunctionService
     ]);
   }
 
+  /**
+   * @return array<string, mixed>
+   * @throws ApiException
+   */
   public function getJobFunctionById(string $userId, string $jobFunctionId): array
   {
     if (trim($jobFunctionId) === '') {
@@ -152,6 +168,10 @@ class JobFunctionService
     return JobFunctionResponseDTO::fromArray($row)->toArray();
   }
 
+  /**
+   * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
+   * @throws ApiException
+   */
   public function getJobFunctions(string $userId, int $page, int $limit, ?string $declarationId = null): array
   {
     if ($page < 1) {
@@ -192,6 +212,10 @@ class JobFunctionService
     ];
   }
 
+  /**
+   * @return array<string, mixed>
+   * @throws ApiException
+   */
   private function requireIncompleteOwnedDeclaration(string $userId, string $declarationId): array
   {
     $declaration = $this->declarationRepository->findById($declarationId);
@@ -210,6 +234,9 @@ class JobFunctionService
     return $declaration;
   }
 
+  /**
+   * @throws ApiException
+   */
   private function assertReferencedFunctionExists(string $userId, ?string $officialFunctionId, ?string $customFunctionId): void
   {
     if ($officialFunctionId !== null) {
@@ -226,6 +253,11 @@ class JobFunctionService
     }
   }
 
+  /**
+   * @param int|null $overtimeMinutes
+   * @param string|null $justification
+   * @throws ApiException
+   */
   private function assertJustificationForOvertime(?int $overtimeMinutes, ?string $justification): void
   {
     if ($overtimeMinutes !== null && $overtimeMinutes > 0 && ($justification === null || trim($justification) === '')) {
