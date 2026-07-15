@@ -51,7 +51,7 @@ export default function UserList({
             color: u.role === 'admin' ? '#1a2b4a' : '#555',
           }}
         >
-          {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+          {u.role === 'admin' ? 'Administrador' : 'Funcionario'}
         </Typography>
       ),
     }

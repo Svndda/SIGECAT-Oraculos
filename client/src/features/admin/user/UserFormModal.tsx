@@ -28,7 +28,7 @@ interface UserFormModalProps {
 
 const ROLES = [
   { value: 'admin', label: 'Administrador' },
-  { value: 'employee', label: 'Empleado' },
+  { value: 'employee', label: 'Funcionario' },
 ];
 
 export default function UserFormModal({
