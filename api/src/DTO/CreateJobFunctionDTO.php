@@ -6,25 +6,8 @@ namespace DTO;
 use Http\ApiException;
 use Http\ErrorType;
 
-/**
- * CreateJobFunctionDTO
- *
- * Encapsulates and validates the data required to add a function to a
- * declaration (JOB_FUNCTIONS). The owner (user_id) and the job_position_id are
- * derived from the target declaration, never from the payload. Exactly one of
- * official_function_id / custom_function_id must be provided (XOR).
- *
- * overtime_minutes is optional ("¿Es tiempo extra?" + how many minutes). Unlike
- * an update, every field here is known up front - there is no existing row to
- * merge against - so the overtime/justification requirement
- * (CHK_JOB_FUNC_OVER_JUST: overtime_minutes set => justification required) is
- * enforced directly by this DTO instead of being deferred to the service.
- *
- * @package DTO
- */
 final class CreateJobFunctionDTO
 {
-  /** Allowed frequency values, matching the FREQUENCY check constraint. */
   public const ALLOWED_FREQUENCIES = ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Semestral'];
 
   public readonly string $declarationId;
@@ -33,7 +16,7 @@ final class CreateJobFunctionDTO
   public readonly string $frequency;
   public readonly ?string $justification;
   public int $durationMinutes;
-  public int $overtimeMinutes;
+  public ?int $overtimeMinutes;
 
   private function __construct(
     string $declarationId,
@@ -53,7 +36,6 @@ final class CreateJobFunctionDTO
     $this->overtimeMinutes = $overtimeMinutes;
   }
 
-  /** @param array<string, mixed> $data */
   public static function fromArray(array $data): self
   {
     $opt = static function (string $key) use ($data): ?string {
@@ -64,6 +46,14 @@ final class CreateJobFunctionDTO
       return $value === '' ? null : $value;
     };
 
+    $durationMinutes = isset($data['duration_minutes']) && is_numeric($data['duration_minutes'])
+      ? (int) $data['duration_minutes']
+      : 0;
+
+    $overtimeMinutes = isset($data['overtime_minutes']) && is_numeric($data['overtime_minutes'])
+      ? (int) $data['overtime_minutes']
+      : null;
+
     return new self(
       (string) ($data['declaration_id'] ?? ''),
       $opt('official_function_id'),
@@ -71,8 +61,8 @@ final class CreateJobFunctionDTO
       isset($data['frequency']) && trim((string) $data['frequency']) !== ''
         ? (string) $data['frequency'] : 'Diario',
       $opt('justification'),
-      $data['duration_minutes'] ?? null,
-      $data['overtime_minutes'] ?? null
+      $durationMinutes,
+      $overtimeMinutes
     );
   }
 
@@ -114,13 +104,7 @@ final class CreateJobFunctionDTO
       );
     }
 
-    if ($this->overtimeMinutes !== null && $this->overtimeMinutes !== '') {
-      if (!is_numeric($this->overtimeMinutes) || (int) $this->overtimeMinutes != $this->overtimeMinutes) {
-        throw new ApiException(
-          ErrorType::invalidField('overtime_minutes', 'El tiempo extra debe ser un número entero')
-        );
-      }
-      $this->overtimeMinutes = (int) $this->overtimeMinutes;
+    if ($this->overtimeMinutes !== null) {
       if ($this->overtimeMinutes <= 0) {
         throw new ApiException(
           ErrorType::invalidField('overtime_minutes', 'El tiempo extra debe ser un número entero mayor a 0')

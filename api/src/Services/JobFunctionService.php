@@ -14,22 +14,6 @@ use Repositories\DeclarationsRepository;
 use Repositories\JobFunctionRepository;
 use Repositories\OfficialFunctionRepository;
 
-/**
- * JobFunctionService
- *
- * Business logic for the functions declared on a declaration (JOB_FUNCTIONS).
- * Everything is scoped to the authenticated employee: a user only manages the
- * functions of their own declarations, and only while the declaration is still
- * 'Incomplete'.
- *
- * Domain rules:
- *  - Exactly one of official/custom function is referenced (XOR).
- *  - overtime_minutes is a manual entry ("¿Es tiempo extra?" + how many
- *    minutes) rather than derived from the declaration's shift window; when
- *    it is set a justification is mandatory (mirrors CHK_JOB_FUNC_OVER_JUST).
- *
- * @package Services
- */
 class JobFunctionService
 {
   private JobFunctionRepository $repository;
@@ -45,12 +29,6 @@ class JobFunctionService
     $this->declarationRepository = new DeclarationsRepository($this->pdo);
   }
 
-  /**
-   * Adds a function to a declaration owned by the user.
-   *
-   * @return array<string, mixed>
-   * @throws ApiException
-   */
   public function createJobFunction(string $userId, CreateJobFunctionDTO $dto): array
   {
     $dto->validate();
@@ -82,12 +60,6 @@ class JobFunctionService
     return $this->getJobFunctionById($userId, $id);
   }
 
-  /**
-   * Applies a partial update to one of the user's declaration functions.
-   *
-   * @return array<string, mixed>
-   * @throws ApiException
-   */
   public function updateJobFunction(string $userId, string $jobFunctionId, UpdateJobFunctionDTO $dto): array
   {
     $dto->validate();
@@ -99,7 +71,6 @@ class JobFunctionService
 
     $this->requireIncompleteOwnedDeclaration($userId, (string) $existing['declaration_id']);
 
-    // Resolve the effective function reference (XOR is preserved).
     $official = (string) ($existing['official_function_id'] ?? '') ?: null;
     $custom   = (string) ($existing['custom_function_id'] ?? '') ?: null;
     if ($dto->officialFunctionId !== null) {
@@ -114,8 +85,12 @@ class JobFunctionService
     $frequency = $dto->frequency ?? (string) $existing['frequency'];
     $durationMinutes = $dto->durationMinutes ?? (int) $existing['duration_minutes'];
 
-    $existingOvertimeMinutes = $existing['overtime_minutes'] ?? $existing['OVERTIME_MINUTES'] ?? null;
-    $overtimeMinutes = $dto->overtimeMinutes ?? ($existingOvertimeMinutes !== null ? (int) $existingOvertimeMinutes : null);
+    $rawOvertime = $dto->overtimeMinutes;
+    $overtimeMinutes = $rawOvertime !== null && is_numeric($rawOvertime)
+      ? (int) $rawOvertime
+      : (isset($existing['overtime_minutes']) && $existing['overtime_minutes'] !== null
+          ? (int) $existing['overtime_minutes']
+          : null);
 
     $justification = $dto->justificationProvided
       ? $dto->justification
@@ -141,12 +116,6 @@ class JobFunctionService
     return $this->getJobFunctionById($userId, $jobFunctionId);
   }
 
-  /**
-   * Removes one of the user's declaration functions, only while the declaration
-   * is still 'Incomplete'.
-   *
-   * @throws ApiException
-   */
   public function deleteJobFunction(string $userId, string $jobFunctionId): void
   {
     $existing = $this->repository->findById($jobFunctionId);
@@ -169,12 +138,6 @@ class JobFunctionService
     ]);
   }
 
-  /**
-   * Returns one of the user's declaration functions.
-   *
-   * @return array<string, mixed>
-   * @throws ApiException
-   */
   public function getJobFunctionById(string $userId, string $jobFunctionId): array
   {
     if (trim($jobFunctionId) === '') {
@@ -189,13 +152,6 @@ class JobFunctionService
     return JobFunctionResponseDTO::fromArray($row)->toArray();
   }
 
-  /**
-   * Lists the user's declaration functions, optionally scoped to one of their
-   * declarations.
-   *
-   * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
-   * @throws ApiException
-   */
   public function getJobFunctions(string $userId, int $page, int $limit, ?string $declarationId = null): array
   {
     if ($page < 1) {
@@ -209,7 +165,6 @@ class JobFunctionService
     $declarationId = ($declarationId !== null && trim($declarationId) !== '') ? $declarationId : null;
 
     if ($declarationId !== null) {
-      // Only the owner of the declaration may list its functions.
       $declaration = $this->declarationRepository->findById($declarationId);
       if ($declaration === null || (string) $declaration['user_id'] !== $userId) {
         throw new ApiException(ErrorType::notFound('Declaración'));
@@ -237,13 +192,6 @@ class JobFunctionService
     ];
   }
 
-  /**
-   * Loads a declaration, asserting it exists, is owned by the user and is still
-   * 'Incomplete' (the only state in which its functions can be edited).
-   *
-   * @return array<string, mixed> The declaration row.
-   * @throws ApiException
-   */
   private function requireIncompleteOwnedDeclaration(string $userId, string $declarationId): array
   {
     $declaration = $this->declarationRepository->findById($declarationId);
@@ -262,12 +210,6 @@ class JobFunctionService
     return $declaration;
   }
 
-  /**
-   * Ensures the referenced function exists: an official function must be active,
-   * and a custom function must belong to the user.
-   *
-   * @throws ApiException
-   */
   private function assertReferencedFunctionExists(string $userId, ?string $officialFunctionId, ?string $customFunctionId): void
   {
     if ($officialFunctionId !== null) {
@@ -284,12 +226,6 @@ class JobFunctionService
     }
   }
 
-  /**
-   * Mirrors CHK_JOB_FUNC_OVER_JUST: whenever overtime_minutes is set, a
-   * justification is mandatory.
-   *
-   * @throws ApiException when overtime is reported without a justification.
-   */
   private function assertJustificationForOvertime(?int $overtimeMinutes, ?string $justification): void
   {
     if ($overtimeMinutes !== null && $overtimeMinutes > 0 && ($justification === null || trim($justification) === '')) {
