@@ -1,24 +1,33 @@
 import apiClient from './apiClient';
-import { extractApiError, type PageMeta } from './common';
+import { extractApiError, type ListParams, type PageMeta } from './common';
 
 /**
- * Declared licenses (LICENSE_TIMES): the permits/licenses an employee attaches
- * to their declaration, each over a [starts_at, ends_at] range and bound to a
- * license type. Writes are self-scoped and only allowed while the declaration
- * is still Incomplete (enforced by the backend).
+ * Licenses
+ *
+ *  - the read-only catalogue of authorized license types (LICENSE_TYPES),
+ *    served by GET /license-type and used while filling a declaration.
+ *  - the declared license entries themselves (LICENSE_TIMES): the
+ *    permits/licenses an employee attaches to their declaration, each with a
+ *    duration in minutes and bound to a license type. Writes are self-scoped
+ *    and only allowed while the declaration is still Incomplete (enforced by
+ *    the backend).
  */
+
+/** A kind of authorized permit/license (maps to LICENSE_TYPES). */
+export interface LicenseType {
+  id: string;
+  name: string;
+}
+
 export interface CreateLicensePayload {
   declaration_id: string;
   license_type_id: string;
-  /** 'YYYY-MM-DD HH:MM:SS' */
-  starts_at: string;
-  ends_at: string;
+  duration_minutes: number;
 }
 
 export interface UpdateLicensePayload {
   license_type_id?: string;
-  starts_at?: string;
-  ends_at?: string;
+  duration_minutes?: number;
 }
 
 export interface LicenseResponse {
@@ -27,11 +36,27 @@ export interface LicenseResponse {
   declaration_id: string;
   license_type_id: string;
   license_type_name: string | null;
-  starts_at: string;
-  ends_at: string;
+  duration_minutes: number;
 }
 
 export const licenseService = {
+
+  /**
+   * Lists the authorized permit/license types (active catalogue).
+   * GET /license-type.
+   */
+  async getLicenseTypes(params: ListParams = {}): Promise<LicenseType[]> {
+    try {
+      const res = await apiClient.get<{ data: LicenseType[]; meta: PageMeta }>(
+        '/license-type',
+        { params: { limit: 100, ...params } }
+      );
+      return res.data.data ?? [];
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
   /** Lists the caller's declared licenses for a given declaration. */
   async getLicensesByDeclaration(declarationId: string): Promise<LicenseResponse[]> {
     try {

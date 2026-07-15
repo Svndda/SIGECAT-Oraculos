@@ -1,7 +1,7 @@
 import { Box, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import ucrLogo from '../img/ucr_logo.svg';
-import vraLogo from '../img/VRA_logo.svg';
+import ucrLogo from '../../public/assets/ucr_logo.svg';
+import vraLogo from '../../public/assets/VRA_logo.svg';
 
 interface HeaderProps {
   /** When provided, shows a hamburger button (mobile only) to open the nav drawer. */

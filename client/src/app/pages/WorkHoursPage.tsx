@@ -1,4 +1,3 @@
-// WorkHoursPage.tsx
 import {
   Container,
   Box,
@@ -8,23 +7,13 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import {useEffect, useState} from 'react';
-import {useLocation, useNavigate} from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import {declarationService} from '../../services/declarationsService';
-import type {ServiceError} from '../../services/common';
+import { declarationService } from '../../services/declarationsService';
+import type { ServiceError } from '../../services/common';
 import DeclarationFunctions from '../../features/employee/DeclarationFunctions';
-
-function parseCanonical(s: string): Date {
-  return new Date(s.replace(' ', 'T'));
-}
-
-function durationMinutes(start: string, end: string): number {
-  const startDate = parseCanonical(start);
-  const endDate = parseCanonical(end);
-  return Math.round((endDate.getTime() - startDate.getTime()) / 60000);
-}
 
 export default function WorkHoursPage() {
   const navigate = useNavigate();
@@ -39,9 +28,7 @@ export default function WorkHoursPage() {
     let active = true;
     (async () => {
       try {
-        let id = (location.state as {
-          declarationId?: string
-        } | null)?.declarationId ?? null;
+        let id = (location.state as { declarationId?: string } | null)?.declarationId ?? null;
         if (!id) {
           const incomplete = await declarationService.checkIncomplete();
           id = incomplete.has_incomplete ? incomplete.declaration_id ?? null : null;
@@ -59,7 +46,7 @@ export default function WorkHoursPage() {
         let total = 0;
         if (decl.job_functions) {
           for (const fn of decl.job_functions) {
-            total += durationMinutes(fn.starts_at, fn.ends_at);
+            total += (fn.duration_minutes || 0);
           }
         }
         setTotalFunctionMinutes(total);
@@ -71,15 +58,13 @@ export default function WorkHoursPage() {
         }
       }
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [location.state]);
 
   const handleContinue = () => {
     if (declarationId) {
       navigate('/additional-information', {
-        state: {declarationId, totalFunctionMinutes},
+        state: { declarationId, totalFunctionMinutes },
       });
     }
   };
@@ -87,8 +72,8 @@ export default function WorkHoursPage() {
   if (loading) {
     return (
       <Container maxWidth="lg">
-        <Box sx={{display: 'flex', justifyContent: 'center', py: 8}}>
-          <CircularProgress size={40}/>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={40} />
         </Box>
       </Container>
     );
@@ -96,47 +81,32 @@ export default function WorkHoursPage() {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{py: 4}}>
-        <Typography variant="h4" component="h1" sx={{
-          mb: 1,
-          fontWeight: 'bold',
-          color: '#12457d',
-          textAlign: 'center'
-        }}>
+      <Box sx={{ py: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold', color: '#12457d', textAlign: 'center' }}>
           Cargas de Trabajo
         </Typography>
-        <Typography variant="subtitle1"
-                    sx={{mb: 4, color: '#666', textAlign: 'center'}}>
+        <Typography variant="subtitle1" sx={{ mb: 4, color: '#666', textAlign: 'center' }}>
           Diagnóstico de Cargas de trabajo
         </Typography>
 
-        <DeclarationFunctions/>
+        <DeclarationFunctions />
 
         {error && (
-          <Alert severity="error" sx={{mt: 3}}>
+          <Alert severity="error" sx={{ mt: 3 }}>
             {error}
           </Alert>
         )}
 
-        <Stack direction={{xs: 'column-reverse', sm: 'row'}} spacing={2}
-               sx={{justifyContent: 'center', mt: 4}}>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon/>}
-            onClick={() => navigate('/employee-form')}
-            sx={{color: '#12457d', borderColor: '#12457d'}}
-          >
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate('/employee-form')} sx={{ color: '#12457d', borderColor: '#12457d' }}>
             Atrás
           </Button>
           <Button
             variant="contained"
-            endIcon={<ArrowForwardIcon/>}
+            endIcon={<ArrowForwardIcon />}
             onClick={handleContinue}
             disabled={!declarationId}
-            sx={{
-              backgroundColor: '#2c2c2c',
-              '&:hover': {backgroundColor: '#1a1a1a'},
-            }}
+            sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' } }}
           >
             Continuar
           </Button>
