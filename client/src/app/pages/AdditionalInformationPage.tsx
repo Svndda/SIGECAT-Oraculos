@@ -8,17 +8,17 @@ import {
   CircularProgress,
   TextField,
 } from '@mui/material';
-import {useEffect, useState} from 'react';
-import {useLocation, useNavigate} from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import {declarationService} from '../../services/declarationsService';
-import {restTimeService} from '../../services/restTimeService';
-import {licenseService} from '../../services/licenseService';
-import {type ServiceError} from '../../services/common';
+import { declarationService } from '../../services/declarationsService';
+import { restTimeService } from '../../services/restTimeService';
+import { licenseService } from '../../services/licenseService';
+import { type ServiceError } from '../../services/common';
 import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
 import DeclarationRestTimes from '../../features/employee/DeclarationRestTimes';
-import {useSnackbar} from '../../context/SnackbarContext';
+import { useSnackbar } from '../../context/SnackbarContext';
 
 function parseTimestamp(s: string): Date {
   const clean = s.replace('T', ' ');
@@ -38,16 +38,13 @@ function parseTimestamp(s: string): Date {
 
   let day: number, month: number, year: number;
 
-  // Parse date part (DD-MON-YYYY or YYYY-MM-DD)
   const dateSegments = datePart.split('-');
   if (dateSegments.length !== 3) throw new Error('Invalid date part');
   if (dateSegments[0].length === 4 && !isNaN(parseInt(dateSegments[0], 10))) {
-    // YYYY-MM-DD
     year = parseInt(dateSegments[0], 10);
     month = parseInt(dateSegments[1], 10) - 1;
     day = parseInt(dateSegments[2], 10);
   } else {
-    // DD-MON-YYYY
     day = parseInt(dateSegments[0], 10);
     const monthStr = dateSegments[1].toUpperCase();
     const MONTHS: Record<string, number> = {
@@ -62,7 +59,6 @@ function parseTimestamp(s: string): Date {
 
   let hour: number, minute: number, second: number = 0;
 
-  // Parse time part (HH.MM.SS... or HH:MM:SS)
   const dotParts = timePart.split('.');
   if (dotParts.length >= 3) {
     hour = parseInt(dotParts[0], 10);
@@ -87,17 +83,10 @@ function parseTimestamp(s: string): Date {
   return new Date(year, month, day, hour, minute, second);
 }
 
-function durationMinutes(start: string, end: string): number {
+function durationMinutesShift(start: string, end: string): number {
   const startDate = parseTimestamp(start);
   const endDate = parseTimestamp(end);
   return Math.round((endDate.getTime() - startDate.getTime()) / 60000);
-}
-
-function isTimeOutsideShift(time: string, shiftStart: string, shiftEnd: string): boolean {
-  const t = parseTimestamp(time);
-  const s = parseTimestamp(shiftStart);
-  const e = parseTimestamp(shiftEnd);
-  return t < s || t > e;
 }
 
 export default function AdditionalInformationPage() {
@@ -111,9 +100,7 @@ export default function AdditionalInformationPage() {
 
   const [justification, setJustification] = useState('');
   const [justificationRequired, setJustificationRequired] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{
-    justification?: string;
-  }>({});
+  const [validationErrors, setValidationErrors] = useState<{ justification?: string; }>({});
   const [isSaving, setIsSaving] = useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
@@ -127,32 +114,20 @@ export default function AdditionalInformationPage() {
 
     const shiftStartVal = decl.shift_starts_at;
     const shiftEndVal = decl.shift_ends_at;
-    const shiftDur = durationMinutes(shiftStartVal, shiftEndVal);
+    const shiftDur = durationMinutesShift(shiftStartVal, shiftEndVal);
 
     let required = false;
 
-    for (const fn of decl.job_functions || []) {
-      if (
-        isTimeOutsideShift(fn.starts_at, shiftStartVal, shiftEndVal) ||
-        isTimeOutsideShift(fn.ends_at, shiftStartVal, shiftEndVal)
-      ) {
-        required = true;
-        break;
-      }
-    }
-
     const totalFunctions = (decl.job_functions || []).reduce(
-      (acc, fn) => acc + durationMinutes(fn.starts_at, fn.ends_at),
-      0
+      (acc, fn) => acc + (fn.duration_minutes || 0), 0
     );
     const totalLicenses = lic.reduce(
-      (acc, l) => acc + durationMinutes(l.starts_at, l.ends_at),
-      0
+      (acc, l) => acc + (l.duration_minutes || 0), 0
     );
     const totalRests = rest.reduce(
-      (acc, r) => acc + durationMinutes(r.starts_at, r.ends_at),
-      0
+      (acc, r) => acc + (r.duration_minutes || 0), 0
     );
+
     const totalAll = totalFunctions + totalLicenses + totalRests;
     if (totalAll > shiftDur) {
       required = true;
@@ -169,9 +144,7 @@ export default function AdditionalInformationPage() {
     let active = true;
     (async () => {
       try {
-        const stateId = (location.state as {
-          declarationId?: string
-        } | null)?.declarationId;
+        const stateId = (location.state as { declarationId?: string } | null)?.declarationId;
         let id = stateId ?? null;
         if (!id) {
           const incomplete = await declarationService.checkIncomplete();
@@ -193,9 +166,7 @@ export default function AdditionalInformationPage() {
         }
       }
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [location.state, refreshKey]);
 
   const handleDataChange = () => {
@@ -230,7 +201,7 @@ export default function AdditionalInformationPage() {
           justification: justification.trim(),
         });
       }
-      await declarationService.changeStatus(declarationId, {status: 'Completed'});
+      await declarationService.changeStatus(declarationId, { status: 'Completed' });
       snackbar.success('Declaración completada exitosamente.');
       setTimeout(() => navigate('/'), 1500);
     } catch (err) {
@@ -243,8 +214,8 @@ export default function AdditionalInformationPage() {
   if (loading) {
     return (
       <Container maxWidth="lg">
-        <Box sx={{display: 'flex', justifyContent: 'center', py: 8}}>
-          <CircularProgress size={40}/>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={40} />
         </Box>
       </Container>
     );
@@ -253,14 +224,9 @@ export default function AdditionalInformationPage() {
   if (error) {
     return (
       <Container maxWidth="lg">
-        <Box sx={{py: 4}}>
+        <Box sx={{ py: 4 }}>
           <Alert severity="error">{error}</Alert>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon/>}
-            onClick={() => navigate('/work-hours')}
-            sx={{mt: 2}}
-          >
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate('/work-hours')} sx={{ mt: 2 }}>
             Volver
           </Button>
         </Box>
@@ -270,39 +236,26 @@ export default function AdditionalInformationPage() {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{py: 4}}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            mb: 1,
-            fontWeight: 'bold',
-            color: '#12457d',
-            textAlign: 'center',
-          }}
-        >
+      <Box sx={{ py: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 1, fontWeight: 'bold', color: '#12457d', textAlign: 'center' }}>
           Información Adicional
         </Typography>
-        <Typography variant="subtitle1"
-                    sx={{mb: 4, color: '#666', textAlign: 'center'}}>
+        <Typography variant="subtitle1" sx={{ mb: 4, color: '#666', textAlign: 'center' }}>
           Permisos, licencias y tiempos de descanso
         </Typography>
 
         {justificationRequired && (
-          <Alert severity="warning" sx={{mb: 3}}>
-            Se requiere justificación porque alguna función está fuera del
-            horario de la jornada
-            o la suma de tiempos excede la jornada laboral. Debes indicar si tu
-            jefatura inmediata
-            tiene conocimiento de este tiempo adicional.
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Se requiere justificación porque la suma de tiempos excede la jornada laboral.
+            Debes indicar si tu jefatura inmediata tiene conocimiento de este tiempo adicional.
           </Alert>
         )}
 
-        <DeclarationLicenses onDataChange={handleDataChange}/>
-        <DeclarationRestTimes onDataChange={handleDataChange}/>
+        <DeclarationLicenses onDataChange={handleDataChange} />
+        <DeclarationRestTimes onDataChange={handleDataChange} />
 
         {justificationRequired && (
-          <Box sx={{mt: 4}}>
+          <Box sx={{ mt: 4 }}>
             <TextField
               label="Justificación (tiempo adicional a la jornada)"
               multiline
@@ -325,25 +278,16 @@ export default function AdditionalInformationPage() {
           </Box>
         )}
 
-        <Stack direction={{xs: 'column-reverse', sm: 'row'}} spacing={2}
-               sx={{justifyContent: 'center', mt: 4}}>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon/>}
-            onClick={() => navigate('/work-hours')}
-            sx={{color: '#12457d', borderColor: '#12457d'}}
-          >
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} sx={{ justifyContent: 'center', mt: 4 }}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate('/work-hours')} sx={{ color: '#12457d', borderColor: '#12457d' }}>
             Atrás
           </Button>
           <Button
             variant="contained"
-            endIcon={<CheckCircleIcon/>}
+            endIcon={<CheckCircleIcon />}
             onClick={handleComplete}
             disabled={isSaving || (justificationRequired && !justification.trim())}
-            sx={{
-              backgroundColor: '#2c2c2c',
-              '&:hover': {backgroundColor: '#1a1a1a'},
-            }}
+            sx={{ backgroundColor: '#2c2c2c', '&:hover': { backgroundColor: '#1a1a1a' } }}
           >
             {isSaving ? 'Guardando...' : 'Completar'}
           </Button>

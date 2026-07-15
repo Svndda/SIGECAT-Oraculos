@@ -8,23 +8,17 @@ import type { LicenseResponse } from '../services/licenseService';
 export function calcTotalDeclaredHours(jobFunctions: JobFunction[]): number {
   let total = 0;
   for (const jf of jobFunctions) {
-    if (!jf.starts_at || !jf.ends_at) continue;
-    const start = parseOracleToTimeInput(jf.starts_at);
-    const end = parseOracleToTimeInput(jf.ends_at);
-    if (!start || !end) continue;
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    let dailyHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-    if (dailyHours < 0) dailyHours += 24;
-    let multiplier: number;
+    const durationMinutes = jf.duration_minutes || 0;
+    if (durationMinutes <= 0) continue;
+    const durationHours = durationMinutes / 60;
     const freq = jf.frequency?.toLowerCase() || '';
+    let multiplier = 1;
     if (freq.includes('diario')) multiplier = 5;
     else if (freq.includes('semanal')) multiplier = 1;
-    else if (freq.includes('quincenal')) multiplier = 2;
-    else if (freq.includes('mensual')) multiplier = 4;
-    else if (freq.includes('anual')) multiplier = 0.02;
-    else multiplier = 1; // por defecto semanal
-    total += dailyHours * multiplier;
+    else if (freq.includes('quincenal')) multiplier = 0.5;
+    else if (freq.includes('mensual')) multiplier = 0.25;
+    else if (freq.includes('anual')) multiplier = 1 / 52;
+    total += durationHours * multiplier;
   }
   return Math.round(total * 100) / 100;
 }
@@ -44,14 +38,10 @@ export function calcWeeklyShiftHours(
   return dailyHours * 5;
 }
 
-export function sumDurationsInHours(entries: { starts_at: string; ends_at: string }[]): number {
+export function sumDurationsInHours(entries: { duration_minutes: number }[]): number {
   let totalMinutes = 0;
   for (const e of entries) {
-    const start = new Date(e.starts_at);
-    const end = new Date(e.ends_at);
-    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
-      totalMinutes += (end.getTime() - start.getTime()) / 60000;
-    }
+    totalMinutes += e.duration_minutes || 0;
   }
   return Math.round((totalMinutes / 60) * 100) / 100;
 }
@@ -74,15 +64,6 @@ function functionLabel(jf: JobFunction, officialFnsForJob: OfficialFunction[]): 
   return 'Oficial';
 }
 
-function durationMinutes(startsAt: string, endsAt: string): number {
-  return Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60000);
-}
-
-/**
- * Builds the CSV content for a declaration. `officialFnsForJob` refines the
- * "official" function label (own job vs. another job's catalogue); pass an
- * empty array for a lighter export where that distinction isn't loaded.
- */
 export function buildDeclarationCsv(
   declaration: Declaration,
   restTimes: RestTimeResponse[],
@@ -122,15 +103,15 @@ export function buildDeclarationCsv(
   lines.push('');
 
   lines.push(csvRow(['Funciones']));
-  lines.push(csvRow(['Función', 'Tipo', 'Descripción', 'Horario', 'Frecuencia', 'Extras', 'Justificación']));
+  lines.push(csvRow(['Función', 'Tipo', 'Descripción', 'Duración (min)', 'Frecuencia', 'Extras', 'Justificación']));
   for (const jf of job_functions) {
     lines.push(csvRow([
       jf.function_name || '—',
       functionLabel(jf, officialFnsForJob),
       jf.function_description || '—',
-      `${formatOracleTime(jf.starts_at)} - ${formatOracleTime(jf.ends_at)}`,
+      jf.duration_minutes ?? 0,
       jf.frequency || '—',
-      jf.overtime ? 'Sí' : 'No',
+      (jf.overtime_minutes && jf.overtime_minutes > 0) ? 'Sí' : 'No',
       jf.justification || '—',
     ]));
   }
@@ -138,13 +119,11 @@ export function buildDeclarationCsv(
 
   if (restTimes.length > 0) {
     lines.push(csvRow(['Descansos']));
-    lines.push(csvRow(['Tipo', 'Inicio', 'Fin', 'Duración (min)']));
+    lines.push(csvRow(['Tipo', 'Duración (min)']));
     for (const rt of restTimes) {
       lines.push(csvRow([
         REST_TYPE_LABELS[rt.rest_type],
-        formatOracleTime(rt.starts_at),
-        formatOracleTime(rt.ends_at),
-        durationMinutes(rt.starts_at, rt.ends_at),
+        rt.duration_minutes,
       ]));
     }
     lines.push('');
@@ -152,13 +131,11 @@ export function buildDeclarationCsv(
 
   if (licenseTimes.length > 0) {
     lines.push(csvRow(['Licencias']));
-    lines.push(csvRow(['Tipo', 'Inicio', 'Fin', 'Duración (min)']));
+    lines.push(csvRow(['Tipo', 'Duración (min)']));
     for (const lic of licenseTimes) {
       lines.push(csvRow([
         lic.license_type_name || '—',
-        formatOracleTime(lic.starts_at),
-        formatOracleTime(lic.ends_at),
-        durationMinutes(lic.starts_at, lic.ends_at),
+        lic.duration_minutes,
       ]));
     }
     lines.push('');
@@ -201,7 +178,6 @@ export function exportDeclarationCsv(
   downloadCsv(content, declarationCsvFilename(declaration));
 }
 
-/** Renders a DOM element (e.g. a modal's content) to a paginated A4 PDF. */
 export async function exportElementToPdf(element: HTMLElement, filename: string): Promise<void> {
   const { default: html2canvas } = await import('html2canvas');
   const { jsPDF } = await import('jspdf');

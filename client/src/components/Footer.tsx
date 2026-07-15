@@ -1,7 +1,7 @@
 import { Box, Typography, Link, IconButton } from '@mui/material';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import FacebookIcon from '@mui/icons-material/Facebook';
-import ucrLogo from '../img/ucr_logo2.svg';
+import ucrLogo from '../../public/assets/ucr_logo2.svg';
 
 export default function Footer() {
   return (

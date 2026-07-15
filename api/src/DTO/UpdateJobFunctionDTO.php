@@ -10,12 +10,13 @@ use Http\ErrorType;
  * UpdateJobFunctionDTO
  *
  * Encapsulates and validates a partial update of a declaration function
- * (JOB_FUNCTIONS). Supported fields: frequency, starts_at, ends_at,
- * justification and an optional swap of the referenced function (official XOR
- * custom). The declaration a function belongs to cannot be changed.
+ * (JOB_FUNCTIONS). Supported fields: frequency, duration_minutes,
+ * overtime_minutes, justification and an optional swap of the referenced
+ * function (official XOR custom). The declaration a function belongs to
+ * cannot be changed.
  *
- * Cross-field rules (range ordering, overtime and the justification
- * requirement) depend on the declaration's shift window and are enforced by
+ * Cross-field rules (the overtime/justification requirement, CHK_JOB_FUNC_OVER_JUST)
+ * depend on the effective values after the merge and are enforced by
  * JobFunctionService against the existing row.
  *
  * @package DTO
@@ -31,11 +32,21 @@ final class UpdateJobFunctionDTO
   public readonly ?string $justification;
   public readonly bool $justificationProvided;
 
-  /** Normalized 'Y-m-d H:i:s' strings (null when missing or unparseable). */
-  public readonly ?string $startsAt;
-  public readonly ?string $endsAt;
-  public readonly bool $startsAtProvided;
-  public readonly bool $endsAtProvided;
+  /**
+   * Requested new duration in minutes, or null when the client did not send
+   * this field (meaning: leave it unchanged). Holds the raw scalar until
+   * validate() checks its format and normalizes it to a plain int.
+   */
+  public int|string|null $durationMinutes;
+
+  /**
+   * Requested new overtime duration in minutes, or null when the client did
+   * not send this field (meaning: leave it unchanged). Same raw-then-
+   * normalized handling as durationMinutes. duration_minutes and
+   * overtime_minutes are independent fields (not a start/end pair), so each
+   * carries its own value without needing a matching "provided" flag.
+   */
+  public int|string|null $overtimeMinutes;
 
   private function __construct(
     ?string $frequency,
@@ -45,10 +56,8 @@ final class UpdateJobFunctionDTO
     bool $customProvided,
     ?string $justification,
     bool $justificationProvided,
-    ?string $startsAt,
-    ?string $endsAt,
-    bool $startsAtProvided,
-    bool $endsAtProvided
+    int|string|null $durationMinutes,
+    int|string|null $overtimeMinutes
   ) {
     $this->frequency = $frequency;
     $this->officialFunctionId = $officialFunctionId;
@@ -57,10 +66,8 @@ final class UpdateJobFunctionDTO
     $this->customProvided = $customProvided;
     $this->justification = $justification;
     $this->justificationProvided = $justificationProvided;
-    $this->startsAt = $startsAt;
-    $this->endsAt = $endsAt;
-    $this->startsAtProvided = $startsAtProvided;
-    $this->endsAtProvided = $endsAtProvided;
+    $this->durationMinutes = $durationMinutes;
+    $this->overtimeMinutes = $overtimeMinutes;
   }
 
   /** @param array<string, mixed> $data */
@@ -82,10 +89,8 @@ final class UpdateJobFunctionDTO
       array_key_exists('custom_function_id', $data),
       $optTrim('justification'),
       array_key_exists('justification', $data),
-      CreateRestTimeDTO::normalizeTimestamp($data['starts_at'] ?? null),
-      CreateRestTimeDTO::normalizeTimestamp($data['ends_at'] ?? null),
-      isset($data['starts_at']) && $data['starts_at'] !== '',
-      isset($data['ends_at']) && $data['ends_at'] !== ''
+      $data['duration_minutes'] ?? null,
+      $data['overtime_minutes'] ?? null
     );
   }
 
@@ -111,12 +116,8 @@ final class UpdateJobFunctionDTO
       );
     }
 
-    if ($this->startsAtProvided && $this->startsAt === null) {
-      throw new ApiException(ErrorType::invalidField('starts_at', 'El formato de fecha y hora no es válido'));
-    }
-    if ($this->endsAtProvided && $this->endsAt === null) {
-      throw new ApiException(ErrorType::invalidField('ends_at', 'El formato de fecha y hora no es válido'));
-    }
+    $this->durationMinutes = $this->normalizePositiveInt($this->durationMinutes, 'duration_minutes');
+    $this->overtimeMinutes = $this->normalizePositiveInt($this->overtimeMinutes, 'overtime_minutes');
 
     if ($this->justification !== null && strlen($this->justification) > 255) {
       throw new ApiException(
@@ -128,12 +129,34 @@ final class UpdateJobFunctionDTO
       || $this->officialProvided
       || $this->customProvided
       || $this->justificationProvided
-      || $this->startsAtProvided
-      || $this->endsAtProvided;
+      || $this->durationMinutes !== null
+      || $this->overtimeMinutes !== null;
     if (!$hasAny) {
       throw new ApiException(
         ErrorType::from('NO_UPDATABLE_FIELDS', 'No se proporcionaron campos para actualizar.'), 400
       );
     }
+  }
+
+  /**
+   * Validates a raw scalar as an optional positive integer field. Returns
+   * null when the field was not sent (left unchanged), or the normalized
+   * int when it was sent and is a valid positive whole number.
+   */
+  private function normalizePositiveInt(int|string|null $value, string $field): ?int
+  {
+    if ($value === null || $value === '') {
+      return null;
+    }
+    if (!is_numeric($value) || (int) $value != $value) {
+      throw new ApiException(ErrorType::invalidField($field, 'Debe ser un número entero'));
+    }
+
+    $intValue = (int) $value;
+    if ($intValue <= 0) {
+      throw new ApiException(ErrorType::invalidField($field, 'Debe ser un número entero mayor a 0'));
+    }
+
+    return $intValue;
   }
 }

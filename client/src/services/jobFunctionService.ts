@@ -1,22 +1,40 @@
 import apiClient from './apiClient';
 import { extractApiError } from './common';
 
-/**
- * Declaration functions (JOB_FUNCTIONS): the functions an employee attaches to
- * their declaration, each over a [starts_at, ends_at] range with a frequency.
- * Exactly one of official_function_id / custom_function_id is set (XOR).
- *
- * Reads of a declaration's functions come enriched (with names) from
- * declarationService.getDeclarationById; this service only writes.
- */
+interface JobFunctionFields {
+  user_id: string;
+  job_position_id: string;
+  declaration_id: string;
+  official_function_id: string | null;
+  custom_function_id: string | null;
+  overtime_minutes: number | null;
+  justification: string | null;
+  frequency: string;
+  duration_minutes: number;
+}
+
+/** Shape returned by the /job-functions write endpoints (POST, PATCH). */
+export interface JobFunction extends JobFunctionFields {
+  id: string;
+}
+
+/** Shape embedded in Declaration.job_functions (GET /declarations/{id}). */
+export interface DeclarationJobFunction extends JobFunctionFields {
+  job_function_id: string;
+  function_name?: string;
+  function_description?: string;
+  function_type?: 'official' | 'custom';
+  expected_time?: number | null;
+}
+
 export interface CreateJobFunctionPayload {
   declaration_id: string;
   official_function_id?: string;
   custom_function_id?: string;
   frequency: string;
-  /** 'YYYY-MM-DD HH:MM:SS' */
-  starts_at: string;
-  ends_at: string;
+  duration_minutes: number;
+  /** Manual overtime duration in minutes; when set, justification is required. */
+  overtime_minutes?: number;
   justification?: string;
 }
 
@@ -24,29 +42,15 @@ export interface UpdateJobFunctionPayload {
   official_function_id?: string;
   custom_function_id?: string;
   frequency?: string;
-  starts_at?: string;
-  ends_at?: string;
+  duration_minutes?: number;
+  overtime_minutes?: number;
   justification?: string;
 }
 
-export interface JobFunctionResponse {
-  id: string;
-  user_id: string;
-  job_position_id: string;
-  declaration_id: string;
-  official_function_id: string | null;
-  custom_function_id: string | null;
-  overtime: number | null;
-  justification: string | null;
-  frequency: string;
-  starts_at: string;
-  ends_at: string;
-}
-
 export const jobFunctionService = {
-  async createJobFunction(payload: CreateJobFunctionPayload): Promise<JobFunctionResponse> {
+  async createJobFunction(payload: CreateJobFunctionPayload): Promise<JobFunction> {
     try {
-      const res = await apiClient.post<{ data: JobFunctionResponse }>('/job-functions', payload);
+      const res = await apiClient.post<{ data: JobFunction }>('/job-functions', payload);
       return res.data.data;
     } catch (e) {
       throw extractApiError(e);
