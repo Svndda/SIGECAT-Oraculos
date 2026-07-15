@@ -99,8 +99,12 @@ final class LogRepository extends Repository
 
     $offset = ($page - 1) * $limit;
 
+    // Deliberately omit the CONTEXT CLOB from the list: pdo_oci fetches each LOB
+    // in its own round trip to the (remote) database, which turns a page of rows
+    // into dozens of round trips. The list does not render context anyway — it
+    // is loaded per row on demand via findById() when a detail view is opened.
     $stmt = $this->db->prepare(
-      "SELECT log_id, log_level, category, action, message, context,
+      "SELECT log_id, log_level, category, action, message,
               user_id, ip_address, http_method, http_path, status_code, created_at
          FROM SYSTEM_LOGS
          {$where}
@@ -119,6 +123,27 @@ final class LogRepository extends Repository
       'data'  => $stmt->fetchAll(),
       'total' => $total,
     ];
+  }
+
+  /**
+   * Loads a single log entry including its CONTEXT CLOB. Used for the detail
+   * view, where the per-row LOB round trip is paid once rather than for a whole
+   * page. Returns null when the id does not exist.
+   *
+   * @return array<string, mixed>|null
+   */
+  public function findById(string $id): ?array
+  {
+    $stmt = $this->db->prepare(
+      "SELECT log_id, log_level, category, action, message, context,
+              user_id, ip_address, http_method, http_path, status_code, created_at
+         FROM SYSTEM_LOGS
+        WHERE log_id = :id"
+    );
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+
+    return $row === false ? null : $row;
   }
 
   /**

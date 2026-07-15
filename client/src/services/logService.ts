@@ -59,6 +59,20 @@ export const logService = {
     }
   },
 
+  /**
+   * Loads a single log entry including its `context`. The list omits context
+   * (its CLOB is costly to fetch per row), so the detail view fetches it on
+   * demand when a record is opened.
+   */
+  async get(id: string): Promise<SystemLog> {
+    try {
+      const res = await apiClient.get<{ data: SystemLog }>(`/logs/${id}`);
+      return res.data.data;
+    } catch (e) {
+      throw extractApiError(e);
+    }
+  },
+
   /** Distinct levels and categories present in the log, for filter dropdowns. */
   async facets(): Promise<LogFacets> {
     try {

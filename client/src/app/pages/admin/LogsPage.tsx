@@ -42,8 +42,8 @@ import { formatOracleDate, parseOracleDate, type ServiceError } from '../../../s
 import { useSnackbar } from '../../../context/SnackbarContext';
 
 const PAGE_SIZE = 15;
-/** How many recent log rows to sample and classify on the client. */
-const SAMPLE_SIZE = 500;
+/** How many recent business events to sample and classify on the client. */
+const SAMPLE_SIZE = 300;
 
 interface Actor {
   name: string;
@@ -66,6 +66,8 @@ export default function LogsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<SystemLog | null>(null);
+  const [detail, setDetail] = useState<SystemLog | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const [action, setAction] = useState('');
   const [entity, setEntity] = useState('');
@@ -142,6 +144,25 @@ export default function LogsPage() {
   useEffect(() => {
     setPage(1);
   }, [action, entity, severity, search, dateFrom, dateTo]);
+
+  // Opening a record lazily loads its context (omitted from the list for speed).
+  const openDetail = useCallback(async (log: SystemLog) => {
+    setSelected(log);
+    setDetail(null);
+    setDetailLoading(true);
+    try {
+      setDetail(await logService.get(log.id));
+    } catch {
+      setDetail(log); // fall back to the row without context
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setSelected(null);
+    setDetail(null);
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -281,7 +302,7 @@ export default function LogsPage() {
                     <TableCell align="center">
                       <IconButton
                         size="small"
-                        onClick={() => setSelected(log)}
+                        onClick={() => void openDetail(log)}
                         aria-label="Ver detalle del registro"
                       >
                         <VisibilityOutlinedIcon fontSize="small" />
@@ -306,8 +327,10 @@ export default function LogsPage() {
 
       <ActivityDetailModal
         log={selected}
+        detail={detail}
+        detailLoading={detailLoading}
         actor={selected ? resolveActor(selected, users) : null}
-        onClose={() => setSelected(null)}
+        onClose={closeDetail}
       />
     </Box>
   );
@@ -315,14 +338,19 @@ export default function LogsPage() {
 
 interface ActivityDetailModalProps {
   log: SystemLog | null;
+  detail: SystemLog | null;
+  detailLoading: boolean;
   actor: Actor | null;
   onClose: () => void;
 }
 
-function ActivityDetailModal({ log, actor, onClose }: ActivityDetailModalProps) {
+function ActivityDetailModal({ log, detail, detailLoading, actor, onClose }: ActivityDetailModalProps) {
   const meta = log ? activityMeta(log) : null;
-  const rows = log ? contextRows(log) : [];
-  const affected = log ? affectedLabel(log) : null;
+  // Affected-entity label and the details table come from the lazily loaded
+  // full record (the list omits context), falling back to the row otherwise.
+  const withContext = detail ?? log;
+  const rows = withContext ? contextRows(withContext) : [];
+  const affected = withContext ? affectedLabel(withContext) : null;
 
   return (
     <Dialog open={log !== null} onClose={onClose} maxWidth="sm" fullWidth>
@@ -365,13 +393,20 @@ function ActivityDetailModal({ log, actor, onClose }: ActivityDetailModalProps) 
           >
             <Field label="Fecha y hora" value={formatOracleDate(log.created_at, true)} />
             <Field label="Usuario" value={actor?.name ?? '—'} />
-            <Field label="Entidad afectada" value={affected ?? '—'} />
+            <Field label="Entidad afectada" value={detailLoading ? 'Cargando…' : (affected ?? '—')} />
             <Field label="Correo electrónico" value={actor?.email ?? '—'} />
           </Box>
 
-          <Field label="Descripción" value={log.message} sx={{ mb: rows.length ? 2 : 0 }} />
+          <Field label="Descripción" value={log.message} sx={{ mb: detailLoading || rows.length ? 2 : 0 }} />
 
-          {rows.length > 0 && (
+          {detailLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={16} />
+              <Typography variant="body2" color="text.secondary">
+                Cargando detalles…
+              </Typography>
+            </Box>
+          ) : rows.length > 0 ? (
             <>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
                 Detalles del evento
@@ -395,7 +430,7 @@ function ActivityDetailModal({ log, actor, onClose }: ActivityDetailModalProps) 
                 </Table>
               </TableContainer>
             </>
-          )}
+          ) : null}
         </DialogContent>
       )}
     </Dialog>

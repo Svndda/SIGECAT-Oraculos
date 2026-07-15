@@ -61,6 +61,18 @@ final class LogService
   }
 
   /**
+   * Returns a single log entry (including its decoded context) or null when it
+   * does not exist. Backs the detail view, where context is loaded on demand.
+   *
+   * @return array<string, mixed>|null
+   */
+  public function get(string $id): ?array
+  {
+    $row = $this->logRepository->findById($id);
+    return $row === null ? null : LogResponseDTO::fromArray($row)->toArray();
+  }
+
+  /**
    * Distinct facet values (levels, categories) for building filter controls.
    *
    * @return array{levels: array<int, string>, categories: array<int, string>}
