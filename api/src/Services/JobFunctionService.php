@@ -96,10 +96,8 @@ class JobFunctionService
     // Normalize overtimeMinutes to ?int
     $rawOvertime = $dto->overtimeMinutes;
     $overtimeMinutes = $rawOvertime !== null && is_numeric($rawOvertime)
-      ? (int) $rawOvertime
-      : (isset($existing['overtime_minutes']) && $existing['overtime_minutes'] !== null
-          ? (int) $existing['overtime_minutes']
-          : null);
+        ? (int) $rawOvertime
+        : (isset($existing['overtime_minutes']) ? (int) $existing['overtime_minutes'] : null);
 
     $justification = $dto->justificationProvided
       ? $dto->justification
