@@ -4,7 +4,7 @@ import type { AdminUser } from '../../../services/userService';
 
 const ROLES = [
   { value: 'admin', label: 'Administrador' },
-  { value: 'employee', label: 'Empleado' },
+  { value: 'employee', label: 'Funcionario' },
 ];
 
 interface ChangeRoleModalProps {
