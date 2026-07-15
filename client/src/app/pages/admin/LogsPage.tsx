@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   Dialog,
@@ -23,6 +24,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -60,6 +63,10 @@ function resolveActor(log: SystemLog, users: Map<string, AdminUser>): Actor {
 
 export default function LogsPage() {
   const snackbar = useSnackbar();
+  const theme = useTheme();
+  // Below the table's comfortable width, switch to stacked cards so records are
+  // read top-to-bottom instead of needing a horizontal scroll.
+  const isCompact = useMediaQuery(theme.breakpoints.down('lg'));
 
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [users, setUsers] = useState<Map<string, AdminUser>>(new Map());
@@ -254,67 +261,115 @@ export default function LogsPage() {
         </Tooltip>
       </Stack>
 
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Fecha y hora</TableCell>
-              <TableCell>Usuario</TableCell>
-              <TableCell>Acción</TableCell>
-              <TableCell>Entidad</TableCell>
-              <TableCell>Descripción</TableCell>
-              <TableCell align="center">Severidad</TableCell>
-              <TableCell align="center">Detalles</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pageItems.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {loading ? 'Cargando…' : 'No hay actividad para los filtros seleccionados.'}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              pageItems.map((log) => {
-                const meta = activityMeta(log);
-                const actor = resolveActor(log, users);
-                const sev = SEVERITY_META[meta.severity];
-                return (
-                  <TableRow key={log.id} hover>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+      {isCompact ? (
+        <Stack spacing={1.25}>
+          {pageItems.length === 0 ? (
+            <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                {loading ? 'Cargando…' : 'No hay actividad para los filtros seleccionados.'}
+              </Typography>
+            </Paper>
+          ) : (
+            pageItems.map((log) => {
+              const meta = activityMeta(log);
+              const actor = resolveActor(log, users);
+              const sev = SEVERITY_META[meta.severity];
+              return (
+                <Paper key={log.id} variant="outlined" sx={{ p: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mb: 0.75 }}>
+                    <Typography variant="caption" color="text.secondary">
                       {formatOracleDate(log.created_at, true)}
-                    </TableCell>
-                    <TableCell>{actor.name}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={meta.actionLabel} variant="outlined" />
-                    </TableCell>
-                    <TableCell>{meta.entityLabel}</TableCell>
-                    <TableCell sx={{ maxWidth: 360 }}>
-                      <Typography variant="body2" noWrap title={log.message}>
-                        {log.message}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip size="small" label={sev.label} color={sev.color} />
-                    </TableCell>
-                    <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        onClick={() => void openDetail(log)}
-                        aria-label="Ver detalle del registro"
-                      >
-                        <VisibilityOutlinedIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    </Typography>
+                    <Chip size="small" label={sev.label} color={sev.color} />
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.75 }}>
+                    {log.message}
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 0.75 }}>
+                    <Chip size="small" label={meta.actionLabel} variant="outlined" />
+                    <Chip size="small" label={meta.entityLabel} variant="outlined" />
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0 }}>
+                      {actor.name}
+                    </Typography>
+                    <Button
+                      size="small"
+                      startIcon={<VisibilityOutlinedIcon />}
+                      onClick={() => void openDetail(log)}
+                      sx={{ textTransform: 'none', flexShrink: 0 }}
+                    >
+                      Detalle
+                    </Button>
+                  </Box>
+                </Paper>
+              );
+            })
+          )}
+        </Stack>
+      ) : (
+        <TableContainer component={Paper} variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Fecha y hora</TableCell>
+                <TableCell>Usuario</TableCell>
+                <TableCell>Acción</TableCell>
+                <TableCell>Entidad</TableCell>
+                <TableCell>Descripción</TableCell>
+                <TableCell align="center">Severidad</TableCell>
+                <TableCell align="center">Detalles</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pageItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {loading ? 'Cargando…' : 'No hay actividad para los filtros seleccionados.'}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                pageItems.map((log) => {
+                  const meta = activityMeta(log);
+                  const actor = resolveActor(log, users);
+                  const sev = SEVERITY_META[meta.severity];
+                  return (
+                    <TableRow key={log.id} hover>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        {formatOracleDate(log.created_at, true)}
+                      </TableCell>
+                      <TableCell>{actor.name}</TableCell>
+                      <TableCell>
+                        <Chip size="small" label={meta.actionLabel} variant="outlined" />
+                      </TableCell>
+                      <TableCell>{meta.entityLabel}</TableCell>
+                      <TableCell sx={{ maxWidth: 280 }}>
+                        <Typography variant="body2" noWrap title={log.message}>
+                          {log.message}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip size="small" label={sev.label} color={sev.color} />
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => void openDetail(log)}
+                          aria-label="Ver detalle del registro"
+                        >
+                          <VisibilityOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
         <Pagination
