@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -42,8 +42,19 @@ const ROLE_LABELS: Record<string, string> = {
   EMPLOYEE: 'Funcionario',
 };
 
-const ALL_NAV_ITEMS = [
+interface NavItem {
+  label: string;
+  icon: ReactNode;
+  route: string;
+  /** Shown only to admins. */
+  adminOnly?: boolean;
+  /** Shown only to employees (admins have their own equivalent). */
+  employeeOnly?: boolean;
+}
+
+const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Inicio', icon: <HomeIcon fontSize="small" />, route: '/', adminOnly: false },
+  { label: 'Panel', icon: <DashboardIcon fontSize="small" />, route: '/mi-panel', employeeOnly: true },
   { label: 'Panel', icon: <DashboardIcon fontSize="small" />, route: '/panel', adminOnly: true },
   { label: 'Usuarios', icon: <PeopleIcon fontSize="small" />, route: '/usuarios', adminOnly: true },
   { label: 'Declaraciones', icon: <DocumentScannerRounded fontSize="small" />, route: '/declaraciones', adminOnly: true },
@@ -75,7 +86,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation();
 
   const isAdmin = user?.role === 'ADMIN';
-  const navItems = ALL_NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
+  const navItems = ALL_NAV_ITEMS.filter(
+    item => (!item.adminOnly || isAdmin) && (!item.employeeOnly || !isAdmin)
+  );
 
   useEffect(() => {
     if (!isMobile) onMobileClose();
