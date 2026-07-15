@@ -19,75 +19,7 @@ import { type ServiceError } from '../../services/common';
 import DeclarationLicenses from '../../features/employee/DeclarationLicenses';
 import DeclarationRestTimes from '../../features/employee/DeclarationRestTimes';
 import { useSnackbar } from '../../context/SnackbarContext';
-
-function parseTimestamp(s: string): Date {
-  const clean = s.replace('T', ' ');
-  let d = new Date(clean);
-  if (!isNaN(d.getTime())) return d;
-
-  const parts = clean.trim().split(/\s+/);
-  if (parts.length < 2) {
-    d = new Date(s);
-    if (!isNaN(d.getTime())) return d;
-    throw new Error('Invalid date format');
-  }
-
-  const datePart = parts[0];
-  const timePart = parts[1];
-  const ampm = parts.length > 2 ? parts[2] : '';
-
-  let day: number, month: number, year: number;
-
-  const dateSegments = datePart.split('-');
-  if (dateSegments.length !== 3) throw new Error('Invalid date part');
-  if (dateSegments[0].length === 4 && !isNaN(parseInt(dateSegments[0], 10))) {
-    year = parseInt(dateSegments[0], 10);
-    month = parseInt(dateSegments[1], 10) - 1;
-    day = parseInt(dateSegments[2], 10);
-  } else {
-    day = parseInt(dateSegments[0], 10);
-    const monthStr = dateSegments[1].toUpperCase();
-    const MONTHS: Record<string, number> = {
-      JAN: 0, ENE: 0, FEB: 1, MAR: 2, APR: 3, ABR: 3, MAY: 4, JUN: 5,
-      JUL: 6, AUG: 7, AGO: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11, DIC: 11
-    };
-    month = MONTHS[monthStr];
-    if (month === undefined) throw new Error('Invalid month');
-    year = parseInt(dateSegments[2], 10);
-    if (year < 100) year += 2000;
-  }
-
-  let hour: number, minute: number, second: number = 0;
-
-  const dotParts = timePart.split('.');
-  if (dotParts.length >= 3) {
-    hour = parseInt(dotParts[0], 10);
-    minute = parseInt(dotParts[1], 10);
-    second = parseInt(dotParts[2], 10);
-  } else {
-    const colonParts = timePart.split(':');
-    if (colonParts.length >= 3) {
-      hour = parseInt(colonParts[0], 10);
-      minute = parseInt(colonParts[1], 10);
-      second = parseInt(colonParts[2], 10);
-    } else {
-      throw new Error('Invalid time format');
-    }
-  }
-
-  if (ampm) {
-    if (ampm === 'PM' && hour < 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
-  }
-
-  return new Date(year, month, day, hour, minute, second);
-}
-
-function durationMinutesShift(start: string, end: string): number {
-  const startDate = parseTimestamp(start);
-  const endDate = parseTimestamp(end);
-  return Math.round((endDate.getTime() - startDate.getTime()) / 60000);
-}
+import { calcTotalDeclaredHours, calcWeeklyShiftHours, sumDurationsInHours } from '../../utils/declarationExport';
 
 export default function AdditionalInformationPage() {
   const location = useLocation();
@@ -112,26 +44,16 @@ export default function AdditionalInformationPage() {
       restTimeService.getRestTimesByDeclaration(id),
     ]);
 
-    const shiftStartVal = decl.shift_starts_at;
-    const shiftEndVal = decl.shift_ends_at;
-    const shiftDur = durationMinutesShift(shiftStartVal, shiftEndVal);
+    const shiftStart = decl.shift_starts_at;
+    const shiftEnd = decl.shift_ends_at;
+    const weeklyShiftHours = calcWeeklyShiftHours(shiftStart, shiftEnd);
 
-    let required = false;
+    const functionHours = calcTotalDeclaredHours(decl.job_functions || []);
+    const licenseHours = sumDurationsInHours(lic);
+    const restHours = sumDurationsInHours(rest);
+    const totalReportedHours = functionHours + licenseHours + restHours;
 
-    const totalFunctions = (decl.job_functions || []).reduce(
-      (acc, fn) => acc + (fn.duration_minutes || 0), 0
-    );
-    const totalLicenses = lic.reduce(
-      (acc, l) => acc + (l.duration_minutes || 0), 0
-    );
-    const totalRests = rest.reduce(
-      (acc, r) => acc + (r.duration_minutes || 0), 0
-    );
-
-    const totalAll = totalFunctions + totalLicenses + totalRests;
-    if (totalAll > shiftDur) {
-      required = true;
-    }
+    const required = totalReportedHours > weeklyShiftHours;
 
     setJustificationRequired(required);
     if (!required) {
@@ -246,7 +168,7 @@ export default function AdditionalInformationPage() {
 
         {justificationRequired && (
           <Alert severity="warning" sx={{ mb: 3 }}>
-            Se requiere justificación porque la suma de tiempos excede la jornada laboral.
+            Se requiere justificación porque la suma de tiempos excede la jornada laboral semanal.
             Debes indicar si tu jefatura inmediata tiene conocimiento de este tiempo adicional.
           </Alert>
         )}
@@ -271,7 +193,7 @@ export default function AdditionalInformationPage() {
               error={!!validationErrors.justification}
               helperText={
                 validationErrors.justification ||
-                'Indique si la jefatura inmediata tiene conocimiento de que utiliza tiempo adicional a su jornada laboral.'
+                'Indique si la jefatura inmediata tiene conocimiento de que utiliza tiempo adicional a su jornada laboral semanal.'
               }
               required
             />
