@@ -26,6 +26,7 @@ import LoginPage from './pages/auth/LoginPage';
 import PasswordRecoveryPage from './pages/auth/PasswordRecoveryPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import EmployeeDeclarationsPage from './pages/EmployeeDeclarationsPage.tsx';
+import EmployeeDashboardPage from './pages/EmployeeDashboardPage.tsx';
 import EmployeeFormPage from './pages/EmployeeFormPage';
 import SettingsPage from './pages/SettingsPage.tsx';
 import WorkHoursPage from './pages/WorkHoursPage';
@@ -56,6 +57,7 @@ function App() {
               <Route element={<PrivateRoute/>}>
                 <Route path="/" element={<MainLayout/>}>
                   <Route index element={<EmployeeDeclarationsPage/>}/>
+                  <Route path="mi-panel" element={<EmployeeDashboardPage/>}/>
                   <Route path="declaracion-registro"
                          element={<EmployeeRecordPage/>}/>
                   <Route path="employee-form" element={<EmployeeFormPage/>}/>

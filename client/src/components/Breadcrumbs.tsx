@@ -14,6 +14,7 @@ interface RouteNode {
 
 const ROUTES: Record<string, RouteNode> = {
   '/': {label: 'Inicio'},
+  '/mi-panel': {label: 'Panel', parent: '/'},
   '/declaracion-registro': {label: 'Registro de Cargas', parent: '/'},
   '/employee-form': {
     label: 'Información del puesto',
