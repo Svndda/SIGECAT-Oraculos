@@ -127,4 +127,5 @@ return [
   // System log routes (admin-only audit trail)
   ['method' => 'GET', 'path' => '/logs', 'controller' => 'LogController', 'action' => 'index'],
   ['method' => 'GET', 'path' => '/logs/facets', 'controller' => 'LogController', 'action' => 'facets'],
+  ['method' => 'GET', 'path' => '/logs/{id}', 'controller' => 'LogController', 'action' => 'show'],
 ];

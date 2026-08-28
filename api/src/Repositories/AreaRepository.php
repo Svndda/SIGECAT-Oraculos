@@ -84,9 +84,18 @@ final class AreaRepository extends Repository {
   /**
    * @return array<int, array<string, mixed>>
    */
-  public function getAreas(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
+  /**
+   * Fetches a page of areas along with the total matching row count, in a
+   * single round trip: COUNT(*) OVER() computes the total alongside each row
+   * instead of a separate query, which used to double the round trips to the
+   * Oracle Cloud DB on every list load.
+   *
+   * @return array{data: list<array<string, mixed>>, total: int}
+   */
+  public function getAreasPaginated(int $offset, int $limit, string $filter = '', string $status = 'active'): array {
     $stmt = $this->db->prepare(
-      'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at
+      'SELECT area_id, name, description, created_at, created_by, is_deleted, deleted_at,
+              COUNT(*) OVER() AS total_count
        FROM AREAS
        WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status) . '
        ORDER BY created_at DESC
@@ -96,18 +105,7 @@ final class AreaRepository extends Repository {
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  public function countAreas(string $filter = '', string $status = 'active'): int {
-    $stmt = $this->db->prepare(
-      'SELECT COUNT(*) AS total
-       FROM AREAS
-       WHERE UPPER(name) LIKE UPPER(:filter)' . $this->statusCondition($status)
-    );
-    $stmt->execute([':filter' => '%' . $filter . '%']);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return (int) ($row['total'] ?? $row['TOTAL'] ?? 0);
+    return $this->splitWindowedTotal($stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
   public function createArea(string $createdBy, AreaRequestDTO $dto): void {

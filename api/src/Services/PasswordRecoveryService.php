@@ -109,7 +109,7 @@ class PasswordRecoveryService {
     $userId  = $tokenRow['user_id'];
     $tokenId = $tokenRow['token_id'];
 
-    $hashedPassword = password_hash($dto->password, PASSWORD_BCRYPT);
+    $hashedPassword = password_hash($dto->password, PASSWORD_ARGON2ID);
 
     $this->userRepository->updatePasswordById($userId, $hashedPassword);
     $this->recoveryRepository->markTokenAsUsed($tokenId);

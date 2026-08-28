@@ -517,12 +517,33 @@ final class DeclarationsService
   /**
    * Enriches a list of declarations with job position (and user if admin view).
    *
+   * Batch-fetches job positions, jobs, and (for the admin view) users in a
+   * handful of `WHERE id IN (...)` queries instead of looking each one up per
+   * row, which used to cost up to 3 extra round trips per declaration on a
+   * page (job position, job, user) — a severe N+1 against the Oracle Cloud DB.
+   *
    * @param array<int, mixed> $declarations
    * @param bool $isAdminView Whether to include user details.
    * @return list<array<string, mixed>>
    */
   private function enrichDeclarations(array $declarations, bool $isAdminView):
   array {
+    if (count($declarations) === 0) {
+      return [];
+    }
+
+    $jobPositionIds = array_column($declarations, 'job_position_id');
+    $jobPositionsById = $this->jobPositionRepository->findByIds($jobPositionIds);
+
+    $jobIds = array_values(array_unique(array_column($jobPositionsById, 'job_id')));
+    $jobsById = count($jobIds) > 0 ? $this->jobRepository->findByIds($jobIds) : [];
+
+    $usersById = [];
+    if ($isAdminView) {
+      $userIds = array_column($declarations, 'user_id');
+      $usersById = $this->userRepository->findByIds($userIds);
+    }
+
     $enriched = [];
     foreach ($declarations as $declaration) {
       $item = [
@@ -536,25 +557,18 @@ final class DeclarationsService
         'created_at' => $declaration['created_at']
       ];
 
-      $jobPosition = $this->jobPositionRepository->findById(
-        $declaration['job_position_id']
-      );
-
+      $jobPosition = $jobPositionsById[$declaration['job_position_id']] ?? null;
       if ($jobPosition !== null) {
         $item['job_position'] = $jobPosition;
 
-        $job = $this->jobRepository->findById($jobPosition['job_id']);
+        $job = $jobsById[$jobPosition['job_id']] ?? null;
         if ($job !== null) {
           $item['job'] = $job;
         }
       }
 
       if ($isAdminView) {
-        $user = $this->userRepository->findById(
-          $declaration['user_id'],
-          includeSensitiveInfo : false
-        );
-
+        $user = $usersById[$declaration['user_id']] ?? null;
         if ($user !== null) {
           $item['user'] = $user;
         }

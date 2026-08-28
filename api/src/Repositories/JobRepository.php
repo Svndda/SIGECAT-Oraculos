@@ -103,6 +103,43 @@ final class JobRepository extends Repository
   }
 
   /**
+   * Bulk-fetches jobs by ID, keyed by job_id. Used to avoid an N+1 lookup
+   * when enriching a page of list results.
+   *
+   * @param list<string> $jobIds
+   * @return array<string, array<string, mixed>>
+   */
+  public function findByIds(array $jobIds, string $status = 'active'): array
+  {
+    $ids = array_values(array_unique($jobIds));
+    if (count($ids) === 0) {
+      return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach ($ids as $i => $id) {
+      $key = ':id' . $i;
+      $placeholders[] = $key;
+      $params[$key] = $id;
+    }
+
+    $stmt = $this->db->prepare(
+      'SELECT job_id, job_class_id, name, job_code, description, created_at, created_by, is_deleted, deleted_at
+         FROM jobs
+        WHERE job_id IN (' . implode(', ', $placeholders) . ')'
+        . $this->statusCondition($status)
+    );
+    $stmt->execute($params);
+
+    $byId = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $byId[$row['job_id']] = $row;
+    }
+    return $byId;
+  }
+
+  /**
    * Retrieves a paginated list of job based on filters.
    *
    * @param int    $limit  Maximum number of records to return.

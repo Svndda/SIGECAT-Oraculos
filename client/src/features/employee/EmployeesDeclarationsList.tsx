@@ -1,3 +1,4 @@
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import {
   Tooltip,
@@ -16,12 +17,14 @@ interface EmployeeDeclarationsListProps {
   declarations: Declaration[];
   loading: boolean;
   onView: (declaration: Declaration) => void;
+  onDownloadCsv: (declaration: Declaration) => void;
 }
 
 export default function EmployeeDeclarationsList({
   declarations,
   loading,
   onView,
+  onDownloadCsv,
 }: EmployeeDeclarationsListProps) {
   const columns: DataColumn<Declaration>[] = [
     {
@@ -83,6 +86,12 @@ export default function EmployeeDeclarationsList({
           label: 'Ver detalles',
           color: 'info.main',
           onClick: onView,
+        },
+        {
+          icon: <DownloadOutlinedIcon fontSize="small" />,
+          label: 'Descargar CSV',
+          color: '#666',
+          onClick: onDownloadCsv,
         },
       ]}
       emptyMessage="No tienes declaraciones registradas."

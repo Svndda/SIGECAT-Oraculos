@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Services;
 
-use DateTimeImmutable;
 use DTO\CreateJobFunctionDTO;
 use DTO\JobFunctionResponseDTO;
 use DTO\UpdateJobFunctionDTO;
@@ -15,22 +14,6 @@ use Repositories\DeclarationsRepository;
 use Repositories\JobFunctionRepository;
 use Repositories\OfficialFunctionRepository;
 
-/**
- * JobFunctionService
- *
- * Business logic for the functions declared on a declaration (JOB_FUNCTIONS).
- * Everything is scoped to the authenticated employee: a user only manages the
- * functions of their own declarations, and only while the declaration is still
- * 'Incomplete'.
- *
- * Domain rules:
- *  - Exactly one of official/custom function is referenced (XOR).
- *  - overtime is derived as the portion of the function range that falls
- *    outside the declaration shift window; when there is overtime a
- *    justification is mandatory (mirrors CHK_JOB_FUNC_OVER_JUST).
- *
- * @package Services
- */
 class JobFunctionService
 {
   private JobFunctionRepository $repository;
@@ -47,8 +30,6 @@ class JobFunctionService
   }
 
   /**
-   * Adds a function to a declaration owned by the user.
-   *
    * @return array<string, mixed>
    * @throws ApiException
    */
@@ -60,15 +41,7 @@ class JobFunctionService
 
     $this->assertReferencedFunctionExists($userId, $dto->officialFunctionId, $dto->customFunctionId);
 
-    $overtime = $this->overtimeHours(
-      (string) $declaration['shift_starts_at'],
-      (string) $declaration['shift_ends_at'],
-      (string) $dto->startsAt,
-      (string) $dto->endsAt
-    );
-
-    $justification = $dto->justification;
-    $this->assertJustificationForOvertime($overtime, $justification);
+    $this->assertJustificationForOvertime($dto->overtimeMinutes, $dto->justification);
 
     $id = $this->repository->create([
       'user_id'              => $userId,
@@ -76,11 +49,10 @@ class JobFunctionService
       'declaration_id'       => $dto->declarationId,
       'official_function_id' => $dto->officialFunctionId,
       'custom_function_id'   => $dto->customFunctionId,
-      'overtime'             => $overtime > 0 ? $overtime : null,
-      'justification'        => $justification,
+      'overtime_minutes'     => $dto->overtimeMinutes,
+      'justification'        => $dto->justification,
       'frequency'            => $dto->frequency,
-      'starts_at'            => $dto->startsAt,
-      'ends_at'              => $dto->endsAt,
+      'duration_minutes'     => $dto->durationMinutes,
     ]);
 
     Logger::info('job_function', 'Función agregada a declaración', 'job_function.create', [
@@ -93,8 +65,6 @@ class JobFunctionService
   }
 
   /**
-   * Applies a partial update to one of the user's declaration functions.
-   *
    * @return array<string, mixed>
    * @throws ApiException
    */
@@ -107,9 +77,8 @@ class JobFunctionService
       throw new ApiException(ErrorType::notFound('Función de la declaración'));
     }
 
-    $declaration = $this->requireIncompleteOwnedDeclaration($userId, (string) $existing['declaration_id']);
+    $this->requireIncompleteOwnedDeclaration($userId, (string) $existing['declaration_id']);
 
-    // Resolve the effective function reference (XOR is preserved).
     $official = (string) ($existing['official_function_id'] ?? '') ?: null;
     $custom   = (string) ($existing['custom_function_id'] ?? '') ?: null;
     if ($dto->officialFunctionId !== null) {
@@ -122,36 +91,27 @@ class JobFunctionService
     $this->assertReferencedFunctionExists($userId, $official, $custom);
 
     $frequency = $dto->frequency ?? (string) $existing['frequency'];
-    $startsAt  = $dto->startsAtProvided ? (string) $dto->startsAt : (string) $existing['starts_at'];
-    $endsAt    = $dto->endsAtProvided ? (string) $dto->endsAt : (string) $existing['ends_at'];
+    $durationMinutes = $dto->durationMinutes ?? (int) $existing['duration_minutes'];
 
-    if ($endsAt <= $startsAt) {
-      throw new ApiException(
-        ErrorType::invalidField('ends_at', 'La hora de fin debe ser posterior a la de inicio')
-      );
-    }
-
-    $overtime = $this->overtimeHours(
-      (string) $declaration['shift_starts_at'],
-      (string) $declaration['shift_ends_at'],
-      $startsAt,
-      $endsAt
-    );
+    // Normalize overtimeMinutes to ?int
+    $rawOvertime = $dto->overtimeMinutes;
+    $overtimeMinutes = $rawOvertime !== null && is_numeric($rawOvertime)
+        ? (int) $rawOvertime
+        : (isset($existing['overtime_minutes']) ? (int) $existing['overtime_minutes'] : null);
 
     $justification = $dto->justificationProvided
       ? $dto->justification
       : ((string) ($existing['justification'] ?? '') ?: null);
 
-    $this->assertJustificationForOvertime($overtime, $justification);
+    $this->assertJustificationForOvertime($overtimeMinutes, $justification);
 
     $this->repository->update($jobFunctionId, [
       'official_function_id' => $official,
       'custom_function_id'   => $custom,
-      'overtime'             => $overtime > 0 ? $overtime : null,
+      'overtime_minutes'     => $overtimeMinutes,
       'justification'        => $justification,
       'frequency'            => $frequency,
-      'starts_at'            => $startsAt,
-      'ends_at'              => $endsAt,
+      'duration_minutes'     => $durationMinutes,
     ]);
 
     Logger::info('job_function', 'Función de declaración actualizada', 'job_function.update', [
@@ -164,9 +124,6 @@ class JobFunctionService
   }
 
   /**
-   * Removes one of the user's declaration functions, only while the declaration
-   * is still 'Incomplete'.
-   *
    * @throws ApiException
    */
   public function deleteJobFunction(string $userId, string $jobFunctionId): void
@@ -192,8 +149,6 @@ class JobFunctionService
   }
 
   /**
-   * Returns one of the user's declaration functions.
-   *
    * @return array<string, mixed>
    * @throws ApiException
    */
@@ -212,9 +167,6 @@ class JobFunctionService
   }
 
   /**
-   * Lists the user's declaration functions, optionally scoped to one of their
-   * declarations.
-   *
    * @return array{data: array<int, array<string, mixed>>, meta: array<string, int>}
    * @throws ApiException
    */
@@ -231,7 +183,6 @@ class JobFunctionService
     $declarationId = ($declarationId !== null && trim($declarationId) !== '') ? $declarationId : null;
 
     if ($declarationId !== null) {
-      // Only the owner of the declaration may list its functions.
       $declaration = $this->declarationRepository->findById($declarationId);
       if ($declaration === null || (string) $declaration['user_id'] !== $userId) {
         throw new ApiException(ErrorType::notFound('Declaración'));
@@ -260,10 +211,7 @@ class JobFunctionService
   }
 
   /**
-   * Loads a declaration, asserting it exists, is owned by the user and is still
-   * 'Incomplete' (the only state in which its functions can be edited).
-   *
-   * @return array<string, mixed> The declaration row (with its shift window).
+   * @return array<string, mixed>
    * @throws ApiException
    */
   private function requireIncompleteOwnedDeclaration(string $userId, string $declarationId): array
@@ -285,9 +233,6 @@ class JobFunctionService
   }
 
   /**
-   * Ensures the referenced function exists: an official function must be active,
-   * and a custom function must belong to the user.
-   *
    * @throws ApiException
    */
   private function assertReferencedFunctionExists(string $userId, ?string $officialFunctionId, ?string $customFunctionId): void
@@ -306,55 +251,17 @@ class JobFunctionService
     }
   }
 
-  /** @throws ApiException when there is overtime but no justification. */
-  private function assertJustificationForOvertime(float $overtime, ?string $justification): void
+  /**
+   * @param int|null $overtimeMinutes
+   * @param string|null $justification
+   * @throws ApiException
+   */
+  private function assertJustificationForOvertime(?int $overtimeMinutes, ?string $justification): void
   {
-    if ($overtime > 0 && ($justification === null || trim($justification) === '')) {
+    if ($overtimeMinutes !== null && $overtimeMinutes > 0 && ($justification === null || trim($justification) === '')) {
       throw new ApiException(
         ErrorType::missingField('justification')
       );
-    }
-  }
-
-  /**
-   * Portion of [start, end] falling outside the shift window [shiftStart,
-   * shiftEnd], expressed in hours rounded to 2 decimals.
-   */
-  private function overtimeHours(string $shiftStart, string $shiftEnd, string $start, string $end): float
-  {
-    $s  = $this->toDateTime($start)->getTimestamp();
-    $e  = $this->toDateTime($end)->getTimestamp();
-    $ss = $this->toDateTime($shiftStart)->getTimestamp();
-    $se = $this->toDateTime($shiftEnd)->getTimestamp();
-
-    $before = max(0, min($e, $ss) - $s);   // part before the shift starts
-    $after  = max(0, $e - max($s, $se));   // part after the shift ends
-    $seconds = $before + $after;
-
-    return round($seconds / 3600, 2);
-  }
-
-  /**
-   * Parses a timestamp coming either as the canonical 'Y-m-d H:i:s' (the
-   * function range, already normalized) or as Oracle's default TIMESTAMP
-   * rendering (the declaration shift window read through DeclarationsRepository,
-   * e.g. "24-JUN-26 08.00.00.000000 AM").
-   *
-   * @throws ApiException when the value cannot be parsed.
-   */
-  private function toDateTime(string $value): DateTimeImmutable
-  {
-    try {
-      return new DateTimeImmutable($value);
-    } catch (\Exception) {
-      $parsed = DateTimeImmutable::createFromFormat('d-M-y h.i.s.u A', $value)
-        ?: DateTimeImmutable::createFromFormat('d-M-y h.i.s A', $value);
-      if ($parsed === false) {
-        throw new ApiException(
-          ErrorType::internal('No se pudo interpretar la jornada de la declaración')
-        );
-      }
-      return $parsed;
     }
   }
 }

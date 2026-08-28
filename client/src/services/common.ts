@@ -92,6 +92,42 @@ export function formatDateForBackend(date: Date | string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+/**
+ * Parses an API date string — ISO or Oracle `DD-MON-YY HH.MI.SS AM` — into a
+ * JS Date, or null when it cannot be parsed. Shared by views that need to sort
+ * or range-filter on a timestamp rather than just display it.
+ */
+export function parseOracleDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+
+  const iso = new Date(dateStr);
+  if (!isNaN(iso.getTime())) return iso;
+
+  const parts = dateStr.trim().toUpperCase().split(/\s+/);
+  const dateSegments = parts[0]?.split('-') ?? [];
+  if (dateSegments.length !== 3) return null;
+
+  const day = parseInt(dateSegments[0], 10);
+  const months: Record<string, number> = {
+    JAN: 0, ENE: 0, FEB: 1, MAR: 2, APR: 3, ABR: 3, MAY: 4, JUN: 5,
+    JUL: 6, AUG: 7, AGO: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11, DIC: 11,
+  };
+  const month = months[dateSegments[1]];
+  let year = parseInt(dateSegments[2], 10);
+  if (isNaN(day) || month === undefined || isNaN(year)) return null;
+  if (year < 100) year += 2000;
+
+  const timeSegments = (parts[1] ?? '0').split(/[.:]/);
+  let hour = parseInt(timeSegments[0] || '0', 10);
+  const minute = parseInt(timeSegments[1] || '0', 10);
+  const second = parseInt(timeSegments[2] || '0', 10);
+  if (parts[2] === 'PM' && hour < 12) hour += 12;
+  if (parts[2] === 'AM' && hour === 12) hour = 0;
+
+  const d = new Date(year, month, day, hour, minute, second);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export function formatOracleDate(dateStr: string | null | undefined, incluirHora = false): string {
   if (!dateStr) return '—';
 

@@ -146,12 +146,12 @@ class LicenseTypeService
     $status = $this->normalizeStatus($status);
     $offset = ($page - 1) * $limit;
 
-    $total = $this->repository->countLicenseTypes($filter, $status);
-    $rows  = $this->repository->getLicenseTypes($offset, $limit, $filter, $status);
+    $result = $this->repository->getLicenseTypes($offset, $limit, $filter, $status);
+    $total  = $result['total'];
 
     $data = array_map(
       static fn(array $row) => LicenseTypeResponseDTO::fromArray($row)->toArray(),
-      $rows
+      $result['data']
     );
 
     return [

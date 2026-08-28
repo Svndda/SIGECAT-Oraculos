@@ -204,13 +204,13 @@ class DepartmentService {
     $status = $this->normalizeStatus($status);
     $offset = ($page - 1) * $limit;
 
-    $total = $this->departmentRepository->countAll($filter, $status);
-    $departments = $this->departmentRepository->findAllPaginated(
+    $result = $this->departmentRepository->findAllPaginated(
       $limit, $offset, $filter, $status
     );
+    $total = $result['total'];
 
     return [
-      'data' => $departments,
+      'data' => $result['data'],
       'meta' => [
         'page'        => $page,
         'limit'       => $limit,

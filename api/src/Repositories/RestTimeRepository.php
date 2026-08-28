@@ -14,38 +14,16 @@ use PDOException;
  * Repository handling persistence operations for the REST_TIMES table.
  *
  * Each rest time is a line of a declaration: it belongs to a user and a
- * declaration and spans a [starts_at, ends_at] range for a given rest type.
- * Rows are deleted physically (the table has no soft-delete columns).
+ * declaration and has a duration in minutes for a given rest type. Rows are
+ * deleted physically (the table has no soft-delete columns).
  *
  * @package Repositories
  */
 final class RestTimeRepository extends Repository
 {
-  /** SQL expression turning a canonical 'Y-m-d H:i:s' bind into a TIMESTAMP. */
-  private const TS = "TO_TIMESTAMP(:%s, 'YYYY-MM-DD HH24:MI:SS')";
-
   public function __construct(PDO $db)
   {
     parent::__construct($db);
-  }
-
-  /**
-   * Normalizes a raw database row into an associative array with the
-   * canonical (snake_case) keys exposed by the API.
-   *
-   * @param array<string, mixed> $row Raw row fetched from the database.
-   * @return array<string, mixed>
-   */
-  private function mapRow(array $row): array
-  {
-    return [
-      'rest_time_id'   => $row['rest_time_id'] ?? $row['REST_TIME_ID'],
-      'user_id'        => $row['user_id'] ?? $row['USER_ID'],
-      'declaration_id' => $row['declaration_id'] ?? $row['DECLARATION_ID'],
-      'rest_type'      => $row['rest_type'] ?? $row['REST_TYPE'],
-      'starts_at'      => $row['starts_at'] ?? $row['STARTS_AT'],
-      'ends_at'        => $row['ends_at'] ?? $row['ENDS_AT'],
-    ];
   }
 
   /**
@@ -59,26 +37,21 @@ final class RestTimeRepository extends Repository
   {
     $restTimeId = UlidGenerator::generate();
 
-    $sql = sprintf(
-      'INSERT INTO rest_times (
-          rest_time_id, user_id, declaration_id, rest_type, starts_at, ends_at
+    $sql = 'INSERT INTO rest_times (
+          rest_time_id, user_id, declaration_id, rest_type, duration_minutes
         ) VALUES (
-          :v_rest_time_id, :v_user_id, :v_declaration_id, :v_rest_type, %s, %s
-        )',
-      sprintf(self::TS, 'v_starts_at'),
-      sprintf(self::TS, 'v_ends_at')
-    );
+          :v_rest_time_id, :v_user_id, :v_declaration_id, :v_rest_type, :v_duration_minutes
+        )';
 
     $this->beginTransaction();
     try {
       $stmt = $this->db->prepare($sql);
       $stmt->execute([
-        ':v_rest_time_id'   => $restTimeId,
-        ':v_user_id'        => $userId,
-        ':v_declaration_id' => $dto->declarationId,
-        ':v_rest_type'      => $dto->restType,
-        ':v_starts_at'      => $dto->startsAt,
-        ':v_ends_at'        => $dto->endsAt,
+        ':v_rest_time_id'     => $restTimeId,
+        ':v_user_id'          => $userId,
+        ':v_declaration_id'   => $dto->declarationId,
+        ':v_rest_type'        => $dto->restType,
+        ':v_duration_minutes' => $dto->durationMinutes,
       ]);
       $this->commit();
     } catch (PDOException $e) {
@@ -97,20 +70,22 @@ final class RestTimeRepository extends Repository
    */
   public function findById(string $restTimeId): ?array
   {
-    $sql = "
-        SELECT rest_time_id, user_id, declaration_id, rest_type,
-               TO_CHAR(starts_at, 'YYYY-MM-DD HH24:MI:SS') AS starts_at,
-               TO_CHAR(ends_at,   'YYYY-MM-DD HH24:MI:SS') AS ends_at
+    $sql = '
+        SELECT rest_time_id, user_id, declaration_id, rest_type, duration_minutes
         FROM rest_times
         WHERE rest_time_id = :v_rest_time_id
           AND ROWNUM = 1
-    ";
+    ';
 
     $stmt = $this->db->prepare($sql);
     $stmt->execute([':v_rest_time_id' => $restTimeId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    return $row ? $this->mapRow($row) : null;
+    if (!$row) {
+      return null;
+    }
+
+    return $row;
   }
 
   /**
@@ -129,15 +104,13 @@ final class RestTimeRepository extends Repository
     $declCondition = $declarationId !== null ? ' AND declaration_id = :v_declaration_id' : '';
     $userCondition = $userId !== null ? ' AND user_id = :v_user_id' : '';
 
-    $sql = "
-        SELECT rest_time_id, user_id, declaration_id, rest_type,
-               TO_CHAR(starts_at, 'YYYY-MM-DD HH24:MI:SS') AS starts_at,
-               TO_CHAR(ends_at,   'YYYY-MM-DD HH24:MI:SS') AS ends_at
+    $sql = '
+        SELECT rest_time_id, user_id, declaration_id, rest_type, duration_minutes
         FROM rest_times
-        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)" . $declCondition . $userCondition . "
-        ORDER BY starts_at DESC
+        WHERE UPPER(rest_type) LIKE UPPER(:v_filter)' . $declCondition . $userCondition . '
+        ORDER BY rest_time_id DESC
         OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
-    ";
+    ';
 
     $stmt = $this->db->prepare($sql);
     $stmt->bindValue(':v_filter', '%' . $filter . '%');
@@ -151,7 +124,7 @@ final class RestTimeRepository extends Repository
     $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
 
-    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
   /**
@@ -204,14 +177,9 @@ final class RestTimeRepository extends Repository
       $params[':v_rest_type'] = $dto->restType;
     }
 
-    if ($dto->startsAtProvided) {
-      $fields[] = 'starts_at = ' . sprintf(self::TS, 'v_starts_at');
-      $params[':v_starts_at'] = $dto->startsAt;
-    }
-
-    if ($dto->endsAtProvided) {
-      $fields[] = 'ends_at = ' . sprintf(self::TS, 'v_ends_at');
-      $params[':v_ends_at'] = $dto->endsAt;
+    if ($dto->durationMinutes !== null) {
+      $fields[] = 'duration_minutes = :v_duration_minutes';
+      $params[':v_duration_minutes'] = $dto->durationMinutes;
     }
 
     if (empty($fields)) {

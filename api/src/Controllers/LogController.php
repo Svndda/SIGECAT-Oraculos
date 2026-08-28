@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Controllers;
 
 use Http\ApiException;
+use Http\ErrorType;
 use Http\Response;
 use Services\AuthService;
 use Services\LogService;
@@ -51,12 +52,35 @@ final class LogController
         'search'    => $_GET['search']    ?? null,
         'date_from' => $_GET['date_from'] ?? null,
         'date_to'   => $_GET['date_to']   ?? null,
+        'scope'     => $_GET['scope']     ?? null,
       ];
 
       $result = $this->logService->list($filters, $page, $limit);
       $meta = array_merge($result['meta'], ['message' => 'Registros obtenidos exitosamente']);
 
       Response::success($result['data'], $meta);
+    } catch (ApiException $e) {
+      Response::error($e->getError(), $e->getHttpStatus());
+    }
+  }
+
+  /**
+   * GET /logs/{id}
+   *
+   * A single log entry including its context, loaded on demand for the detail
+   * view so the context CLOB is never fetched for a whole list page.
+   */
+  public function show(string $id): void
+  {
+    try {
+      $this->authService->requireAdmin();
+
+      $log = $this->logService->get($id);
+      if ($log === null) {
+        throw new ApiException(ErrorType::notFound('Registro'));
+      }
+
+      Response::success($log, ['message' => 'Registro obtenido exitosamente']);
     } catch (ApiException $e) {
       Response::error($e->getError(), $e->getHttpStatus());
     }

@@ -138,18 +138,21 @@ final class DepartmentRepository extends Repository
   }
 
   /**
-   * Fetches a paginated list of records from the departments table.
+   * Fetches a paginated list of departments along with the total matching row
+   * count, in a single round trip (COUNT(*) OVER()) instead of a separate
+   * COUNT(*) query.
    *
    * @param int $limit The maximum number of records to return.
    * @param int $offset The number of records to skip.
    * @param string $filter Optional string to filter by department name.
    * @param string $status One of active|deleted|all (default active).
-   * @return array<int, array<string, mixed>> List of departments.
+   * @return array{data: list<array<string, mixed>>, total: int}
    */
   public function findAllPaginated(int $limit, int $offset, string $filter = '', string $status = 'active'): array
   {
     $sql = '
-        SELECT department_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at 
+        SELECT department_id, area_id, name, description, created_at, created_by, is_deleted, deleted_at,
+               COUNT(*) OVER() AS total_count
         FROM departments
         WHERE UPPER(name) LIKE UPPER(:v_filter)' . $this->statusCondition($status) . '
         ORDER BY created_at DESC
@@ -164,30 +167,7 @@ final class DepartmentRepository extends Repository
 
     $stmt->execute();
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  /**
-   * Counts the total number of departments matching the filter and status.
-   *
-   * @param string $filter Optional string to filter by department name.
-   * @param string $status One of active|deleted|all (default active).
-   * @return int The total count of department records.
-   */
-  public function countAll(string $filter = '', string $status = 'active'): int
-  {
-    $sql = '
-        SELECT COUNT(*) as total 
-        FROM departments 
-        WHERE UPPER(name) LIKE UPPER(:v_filter)' . $this->statusCondition($status);
-
-    $stmt = $this->db->prepare($sql);
-    $stmt->bindValue(':v_filter', '%' . $filter . '%');
-    $stmt->execute();
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    return $row !== false ? (int) ($row['total'] ?? $row['TOTAL'] ?? 0) : 0;
+    return $this->splitWindowedTotal($stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
   /**

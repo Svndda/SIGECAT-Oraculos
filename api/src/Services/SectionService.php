@@ -115,11 +115,11 @@ class SectionService {
     $status = $this->normalizeStatus($status);
 
     $offset = ($page - 1) * $limit;
-    $total  = $this->sectionRepository->countSections($filter, $status);
-    $rows   = $this->sectionRepository->getSections($offset, $limit, $filter, $status);
+    $result = $this->sectionRepository->getSections($offset, $limit, $filter, $status);
+    $total  = $result['total'];
 
     return [
-      'data' => $rows,
+      'data' => $result['data'],
       'meta' => [
         'page'        => $page,
         'limit'       => $limit,

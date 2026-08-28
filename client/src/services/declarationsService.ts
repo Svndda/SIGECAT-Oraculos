@@ -8,6 +8,11 @@ import {
 import type { JobPosition } from './jobPositionService';
 import type { Job } from './jobService';
 import type {UserProfile} from "./userService.ts";
+import type { DeclarationJobFunction } from './jobFunctionService';
+
+export type { DeclarationJobFunction };
+
+export type JobFunction = DeclarationJobFunction;
 
 export type DeclarationStatus =
   | 'Incomplete'
@@ -24,24 +29,6 @@ export interface DeclarationStatusHistory {
   created_by: string;
 }
 
-export interface JobFunction {
-  job_function_id: string;
-  user_id: string;
-  job_position_id: string;
-  declaration_id: string;
-  official_function_id: string | null;
-  custom_function_id: string | null;
-  overtime: number | null;
-  justification: string | null;
-  frequency: string | null;
-  starts_at: string;
-  ends_at: string;
-  function_name?: string;
-  function_description?: string;
-  function_type?: 'official' | 'custom';
-  expected_time?: number | null;
-}
-
 export interface Declaration {
   declaration_id: string;
   user_id: string;
@@ -54,7 +41,7 @@ export interface Declaration {
   job_position?: JobPosition;
   job?: Job;
   status_history?: DeclarationStatusHistory[];
-  job_functions?: JobFunction[];
+  job_functions?: DeclarationJobFunction[];
   user? : UserProfile;
 }
 

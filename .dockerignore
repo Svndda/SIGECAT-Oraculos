@@ -8,3 +8,4 @@ Wallet_*.zip
 *.rpm
 **/.env*
 api/config/oci_config.php
+api/config/mail_config.php

@@ -3,14 +3,13 @@ import {extractApiError, type PageMeta} from './common';
 
 /**
  * Declared rest times (REST_TIMES): the breaks (coffee, breakfast, lunch,
- * dinner) an employee attaches to their declaration, each over a
- * [starts_at, ends_at] range bound to a rest type.
+ * dinner) an employee attaches to their declaration, each with a duration in
+ * minutes bound to a rest type.
  */
 
 export const REST_TYPES = ['Breakfast', 'Coffee', 'Dinner', 'Lunch'] as const;
 export type RestType = (typeof REST_TYPES)[number];
 
-/** Spanish display labels for the REST_TYPE enum values. */
 export const REST_TIME_MAX_MINUTES: Record<RestType, number> = {
   Coffee: 30,
   Breakfast: 60,
@@ -28,15 +27,12 @@ export const REST_TYPE_LABELS: Record<RestType, string> = {
 export interface CreateRestTimePayload {
   declaration_id: string;
   rest_type: RestType;
-  /** 'YYYY-MM-DD HH:MM:SS' */
-  starts_at: string;
-  ends_at: string;
+  duration_minutes: number;
 }
 
 export interface UpdateRestTimePayload {
   rest_type?: RestType;
-  starts_at?: string;
-  ends_at?: string;
+  duration_minutes?: number;
 }
 
 export interface RestTimeResponse {
@@ -44,8 +40,7 @@ export interface RestTimeResponse {
   user_id: string;
   declaration_id: string;
   rest_type: RestType;
-  starts_at: string;
-  ends_at: string;
+  duration_minutes: number;
 }
 
 export interface GetRestTimesParams {
@@ -64,28 +59,21 @@ export interface PaginatedRestTimes {
 }
 
 /**
- * Client-side mirror of the CHK_REST_TIMES_DURATION rule
+ * Client-side mirror of the CHK_REST_TIMES_DURATION rule.
  *
- * @returns null when the range is valid, or a human-readable error otherwise.
+ * @returns null when duration_minutes is valid for the rest type, or a
+ * human-readable error otherwise.
  */
-export function validateRestTimeRange(
+export function validateRestTimeDuration(
   restType: RestType,
-  startsAt: string,
-  endsAt: string
+  durationMinutes: number
 ): string | null {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return 'El formato de fecha y hora no es válido';
-  }
-  if (end <= start) {
-    return 'La hora de fin debe ser posterior a la de inicio';
+  if (!Number.isInteger(durationMinutes) || durationMinutes <= 0) {
+    return 'La duración debe ser un número entero mayor a 0';
   }
 
-  const minutes = (end.getTime() - start.getTime()) / 60000;
   const maxMinutes = REST_TIME_MAX_MINUTES[restType];
-  if (minutes > maxMinutes) {
+  if (durationMinutes > maxMinutes) {
     return `La duración del descanso '${restType}' no puede exceder los ${maxMinutes} minutos`;
   }
 
@@ -175,7 +163,7 @@ export const restTimeService = {
   /**
    * PATCH /rest-time/{id}
    * Partial update of one of the caller's own entries (rest_type and/or
-   * starts_at/ends_at). At least one field must be provided — the backend
+   * duration_minutes). At least one field must be provided — the backend
    * rejects an empty payload. Only allowed while the parent declaration is
    * still 'Incomplete'.
    */

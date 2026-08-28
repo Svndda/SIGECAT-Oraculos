@@ -8,7 +8,6 @@ import {
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Section } from '../../../services/sectionService';
-import { truncateText } from '../../../utils/text';
 
 interface SectionListProps {
   sections: Section[];
@@ -34,13 +33,13 @@ export default function SectionList({ sections, loading, areaMap, onEdit, onDele
       render: (s) => (
         <Tooltip title={s.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(s.name)}
+            {s.name}
           </Typography>
         </Tooltip>
       ),
     },
-    { label: 'Área', flex: '1', render: (s) => areaMap.get(s.area_id) ?? '—' },
-    { label: 'Fecha de creación', flex: '1', meta: true, render: (s) => formatDate(s.created_at) },
+    { label: 'Área', flex: '1', truncate: true, render: (s) => areaMap.get(s.area_id) ?? '—' },
+    { label: 'Fecha de creación', flex: '0 0 160px', meta: true, render: (s) => formatDate(s.created_at) },
   ];
 
   return (

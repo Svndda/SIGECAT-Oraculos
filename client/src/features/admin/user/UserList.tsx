@@ -4,7 +4,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { AdminUser } from '../../../services/userService';
-import { truncateText } from '../../../utils/text';
 
 interface UserListProps {
   users: AdminUser[];
@@ -24,21 +23,21 @@ export default function UserList({
   const columns: DataColumn<AdminUser>[] = [
     {
       label: 'Nombre completo',
-      flex: '0 0 24%',
+      flex: '1.4',
       primary: true,
       truncate: true,
       render: (u) => (
         <Tooltip title={`${u.first_name} ${u.last_name}`} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(`${u.first_name} ${u.last_name}`)}
+            {`${u.first_name} ${u.last_name}`}
           </Typography>
         </Tooltip>
       ),
     },
-    { label: 'Correo institucional', flex: '1', truncate: true, render: (u) => u.email },
+    { label: 'Correo institucional', flex: '1.2', truncate: true, render: (u) => u.email },
     {
       label: 'Rol',
-      flex: '0 0 15%',
+      flex: '0 0 140px',
       badge: true,
       render: (u) => (
         <Typography
@@ -52,7 +51,7 @@ export default function UserList({
             color: u.role === 'admin' ? '#1a2b4a' : '#555',
           }}
         >
-          {u.role === 'admin' ? 'Administrador' : 'Empleado'}
+          {u.role === 'admin' ? 'Administrador' : 'Funcionario'}
         </Typography>
       ),
     }

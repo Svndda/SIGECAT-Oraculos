@@ -61,6 +61,18 @@ final class LogService
   }
 
   /**
+   * Returns a single log entry (including its decoded context) or null when it
+   * does not exist. Backs the detail view, where context is loaded on demand.
+   *
+   * @return array<string, mixed>|null
+   */
+  public function get(string $id): ?array
+  {
+    $row = $this->logRepository->findById($id);
+    return $row === null ? null : LogResponseDTO::fromArray($row)->toArray();
+  }
+
+  /**
    * Distinct facet values (levels, categories) for building filter controls.
    *
    * @return array{levels: array<int, string>, categories: array<int, string>}
@@ -91,6 +103,11 @@ final class LogService
     $level = strtoupper(trim((string) ($filters['level'] ?? '')));
     if (in_array($level, [Logger::DEBUG, Logger::INFO, Logger::WARNING, Logger::ERROR, Logger::CRITICAL], true)) {
       $clean['level'] = $level;
+    }
+
+    // Opt-in narrowing to business events only (excludes server/technical noise).
+    if (($filters['scope'] ?? '') === 'business') {
+      $clean['scope'] = 'business';
     }
 
     return $clean;

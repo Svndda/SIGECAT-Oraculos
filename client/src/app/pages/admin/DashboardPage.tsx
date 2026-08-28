@@ -240,7 +240,7 @@ export default function DashboardPage() {
                 onClick={() => navigate('/registros')}
                 sx={{ color: '#12457d', textTransform: 'none' }}
               >
-                Ver registros
+                Ver bitácora
               </Button>
             }
           >

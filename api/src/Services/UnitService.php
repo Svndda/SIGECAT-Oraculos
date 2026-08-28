@@ -185,12 +185,12 @@ class UnitService {
     $status = $this->normalizeStatus($status);
 
     $offset = ($page - 1) * $limit;
-    $total  = $this->unitRepository->countUnits($filter, $status);
-    $rows   = $this->unitRepository->getUnits($offset, $limit, $filter, $status);
+    $result = $this->unitRepository->getUnits($offset, $limit, $filter, $status);
+    $total  = $result['total'];
 
     $data = array_map(
       static fn(array $row) => UnitResponseDTO::fromArray($row)->toArray(),
-      $rows
+      $result['data']
     );
 
     return [

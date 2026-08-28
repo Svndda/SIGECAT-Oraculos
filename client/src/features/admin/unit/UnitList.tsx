@@ -8,7 +8,6 @@ import {
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Unit } from '../../../services/unitService';
-import { truncateText } from '../../../utils/text';
 
 interface UnitListProps {
   units: Unit[];
@@ -34,13 +33,13 @@ export default function UnitList({ units, loading, onEdit, onDelete, onView, bel
       render: (u) => (
         <Tooltip title={u.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(u.name)}
+            {u.name}
           </Typography>
         </Tooltip>
       ),
     },
     { label: 'Pertenece a', flex: '1', truncate: true, render: (u) => belongsTo(u) },
-    { label: 'Fecha de creación', flex: '1', meta: true, render: (u) => formatDate(u.created_at) },
+    { label: 'Fecha de creación', flex: '0 0 160px', meta: true, render: (u) => formatDate(u.created_at) },
   ];
 
   return (

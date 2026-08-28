@@ -277,36 +277,47 @@ final class DeclarationsRepository extends Repository
    */
   public function findAllPaginated(int $limit, int $offset, array $filters = []
   ): array {
-    $baseSql = '
-                SELECT 
-                    d.DECLARATION_ID,
-                    d.USER_ID,
-                    d.JOB_POSITION_ID,
-                    d.JUSTIFICATION,
-                    d.CREATED_AT,
-                    d.SHIFT_STARTS_AT,
-                    d.SHIFT_ENDS_AT,
-                    ds.STATUS_VALUE AS CURRENT_STATUS
-                FROM DECLARATIONS d
-                INNER JOIN DECLARATIONS_STATUS ds 
-                    ON d.DECLARATION_ID = ds.DECLARATION_ID
-                WHERE ds.CREATED_AT = (
-                    SELECT MAX(CREATED_AT) 
-                    FROM DECLARATIONS_STATUS 
-                    WHERE DECLARATION_ID = d.DECLARATION_ID
-                )
-            ';
+    // The latest status per declaration used to be picked with a correlated
+    // subquery (WHERE ds.CREATED_AT = (SELECT MAX(...) ... WHERE
+    // DECLARATION_ID = d.DECLARATION_ID)), re-evaluated for every joined row.
+    // A window function does the same job in a single pass over the
+    // (DECLARATION_ID, CREATED_AT DESC) index (idx_declarations_status_decl).
+    // Filters that depend on d.* apply inside the window (cheap, index-backed);
+    // the status filter can only apply once the latest row is known, so it's
+    // applied in the outer WHERE after RN = 1.
+    $innerFilters = $this->buildFilterConditions($filters, forInnerQuery: true);
+    $outerFilters = $this->buildFilterConditions($filters, forInnerQuery: false);
 
-    $filterResult = $this->buildFilterConditions($filters);
-    $sql = $baseSql . $filterResult['where'] . '
-                ORDER BY d.CREATED_AT DESC
+    $sql = '
+                SELECT DECLARATION_ID, USER_ID, JOB_POSITION_ID, JUSTIFICATION,
+                       CREATED_AT, SHIFT_STARTS_AT, SHIFT_ENDS_AT, CURRENT_STATUS
+                FROM (
+                    SELECT
+                        d.DECLARATION_ID,
+                        d.USER_ID,
+                        d.JOB_POSITION_ID,
+                        d.JUSTIFICATION,
+                        d.CREATED_AT,
+                        d.SHIFT_STARTS_AT,
+                        d.SHIFT_ENDS_AT,
+                        ds.STATUS_VALUE AS CURRENT_STATUS,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY d.DECLARATION_ID ORDER BY ds.CREATED_AT DESC
+                        ) AS RN
+                    FROM DECLARATIONS d
+                    INNER JOIN DECLARATIONS_STATUS ds
+                        ON d.DECLARATION_ID = ds.DECLARATION_ID
+                    WHERE 1 = 1' . $innerFilters['where'] . '
+                )
+                WHERE RN = 1' . $outerFilters['where'] . '
+                ORDER BY CREATED_AT DESC
                 OFFSET :v_offset ROWS FETCH NEXT :v_limit ROWS ONLY
             ';
 
     $stmt = $this->db->prepare($sql);
     $stmt->bindValue(':v_offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':v_limit', $limit, PDO::PARAM_INT);
-    foreach ($filterResult['params'] as $key => $value) {
+    foreach ([...$innerFilters['params'], ...$outerFilters['params']] as $key => $value) {
       $stmt->bindValue($key, $value);
     }
     $stmt->execute();
@@ -318,35 +329,41 @@ final class DeclarationsRepository extends Repository
    * Builds WHERE conditions and parameters from filters.
    *
    * @param array<string, string> $filters
+   * @param bool $forInnerQuery When true, returns the d.*-only conditions
+   *   (user/date/free-text) meant for the windowed inner query; when false,
+   *   returns just the status condition, meant for the outer WHERE RN = 1.
    * @return array{where: string, params: array<string, mixed>}
    */
-  private function buildFilterConditions(array $filters): array
+  private function buildFilterConditions(array $filters, bool $forInnerQuery = true): array
   {
     $conditions = [];
     $params = [];
 
-    if (!empty($filters['user_id'])) {
-      $conditions[] = 'd.USER_ID = :v_user_id';
-      $params[':v_user_id'] = $filters['user_id'];
-    }
-    if (!empty($filters['status']) && $filters['status'] !== 'all') {
-      $conditions[] = 'ds.STATUS_VALUE = :v_status';
-      $params[':v_status'] = $filters['status'];
-    }
-    if (!empty($filters['from_date'])) {
-      $conditions[] = 'd.CREATED_AT >= :v_from_date';
-      $params[':v_from_date'] = $filters['from_date'];
-    }
-    if (!empty($filters['to_date'])) {
-      $conditions[] = 'd.CREATED_AT <= :v_to_date';
-      $params[':v_to_date'] = $filters['to_date'];
-    }
-    if (!empty($filters['filter'])) {
-      $conditions[] = '(
+    if ($forInnerQuery) {
+      if (!empty($filters['user_id'])) {
+        $conditions[] = 'd.USER_ID = :v_user_id';
+        $params[':v_user_id'] = $filters['user_id'];
+      }
+      if (!empty($filters['from_date'])) {
+        $conditions[] = 'd.CREATED_AT >= :v_from_date';
+        $params[':v_from_date'] = $filters['from_date'];
+      }
+      if (!empty($filters['to_date'])) {
+        $conditions[] = 'd.CREATED_AT <= :v_to_date';
+        $params[':v_to_date'] = $filters['to_date'];
+      }
+      if (!empty($filters['filter'])) {
+        $conditions[] = '(
                         UPPER(d.JOB_POSITION_ID) LIKE UPPER(:v_filter) OR
                         UPPER(d.USER_ID) LIKE UPPER(:v_filter)
                     )';
-      $params[':v_filter'] = '%' . $filters['filter'] . '%';
+        $params[':v_filter'] = '%' . $filters['filter'] . '%';
+      }
+    } else {
+      if (!empty($filters['status']) && $filters['status'] !== 'all') {
+        $conditions[] = 'CURRENT_STATUS = :v_status';
+        $params[':v_status'] = $filters['status'];
+      }
     }
 
     $where = '';

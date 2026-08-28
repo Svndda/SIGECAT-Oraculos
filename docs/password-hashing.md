@@ -9,37 +9,43 @@
 
 ## 1. Decisión
 
-Las contraseñas **no se cifran, se _hashean_** con **bcrypt**, a través de la
-función nativa de PHP `password_hash()` con el algoritmo `PASSWORD_BCRYPT`
-(factor de costo por defecto = 10). La verificación se hace con
-`password_verify()`.
+Las contraseñas **no se cifran, se _hashean_** con **Argon2id**, a través de la
+función nativa de PHP `password_hash()` con el algoritmo `PASSWORD_ARGON2ID`
+(parámetros por defecto de PHP: memory_cost, time_cost y threads). La
+verificación se hace con `password_verify()`.
+
+> Nota histórica: el proyecto arrancó con **bcrypt** (`PASSWORD_BCRYPT`) por
+> simplicidad/portabilidad — ver §2 — y migró a Argon2id una vez confirmada la
+> disponibilidad de la extensión en todos los entornos (local y Docker/PHP
+> 8.4). La migración de los hashes ya emitidos es transparente: ver §6.
 
 Aclaración importante de terminología: cifrar (encriptar) es reversible; un hash
 **no** lo es. Para credenciales lo correcto es hashear con un algoritmo lento y
 con sal, no encriptar. Por eso nunca guardamos ni la contraseña en claro ni una
 versión "desencriptable".
 
-## 2. Por qué bcrypt
+## 2. Por qué Argon2id (y por qué se empezó con bcrypt)
 
 - **Es un hash adaptativo y con sal**, diseñado específicamente para contraseñas.
   Cada contraseña recibe una **sal aleatoria distinta** (generada
   automáticamente por `password_hash`), por lo que dos usuarios con la misma
   contraseña producen hashes diferentes y las _rainbow tables_ no aplican.
-- **Es deliberadamente lento** (factor de costo configurable), lo que encarece
-  los ataques de fuerza bruta. El costo se puede subir en el futuro sin cambiar
-  el código.
-- **Está recomendado por OWASP** para almacenamiento de contraseñas y es el
-  estándar de facto en PHP.
+- **Ganador del Password Hashing Competition** y recomendado por OWASP como
+  primera opción (por delante de bcrypt) por su resistencia superior a ataques
+  con hardware dedicado (GPU/ASIC), gracias a su costo de memoria configurable.
 - **Es nativo de PHP** (`password_hash` / `password_verify`): menos superficie de
   error que una implementación propia, y soporta migración de algoritmo con
   `password_needs_rehash()`.
+- Se empezó con **bcrypt** porque no dependía de verificar soporte de la
+  extensión Argon2 en cada entorno; una vez confirmado que PHP 8.4 (local y la
+  imagen Docker) lo soporta nativamente, se migró sin fricción.
 
 Alternativas consideradas:
 
-| Opción | Por qué no (por ahora) |
+| Opción | Por qué no |
 |---|---|
 | Texto plano / MD5 / SHA-1 / SHA-256 "a secas" | Inseguros para contraseñas: rápidos y sin sal. Descartados. |
-| Argon2id (`PASSWORD_ARGON2ID`) | Es **mejor** que bcrypt y es nuestra ruta de mejora futura, pero depende de que la extensión esté disponible en el entorno de despliegue. Por simplicidad y portabilidad arrancamos con bcrypt. La migración es trivial gracias a `password_needs_rehash()` (ver §6). |
+| bcrypt (`PASSWORD_BCRYPT`) | Algoritmo inicial del proyecto (ver nota histórica arriba); reemplazado por Argon2id por su mejor resistencia a ataques con GPU/ASIC. Los hashes bcrypt existentes se migran solos en el próximo login (§6). |
 
 ## 3. Aclaración: qué se guarda en la columna `password_hash`
 
@@ -49,12 +55,13 @@ un malentendido sobre el **formato PHC** que produce `password_hash`. La columna
 en una sola cadena autodescriptiva:
 
 ```
-$2y$10$Q9mZ4u8t1f6kРnД….<los 31 caracteres del digest>
-└┬┘ └┬┘ └──────┬──────┘ └──────────────┬──────────────┘
- │   │         │                        └ digest (el "valor" del hash)
- │   │         └ sal (22 caracteres, única por contraseña)
- │   └ costo (10) = 2^10 iteraciones
- └ identificador del algoritmo ($2y$ = bcrypt)
+$argon2id$v=19$m=65536,t=4,p=1$<sal en base64>$<digest en base64>
+└───┬───┘ └─┬─┘ └───────┬──────┘ └──────┬──────┘ └──────┬──────┘
+    │       │           │                │                └ digest (el "valor" del hash)
+    │       │           │                └ sal (única por contraseña)
+    │       │           └ memoria (m), iteraciones (t) y paralelismo (p)
+    │       └ versión del algoritmo
+    └ identificador del algoritmo (Argon2id)
 ```
 
 Es decir, una sola cadena contiene **algoritmo + costo + sal + digest**. Esto es
@@ -64,12 +71,13 @@ necesitamos (ni debemos) guardar la sal o el costo en columnas aparte.
 
 ## 4. Dónde está en el código
 
-- Registro de usuario y cambio de contraseña por admin:
-  `api/src/Services/UserService.php` → `password_hash($password, PASSWORD_BCRYPT)`.
+- Registro de usuario, cambio de contraseña por admin y cambio propio:
+  `api/src/Services/UserService.php` → `password_hash($password, PASSWORD_ARGON2ID)`.
 - Restablecimiento vía recuperación:
-  `api/src/Services/PasswordRecoveryService.php` → `password_hash(..., PASSWORD_BCRYPT)`.
-- Inicio de sesión (verificación):
-  `api/src/Services/AuthService.php` → `password_verify($password, $user['password_hash'])`.
+  `api/src/Services/PasswordRecoveryService.php` → `password_hash(..., PASSWORD_ARGON2ID)`.
+- Inicio de sesión (verificación + migración transparente de hashes viejos):
+  `api/src/Services/AuthService.php` → `password_verify($password, $user['password_hash'])`,
+  seguido de `password_needs_rehash(...)` (ver §6).
 - Reglas mínimas de la contraseña (longitud, mayúscula, número, símbolo):
   `api/src/DTO/PasswordValidator.php`.
 
@@ -81,12 +89,29 @@ correcto y **distinto** del caso de las contraseñas: un token es un valor
 aleatorio largo y de un solo uso, no un secreto elegido por el usuario, así que
 no necesita un hash lento; solo evitar guardarlo en claro.
 
-## 6. Trabajo futuro
+## 6. Migración de bcrypt a Argon2id (ya implementada)
 
-- Migrar a **Argon2id** cuando el entorno lo soporte. Como `password_verify`
-  entiende cualquier formato que produzca `password_hash`, se puede migrar de
-  forma transparente: en el login, tras verificar, llamar a
-  `password_needs_rehash($hash, PASSWORD_ARGON2ID)` y, si devuelve `true`,
-  re-hashear con el nuevo algoritmo y actualizar la fila.
-- Revisar periódicamente el **factor de costo** y subirlo conforme mejore el
-  hardware (misma técnica de `password_needs_rehash`).
+`password_verify()` entiende cualquier formato que produzca `password_hash`
+(el algoritmo va codificado en el propio hash), así que un usuario con un hash
+bcrypt viejo puede seguir logueándose sin cambios. La migración es transparente
+y ocurre en `AuthService::login`:
+
+1. Se verifica la contraseña con `password_verify()` contra el hash almacenado
+   (bcrypt o Argon2id, da igual).
+2. Si la verificación es exitosa, se llama a
+   `password_needs_rehash($storedHash, PASSWORD_ARGON2ID)`.
+3. Si devuelve `true` (el hash no es Argon2id, o usa parámetros desactualizados),
+   se re-hashea la contraseña en texto plano recién verificada con
+   `PASSWORD_ARGON2ID` y se actualiza `password_hash` en la fila
+   (`UserRepository::updatePasswordHashById`), **sin** tocar
+   `is_password_temp` ni `failed_logging_attempts` — no es un evento de cambio
+   de contraseña, solo una migración de algoritmo en segundo plano.
+
+Así, cada usuario existente queda migrado a Argon2id la primera vez que inicia
+sesión después de este cambio, sin ninguna acción manual.
+
+## 7. Trabajo futuro
+
+- Revisar periódicamente los **parámetros de costo** de Argon2id (memoria,
+  iteraciones) y subirlos conforme mejore el hardware, reutilizando la misma
+  técnica de `password_needs_rehash()` del §6.

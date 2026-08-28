@@ -21,6 +21,9 @@ import type {ServiceError} from '../../../services/common';
 import type {Declaration} from '../../../services/declarationsService';
 import {declarationService} from '../../../services/declarationsService';
 import {STATUS_TRANSLATIONS} from '../../../services/declarationConstants';
+import {restTimeService} from '../../../services/restTimeService';
+import {licenseService} from '../../../services/licenseService';
+import {exportDeclarationCsv} from '../../../utils/declarationExport';
 
 const PAGE_LIMIT = 10;
 const MAX_LIMIT = 500;
@@ -128,6 +131,23 @@ export default function DeclarationsPage() {
     setSearchParams(next, {replace: true});
   }, [searchParams, loading, allDeclarations, handleViewDetail, setSearchParams]);
 
+  const handleDownloadCsv = async (declaration: Declaration) => {
+    try {
+      const fullDeclaration = await declarationService.getDeclarationById(
+        declaration.declaration_id,
+        true
+      );
+      const [restTimes, licenseTimes] = await Promise.all([
+        restTimeService.getRestTimesByDeclaration(declaration.declaration_id),
+        licenseService.getLicensesByDeclaration(declaration.declaration_id),
+      ]);
+      exportDeclarationCsv(fullDeclaration, restTimes, licenseTimes);
+    } catch (error) {
+      const e = error as ServiceError;
+      snackbar.error(e.message ?? 'Error al descargar la declaración.');
+    }
+  };
+
   const handleCloseDetail = () => {
     setDetailOpen(false);
     setSelectedDeclaration(null);
@@ -178,6 +198,7 @@ export default function DeclarationsPage() {
           declarations={paginatedDeclarations}
           loading={loading}
           onView={handleViewDetail}
+          onDownloadCsv={handleDownloadCsv}
         />
         {loading && (
           <Box sx={{display: 'flex', justifyContent: 'center', py: 6}}>

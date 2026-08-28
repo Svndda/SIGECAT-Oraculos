@@ -14,54 +14,43 @@ use Http\ErrorType;
  *
  * Responsibilities:
  * - Maps incoming request data using fromArray().
- * - Supports partial updates (license_type_id, starts_at, ends_at are optional).
+ * - Supports partial updates (license_type_id and duration_minutes are both
+ *   optional).
  * - Validates the format of each field only when it is present.
  * - At least one updatable field must be provided.
- *
- * The cross-field rule (ends_at after starts_at) depends on the effective values
- * after the merge, so it is enforced by LicenseService against the existing row.
  *
  * @package DTO
  */
 final class UpdateLicenseDTO
 {
   public ?string $licenseTypeId;
-  public bool $startsAtProvided;
-  public bool $endsAtProvided;
 
-  /** Normalized 'Y-m-d H:i:s' strings (null when missing or unparseable). */
-  public ?string $startsAt;
-  public ?string $endsAt;
+  /**
+   * Requested new duration in minutes, or null when the client did not send
+   * this field at all (meaning: leave it unchanged). Holds the raw scalar
+   * until validate() checks its format and normalizes it to a plain int.
+   */
+  public int|string|null $durationMinutes;
 
   private function __construct(
     ?string $licenseTypeId,
-    ?string $startsAt,
-    ?string $endsAt,
-    bool $startsAtProvided,
-    bool $endsAtProvided
+    int|string|null $durationMinutes
   ) {
     $this->licenseTypeId = $licenseTypeId;
-    $this->startsAt = $startsAt;
-    $this->endsAt = $endsAt;
-    $this->startsAtProvided = $startsAtProvided;
-    $this->endsAtProvided = $endsAtProvided;
+    $this->durationMinutes = $durationMinutes;
   }
 
   /**
    * @param array{
    *     license_type_id?: string,
-   *     starts_at?: string,
-   *     ends_at?: string
+   *     duration_minutes?: int|string
    * } $data
    */
   public static function fromArray(array $data): self
   {
     return new self(
       isset($data['license_type_id']) ? (string) $data['license_type_id'] : null,
-      CreateLicenseDTO::normalizeTimestamp($data['starts_at'] ?? null),
-      CreateLicenseDTO::normalizeTimestamp($data['ends_at'] ?? null),
-      isset($data['starts_at']) && $data['starts_at'] !== '',
-      isset($data['ends_at']) && $data['ends_at'] !== ''
+      $data['duration_minutes'] ?? null
     );
   }
 
@@ -71,18 +60,25 @@ final class UpdateLicenseDTO
       throw new ApiException(ErrorType::invalidField('license_type_id'));
     }
 
-    if ($this->startsAtProvided && $this->startsAt === null) {
-      throw new ApiException(
-        ErrorType::invalidField('starts_at', 'El formato de fecha y hora no es válido')
-      );
-    }
-    if ($this->endsAtProvided && $this->endsAt === null) {
-      throw new ApiException(
-        ErrorType::invalidField('ends_at', 'El formato de fecha y hora no es válido')
-      );
+    if ($this->durationMinutes !== null && $this->durationMinutes !== '') {
+      if (!is_numeric($this->durationMinutes) || (int) $this->durationMinutes != $this->durationMinutes) {
+        throw new ApiException(
+          ErrorType::invalidField('duration_minutes', 'La duración debe ser un número entero')
+        );
+      }
+
+      $this->durationMinutes = (int) $this->durationMinutes;
+
+      if ($this->durationMinutes <= 0) {
+        throw new ApiException(
+          ErrorType::invalidField('duration_minutes', 'La duración debe ser un número entero mayor a 0')
+        );
+      }
+    } else {
+      $this->durationMinutes = null;
     }
 
-    if ($this->licenseTypeId === null && !$this->startsAtProvided && !$this->endsAtProvided) {
+    if ($this->licenseTypeId === null && $this->durationMinutes === null) {
       throw new ApiException(
         ErrorType::invalidField('license', 'Debe proporcionar al menos un campo para actualizar')
       );

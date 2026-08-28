@@ -8,7 +8,6 @@ import {
 
 import DataTable, { type DataColumn } from '../../../components/DataTable';
 import type { Area } from '../../../services/areaService';
-import { truncateText } from '../../../utils/text';
 
 interface AreaListProps {
   areas: Area[];
@@ -33,12 +32,12 @@ export default function AreaList({ areas, loading, onEdit, onDelete, onView }: A
       render: (a) => (
         <Tooltip title={a.name} arrow>
           <Typography variant="body2" fontWeight={600} noWrap>
-            {truncateText(a.name)}
+            {a.name}
           </Typography>
         </Tooltip>
       ),
     },
-    { label: 'Fecha de creación', flex: '1', meta: true, render: (a) => formatDate(a.created_at) },
+    { label: 'Fecha de creación', flex: '0 0 160px', meta: true, render: (a) => formatDate(a.created_at) },
   ];
 
   return (

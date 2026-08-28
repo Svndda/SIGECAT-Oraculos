@@ -2,7 +2,7 @@ import { type DeclarationStatus } from './declarationsService';
 
 export const STATUS_TRANSITIONS: Record<DeclarationStatus, DeclarationStatus[]> = {
   Incomplete: ['Completed', 'Abandoned'],
-  Revision: ['Approved', 'Rejected', 'Abandoned'],
+  Revision: ['Approved', 'Rejected'],
   Approved: ['Rejected'],
   Rejected: [],
   Abandoned: [],
@@ -42,9 +42,6 @@ export function canChangeStatus(
     return false;
   }
 
-  if (newStatus === 'Abandoned' && !isOwner && userRole !== 'ADMIN') {
-    return false;
-  }
+  return !(newStatus === 'Abandoned' && !isOwner && userRole !== 'ADMIN');
 
-  return true;
 }

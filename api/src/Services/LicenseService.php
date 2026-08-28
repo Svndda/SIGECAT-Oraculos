@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Services;
 
-use DateTimeImmutable;
 use DTO\CreateLicenseDTO;
 use DTO\UpdateLicenseDTO;
 use Http\ApiException;
@@ -94,11 +93,6 @@ class LicenseService
     if ($dto->licenseTypeId !== null && !$this->licenseRepository->licenseTypeExists($dto->licenseTypeId)) {
       throw new ApiException(ErrorType::notFound('Tipo de licencia'));
     }
-
-    $startsAt = $dto->startsAtProvided ? (string) $dto->startsAt : (string) $existing['starts_at'];
-    $endsAt   = $dto->endsAtProvided ? (string) $dto->endsAt : (string) $existing['ends_at'];
-
-    $this->assertRange($startsAt, $endsAt);
 
     $this->licenseRepository->update($licenseTimeId, $dto);
 
@@ -229,23 +223,6 @@ class LicenseService
         ErrorType::conflict(
           'Solo se pueden gestionar licencias mientras la declaración está incompleta'
         )
-      );
-    }
-  }
-
-  /**
-   * Ensures the [starts_at, ends_at] range is ordered (mirrors CHECK_LICENSE_DATES).
-   *
-   * @throws ApiException
-   */
-  private function assertRange(string $startsAt, string $endsAt): void
-  {
-    $start = new DateTimeImmutable($startsAt);
-    $end   = new DateTimeImmutable($endsAt);
-
-    if ($end <= $start) {
-      throw new ApiException(
-        ErrorType::invalidField('ends_at', 'La hora de fin debe ser posterior a la de inicio')
       );
     }
   }

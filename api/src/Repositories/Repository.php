@@ -64,4 +64,28 @@ abstract class Repository
       $this->db->rollBack();
     }
   }
+
+  /**
+   * Splits rows fetched from a query that carries a `COUNT(*) OVER()` window
+   * column into the plain row data and the total count, so a paginated list
+   * and its total can be fetched with a single round trip instead of a
+   * separate COUNT(*) query.
+   *
+   * @param array<int, array<string, mixed>> $rows
+   * @return array{data: list<array<string, mixed>>, total: int}
+   */
+  final protected function splitWindowedTotal(array $rows, string $totalColumn = 'total_count'): array
+  {
+    $rows = array_values($rows);
+    $total = count($rows) > 0 ? (int) $rows[0][$totalColumn] : 0;
+    $data = array_map(
+      static function (array $row) use ($totalColumn): array {
+        unset($row[$totalColumn]);
+        return $row;
+      },
+      $rows
+    );
+
+    return ['data' => $data, 'total' => $total];
+  }
 }
